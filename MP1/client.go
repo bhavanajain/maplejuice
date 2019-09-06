@@ -4,38 +4,61 @@ import (
 	"net"
 	"os"
 	"fmt"
+	"strings"
+	"bufio"
+	"regexp"
 )
 
-// Let's create the ping function , with timeout of 
+func grepOnFile(filepath string, pattern string) []string {
+    r, _ := regexp.Compile(pattern)
+    file, err := os.Open(filepath)
+    defer file.Close()
 
-var client [2]string = [2]string{"10.193.204.136","172.16.197.192"}
-var validIP [2]bool = [2]bool{true,true}
+    if err != nil {
+        return err
+    }
 
-func getmyIP() string {
-	addrs, err := net.InterfaceAddrs()
-	var myip string = "-1"
-	if err != nil {
-		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
-		myip = "-1"
-	}
+    reader := bufio.NewReader(file)
+    var line string
+    var linenum int = 0
+    var pattern_matches []string
 
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				myip = ipnet.IP.String()
-			}
-		}
-	}
-	return myip
+    for {
+        line, err = reader.ReadString('\n')
+
+        if r.MatchString(line) {
+            match = fmt.Sprintf("%d:%s", linenum, line)
+            pattern_matches.append(match)
+        }
+        linenum += 1
+        if err != nil {
+            break
+        }
+    }
+    if err != io.EOF {
+        fmt.Printf(" > Failed!: %v\n", err)
+    }
+    return pattern_matches
 }
-func heartbeat_check(){
-	
+
+func client(){
 	// This receives a connection from a server and replies whether it is alive or not
-	fmt.Printf("Waiting for conn")
-	ln, _ := net.Listen("tcp", ":8081")
+	// fmt.Printf("Waiting for conn")
+
+	ln, _ := net.Listen("tcp", ":8080")
 	for {
-		fmt.Printf("Waiting for conn")
 		conn, _ := ln.Accept()
+		reader := bufio.NewReader(conn)
+
+		parameters = reader.ReadString("\n")
+		parameters = parameters[:-1]
+		parameters = strings.Split(parameters, ",")
+		filename, pattern = parameters[0], parameters[1]
+		pattern_matches = grepOnFile(filename, pattern)
+		for _, line_match := range pattern_matches {
+			fmt.Fprintf(conn, line_match + "\n")
+		}
+		fmt.Fprintf(conn, "EOF" + "\n")
 		conn.Close()
 	}
 
@@ -43,12 +66,6 @@ func heartbeat_check(){
 }
 
 func main() {
-
-	 resIp := getmyIP() // myIP  for test
-	 fmt.Printf("%s\n",resIp)
-	 fmt.Printf("%t\n",validIP[1])
-	 fmt.Printf("%t\n",validIP[1])
-	 heartbeat_check()
-	
+	client()	
 }
 

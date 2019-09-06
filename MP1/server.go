@@ -6,73 +6,65 @@ import (
 	"fmt"
 	"time"
 	"sync"
+	"regexp"
+	"flag"
+	"bufio"
 )
-// Let's create the ping function , with timeout of 
 
 var client [2]string = [2]string{"10.193.204.136","172.16.197.192"}
 var validIP [2]bool = [2]bool{true,true}
 
 var mutex = &sync.Mutex{}
 
-func getmyIP() string {
-	addrs, err := net.InterfaceAddrs()
-	var myip string = "-1"
-	if err != nil {
-		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
-		myip = "-1"
-	}
+func distributedGrep(pattern){
+	timeOut := time.Duration(10) * time.Second // TimeOut
 
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				myip = ipnet.IP.String()
-			}
-		}
-	}
-	return myip
-}
+	r, _ := regexp.Compile(pattern)
 
-func ping_client(){
-	myIP := getmyIP()
-	
-	for{
-		for i:=0; i< len(client);i++{
-			clientIP = client[i]
-			timeOut = time.Duration(2) * time.Second // TimeOut
-			if clientIP == myIP {
-				fmt.Printf("This is me")
+	for i:=0; i<len(client); i++ {
+		mutex.Lock()
+		isAlive := validIP[i]
+		mutex.Unlock()
+
+		if isAlive {
+			conn, err := net.DialTimeout("tcp", client[i] + ":8080", timeOut)
+			if err != nil {
+				fmt.Printf("Error connecting with client %d: %s", i, client[i])
+				mutex.Lock()
+				validIP[i] = false
+				mutex.Unlock()
 				continue
-			} else {
-				conn, err := net.DialTimeout("tcp", clientIP+":8081",timeOut)
-				if err != nil {
-                 	// Set the client as dead using mutex
-                 	fmt.Printf("Error in code")	
-                 	
-       	    	} else{
-
-       	    		// mutex set to true
-       	    		fmt.Printf("Server is alive !!")	
-       	    		// done
-       	    	}
 			}
+			for {
+				// send the name of file and pattern
+				filename := fmt.Sprintf("machine.%d.log", i)
 
+				parameters := filename + "," + pattern + "\n"
+				fmt.Fprintf(conn, parameters)
+
+				reader := bufio.NewReader(conn)
+				for {
+					results, err = reader.ReadString('\n')
+					if results == "EOF\n"{
+						break
+					} 
+					fmt.Println(results)
+
+				}
+				//color part will be handled by the master
+			}
+			conn.Close()
 		}
-		time.Sleep(2 * time.Second)
+
 	}
 
-	
 }
+
+
 
 
 
 func main() {
-
-	resIp := getmyIP() // myIP  for test
-	fmt.Printf("%s\n",resIp)
-	fmt.Printf("%t\n",validIP[3])
-	// ping_client()
-	fmt.Printf("%t\n",validIP[3])
-	ping_client()
-	return
+	distributedGrep("martian")
 }
 
