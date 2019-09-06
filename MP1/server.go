@@ -40,6 +40,7 @@ func ping_client(){
 			clientIP = client[i]
 			timeOut = time.Duration(2) * time.Second // TimeOut
 			if clientIP == myIP {
+				fmt.Printf("This is me")
 				continue
 			} else {
 				conn, err := net.DialTimeout("tcp", clientIP+":8081",timeOut)
@@ -50,7 +51,7 @@ func ping_client(){
        	    	} else{
 
        	    		// mutex set to true
-
+       	    		fmt.Printf("Server is alive !!")	
        	    		// done
        	    	}
 			}
@@ -70,4 +71,7 @@ func main() {
 	 fmt.Printf("%t\n",validIP[3])
 	 ping_client()
 	 fmt.Printf("%t\n",validIP[3])
+	 go ping_client()
 	
+}
+
