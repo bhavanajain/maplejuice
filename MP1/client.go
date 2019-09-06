@@ -8,8 +8,8 @@ import (
 
 // Let's create the ping function , with timeout of 
 
-var client [5]string = [5]string{"a","b","c","d","e"}
-var validIP [5]bool = [5]bool{true,true,true,true,true}
+var client [2]string = [2]string{"10.193.204.136","172.16.197.192"}
+var validIP [2]bool = [2]bool{true,true}
 
 func getmyIP() string {
 	addrs, err := net.InterfaceAddrs()
@@ -45,7 +45,6 @@ func main() {
 	 resIp := getmyIP() // myIP  for test
 	 fmt.Printf("%s\n",resIp)
 	 fmt.Printf("%t\n",validIP[3])
-	 ping_client()
 	 fmt.Printf("%t\n",validIP[3])
 	 go heartbeat_check()
 	
