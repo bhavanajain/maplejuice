@@ -66,12 +66,12 @@ func ping_client(){
 
 func main() {
 
-	 resIp := getmyIP() // myIP  for test
-	 fmt.Printf("%s\n",resIp)
-	 fmt.Printf("%t\n",validIP[3])
-	 ping_client()
-	 fmt.Printf("%t\n",validIP[3])
-	 go ping_client()
-	
+	resIp := getmyIP() // myIP  for test
+	fmt.Printf("%s\n",resIp)
+	fmt.Printf("%t\n",validIP[3])
+	ping_client()
+	fmt.Printf("%t\n",validIP[3])
+	go ping_client()
+	return
 }
 
