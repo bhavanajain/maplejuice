@@ -72,7 +72,7 @@ func main() {
 	fmt.Printf("%t\n",validIP[3])
 	// ping_client()
 	fmt.Printf("%t\n",validIP[3])
-	go ping_client()
+	ping_client()
 	return
 }
 

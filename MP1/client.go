@@ -31,8 +31,10 @@ func getmyIP() string {
 func heartbeat_check(){
 	
 	// This receives a connection from a server and replies whether it is alive or not
+	fmt.Printf("Waiting for conn")
 	ln, _ := net.Listen("tcp", ":8081")
 	for {
+		fmt.Printf("Waiting for conn")
 		conn, _ := ln.Accept()
 		conn.Close()
 	}
@@ -44,9 +46,9 @@ func main() {
 
 	 resIp := getmyIP() // myIP  for test
 	 fmt.Printf("%s\n",resIp)
-	 fmt.Printf("%t\n",validIP[3])
-	 fmt.Printf("%t\n",validIP[3])
-	 go heartbeat_check()
+	 fmt.Printf("%t\n",validIP[1])
+	 fmt.Printf("%t\n",validIP[1])
+	 heartbeat_check()
 	
 }
 
