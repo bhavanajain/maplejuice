@@ -7,6 +7,7 @@ import (
 	"strings"
 	"bufio"
 	"regexp"
+	"io"
 )
 
 func grepOnFile(filepath string, pattern string) []string {
@@ -14,8 +15,11 @@ func grepOnFile(filepath string, pattern string) []string {
     file, err := os.Open(filepath)
     defer file.Close()
 
+    var test = []string{}
+
     if err != nil {
-        return err
+        fmt.Printf("Some error while reading file\n")
+        return test
     }
 
     reader := bufio.NewReader(file)
@@ -27,8 +31,8 @@ func grepOnFile(filepath string, pattern string) []string {
         line, err = reader.ReadString('\n')
 
         if r.MatchString(line) {
-            match = fmt.Sprintf("%d:%s", linenum, line)
-            pattern_matches.append(match)
+            match := fmt.Sprintf("%d:%s", linenum, line)
+            pattern_matches = append(pattern_matches, match)
         }
         linenum += 1
         if err != nil {
@@ -50,11 +54,11 @@ func client(){
 		conn, _ := ln.Accept()
 		reader := bufio.NewReader(conn)
 
-		parameters = reader.ReadString("\n")
-		parameters = parameters[:-1]
-		parameters = strings.Split(parameters, ",")
-		filename, pattern = parameters[0], parameters[1]
-		pattern_matches = grepOnFile(filename, pattern)
+		parameters,_ := reader.ReadString('\n')
+		parameters = parameters[:len(parameters)-1]
+		parameters_list := strings.Split(parameters, ",")
+		filename, pattern := parameters_list[0], parameters_list[1]
+		pattern_matches := grepOnFile(filename, pattern)
 		for _, line_match := range pattern_matches {
 			fmt.Fprintf(conn, line_match + "\n")
 		}
