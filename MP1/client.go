@@ -61,9 +61,9 @@ func client(){
 		filename, pattern := parameters_list[0], parameters_list[1]
 		pattern_matches := grepOnFile(filename, pattern)
 		for _, line_match := range pattern_matches {
-			fmt.Fprintf(conn, line_match + "\n")
+			fmt.Fprintf(conn, line_match)
 		}
-		fmt.Fprintf(conn, "EOF" + "\n")
+		fmt.Fprintf(conn, "<EOF>" + "\n")
 		conn.Close()
 	}
 

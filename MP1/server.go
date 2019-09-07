@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 	"sync"
-	// "regexp"
+	"strings"
 	"bufio"
 )
 
@@ -34,25 +34,25 @@ func distributedGrep(pattern string){
 				continue
 			}
 			for {
-				// send the name of file and pattern
-				var e int
-				fmt.Scanf("%d", &e)
-				filename := fmt.Sprintf("machine.%d.log", i)
 
+				filename := fmt.Sprintf("machine.%d.log", i)
+				fmt.Println(filename)
 				parameters := filename + "," + pattern + "\n"
 				fmt.Fprintf(conn, parameters)
 
 				reader := bufio.NewReader(conn)
+				var done bool = false
 				for {
 					results,_ := reader.ReadString('\n')
-					if results == "EOF\n"{
+					if strings.Contains(results, "<EOF>"){
+						done = true
 						break
 					} 
-					fmt.Println(results)
-
+					fmt.Printf("%s", results)
 				}
-				var f int
-				fmt.Scanf("%d", &f)
+				if done {
+					break
+				}
 				//color part will be handled by the master
 			}
 			conn.Close()
