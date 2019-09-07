@@ -46,16 +46,13 @@ func grepOnFile(filepath string, pattern string) []string {
 }
 
 func client(){
-	// This receives a connection from a server and replies whether it is alive or not
-	// fmt.Printf("Waiting for conn")
-
 	ln, _ := net.Listen("tcp", ":8080")
 	for {
 		conn, _ := ln.Accept()
 		fmt.Printf("Got a new connection")
 		reader := bufio.NewReader(conn)
 
-		parameters,_ := reader.ReadString('\n')
+		parameters, _ := reader.ReadString('\n')
 		parameters = parameters[:len(parameters)-1]
 		parameters_list := strings.Split(parameters, ",")
 		filename, pattern := parameters_list[0], parameters_list[1]
@@ -65,9 +62,7 @@ func client(){
 		}
 		fmt.Fprintf(conn, "<EOF>" + "\n")
 		conn.Close()
-	}
-
-	
+	}	
 }
 
 func main() {

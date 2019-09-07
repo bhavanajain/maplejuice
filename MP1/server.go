@@ -67,6 +67,6 @@ func distributedGrep(pattern string){
 
 
 func main() {
-	distributedGrep("martian")
+	distributedGrep("")
 }
 
