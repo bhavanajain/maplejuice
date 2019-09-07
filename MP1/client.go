@@ -52,6 +52,7 @@ func client(){
 	ln, _ := net.Listen("tcp", ":8080")
 	for {
 		conn, _ := ln.Accept()
+		fmt.Printf("Got a new connection")
 		reader := bufio.NewReader(conn)
 
 		parameters,_ := reader.ReadString('\n')
