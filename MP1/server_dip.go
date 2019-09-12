@@ -102,7 +102,11 @@ func pattern_match_thread(wg *sync.WaitGroup, i int, pattern string) {
 			var done bool = false
 			// var idx_arr [][]int
 			for {
-				results,_ := reader.ReadString('\n')
+				results, err := reader.ReadString('\n')
+				if err != nil {
+					done = true
+					break
+				}
 				if strings.Contains(results, "<EOF>"){
 					done = true
 					break
