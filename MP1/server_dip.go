@@ -19,7 +19,7 @@ var validIP [2]bool = [2]bool{true,true}
 var mutex = &sync.Mutex{}
 
 func distributedGrep(pattern string){
-	timeOut := time.Duration(10) * time.Second
+	
 
 	r, _ := regexp.Compile(pattern)
 
@@ -71,6 +71,8 @@ func distributedGrep(pattern string){
 
 func pattern_match_thread(wg *sync.WaitGroup, i int, pattern string) {
 	defer wg.Done()
+	timeOut := time.Duration(10) * time.Second
+	filename := fmt.Sprintf("machine.%d.log", i)
 
 	mutex.Lock()
 	isAlive := validIP[i]
