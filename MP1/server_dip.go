@@ -7,7 +7,6 @@ import (
 	"sync"
 	"strings"
 	"bufio"
-    "github.com/gookit/color"
     "regexp"
     "strconv"
     "bytes"
@@ -24,8 +23,8 @@ func distributedGrep(pattern string){
 
 	r, _ := regexp.Compile(pattern)
 
-	magenta := color.FgMagenta.Render
-    bold := color.OpBold.Render
+	// magenta := color.FgMagenta.Render
+ //    bold := color.OpBold.Render
 
     var wg sync.WaitGroup
     wg.Add(len(client))
@@ -54,7 +53,7 @@ func distributedGrep(pattern string){
 					idx_arr = r.FindAllStringIndex(line, -1)
 					var itest int = 0
             		for _, element := range idx_arr {
-                		fmt.Printf("%s%s", line[itest:element[0]], bold(magenta(line[element[0]:element[1]])))
+                		fmt.Printf("%s%s", line[itest:element[0]], line[element[0]:element[1]])
                 		itest = element[1]
             		}
            			fmt.Printf("%s", line[itest:])
