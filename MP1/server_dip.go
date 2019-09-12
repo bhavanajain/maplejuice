@@ -13,7 +13,7 @@ import (
     "bytes"
 )
 
-var client [2]string = [2]string{"10.193.204.136","172.16.197.192"}
+var client [2]string = [2]string{"172.22.152.106","172.22.152.102"}
 var output [2]string = [2]string{"",""}
 var validIP [2]bool = [2]bool{true,true}
 
