@@ -15,6 +15,7 @@ import (
 var client [2]string = [2]string{"172.22.152.106","172.22.154.102"}
 var output [2]string = [2]string{"",""}
 var validIP [2]bool = [2]bool{true,true}
+// dip says we wont need it
 
 var mutex = &sync.Mutex{}
 
@@ -128,9 +129,9 @@ func pattern_match_thread(wg *sync.WaitGroup, i int, pattern string) {
 				// Write the buffer in a global string
 				output[i] = ""
 				output[i] = buf.String()
-				if i== 1 {
-					//fmt.Printf("%s\n",output[i])
-				}
+				// if i== 1 {
+				// 	//fmt.Printf("%s\n",output[i])
+				// }
 				break
 			}
 			//color part will be handled by the master
@@ -147,6 +148,6 @@ func pattern_match_thread(wg *sync.WaitGroup, i int, pattern string) {
 
 
 func main() {
-	distributedGrep("dip")
+	distributedGrep("re")
 }
 
