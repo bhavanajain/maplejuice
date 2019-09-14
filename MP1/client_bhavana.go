@@ -42,11 +42,11 @@ func client() {
 				fmt.Fprintf(conn, matched_line)
 			}
 			if err != nil {
+				if err != io.EOF {
+					fmt.Printf("Unknown error while reading file %s", filename)
+				}
 				break
 			}
-		}
-		if err != io.EOF {
-			fmt.Printf("Unknown error while reading file %s", filename)
 		}
 		fmt.Fprintf(conn, "<EOF>" + "\n")
 		conn.Close()
