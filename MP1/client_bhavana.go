@@ -31,7 +31,7 @@ func client() {
 		}
 		defer file.Close()
 
-		file_reader = bufio.NewReader(file)
+		file_reader := bufio.NewReader(file)
 
 		var linenum int = 0
 		for {
