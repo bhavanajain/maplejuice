@@ -110,7 +110,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 				fmt.Printf("%s%s", line[next_start:indices[0]], bold(magenta(line[indices[0]:indices[1]])))
 				next_start = indices[1]
 			}
-			fmt.Printf("%s\n", line[next_start:])
+			fmt.Printf("%s", line[next_start:])
 
 			mutex.Unlock()
 		}
