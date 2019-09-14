@@ -38,7 +38,7 @@ func client() {
 			line, err := file_reader.ReadString('\n')
 			linenum += 1
 			if r.MatchString(line) {
-				matched_line := fmt.Sprintf("%d:%s", linenum, line)
+				matched_line := fmt.Sprintf("%d$$$$%s", linenum, line)
 				fmt.Fprintf(conn, matched_line)
 			}
 			if err != nil {

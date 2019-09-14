@@ -97,7 +97,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 				break
 			}
 
-			split_line := strings.Split(line, ":")
+			split_line := strings.Split(line, "$$$$")
 			linenum_str, line := split_line[0], split_line[1]
 			linenum, _ := strconv.Atoi(linenum_str)
 
