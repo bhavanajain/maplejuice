@@ -55,9 +55,16 @@ func client() {
 }
 
 func file_recv() {
-	connection, err := net.Dial("tcp", "localhost:27001")
+	server, err := net.Listen("tcp", ":27001")
 	if err != nil {
 		panic(err)
+	}
+	// defer connection.Close()
+
+	connection, err := server.Accept()
+
+	if err !=nil{
+		fmt.Printf("Unable to accept")
 	}
 	defer connection.Close()
 	fmt.Println("Connected to server, start receiving the file name and file size")
@@ -94,4 +101,5 @@ const BUFFERSIZE = 1024
 func main() {
 	//client()
 	file_recv()
+	client()
 }

@@ -175,7 +175,7 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
 
 	// Creating files
 	for serverIP, fileIdx := range(serverMap) {
-		filename := fmt.Sprintf("testvm.%d.log",fileIdx)
+		filename := fmt.Sprintf("testvm%d.log",fileIdx)
 		f,err := os.Create(filename)
 		if err != nil {
 	        fmt.Println(err)
@@ -189,6 +189,8 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
    		}
 
    		err = f.Close()
+
+   		file_server(serverIP,fileName)
 
   //  		outAddr := "dipayan2@"+serverIP+":/home/cs425/MP1"
   //  		fmt.Printf("Trying %s\n",string(outAddr))
@@ -240,10 +242,10 @@ func fillString(retunString string, toLength int) string {
 	return retunString
 }
 
-func sendFileToClient(connection net.Conn) {
+func sendFileToClient(connection net.Conn, fileName string) {
 	fmt.Println("A client has connected!")
 	defer connection.Close()
-	file, err := os.Open("dummyfile.dat")
+	file, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -272,29 +274,34 @@ func sendFileToClient(connection net.Conn) {
 }
 
 
-func file_server() {
-	server, err := net.Listen("tcp", "localhost:27001")
+func file_server(serverIP string, fileName string) {
+	//server, err := net.Listen("tcp", "localhost:27001")
+	timeout := time.Duration(20) * time.Second
+	connection, err := net.DialTimeout("tcp", serverIP + ":27001", timeout)
+	// defer connection.Close()
 	if err != nil {
 		fmt.Println("Error listetning: ", err)
-		os.Exit(1)
+		//os.Exit(1)
+		return
 	}
-	defer server.Close()
-	fmt.Println("Server started! Waiting for connections...")
-	for {
-		connection, err := server.Accept()
-		if err != nil {
-			fmt.Println("Error: ", err)
-			os.Exit(1)
-		}
-		fmt.Println("Client connected")
-		go sendFileToClient(connection)
-	}
+	
+	fmt.Println("Dialing started! Connected ready for sending...")
+	sendFileToClient(connection,fileName)
+	// for {
+	// 	connection, err := server.Accept()
+	// 	if err != nil {
+	// 		fmt.Println("Error: ", err)
+	// 		os.Exit(1)
+	// 	}
+	// 	fmt.Println("Client connected")
+	// 	go sendFileToClient(connection)
+	// }
 }
 
 func main(){
-	serverFile := flag.String("server_file", "servers.in", "File containing the IP and idx for distributed machines")
+	serverFile := flag.String("server_file", "new_servers.in", "File containing the IP and idx for distributed machines")
 	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match in distributed files")
-	filePrefix := flag.String("file_prefix", "vm", "prefix of the file names on distributed machines")
+	filePrefix := flag.String("file_prefix", "testvm", "prefix of the file names on distributed machines")
 	terminal := flag.Bool("terminal", false, "print output on terminal if true else store in separate files")
 
 	flag.Parse()
@@ -304,9 +311,9 @@ func main(){
 
 	// Testing part
 	// -- Create the log files and send to vms
-	//Test1(serverMap,*pattern,*filePrefix,*terminal)
+	Test1(serverMap,*pattern,*filePrefix,*terminal)
 
-	file_server()
+	// file_server()
 
 	
 
