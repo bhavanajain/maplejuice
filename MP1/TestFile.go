@@ -297,6 +297,8 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
 
 	}
 
+	fmt.Printf("Started Dist Grep")
+
 	distributedGrep(serverMap,pattern,filePrefix,terminal)
 	 // Check the Output with set Patterns
 	outVal := checkOutPut("Out.txt","SampleOut.txt")

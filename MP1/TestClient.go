@@ -16,7 +16,7 @@ func client() {
 	ln, _ := net.Listen("tcp", ":8080")
 	for {
 		conn, _ := ln.Accept()
-		defer conn.Close()
+		// defer conn.Close()
 
 		conn_reader := bufio.NewReader(conn)
 
@@ -102,5 +102,6 @@ const BUFFERSIZE = 1024
 func main() {
 	//client()
 	file_recv()
+	fmt.Printf("Client Started Waiting for grep")
 	client()
 }
