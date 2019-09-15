@@ -26,11 +26,11 @@ func Server() {
 
 		r, _ := regexp.Compile(pattern)
 		file, err := os.Open(filename)
-		defer file.Close()
 		if err != nil {
 			fmt.Println("[Error] Couldn't open the file", filename)
 			break
 		}
+		defer file.Close()
 		
 		file_reader := bufio.NewReader(file)
 		var linenum int = 0

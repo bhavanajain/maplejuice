@@ -21,11 +21,12 @@ func parseServerFile(serverFile string) map[string]int {
 	serverMap := make(map[string]int)
 
 	file, err := os.Open(serverFile)
-	defer file.Close()
 	if err != nil {
 		fmt.Println("[Error] Couldn't open the file", serverFile)
 		return serverMap
 	}
+	defer file.Close()
+
 
 	reader := bufio.NewReader(file)
 	var line string
@@ -71,12 +72,10 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 
 	conn, err := net.DialTimeout("tcp", serverIP + ":8080", timeout)
 	fmt.Println(filename, pattern)
-	
 	if err != nil {
 		fmt.Printf("[Error] Unable to connect with the client %s", serverIP)
 		return
 	}
-
 	defer conn.Close()
 
     r, _ := regexp.Compile(pattern)
