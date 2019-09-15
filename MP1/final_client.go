@@ -31,10 +31,11 @@ func parseServerFile(serverFile string) map[string]int {
 	var line string
 	for {
 		line, err = reader.ReadString('\n')
-		if (line[len(line) - 1] != '\n') {
+		fmt.Printf(line)
+		if (len(line) > 0 && line[len(line) - 1] != '\n') {
 			line = line + "\n"
 		}
-		fmt.Printf(line)
+		fmt.Printf(line, err)
 
 		line = line[:len(line)-1]
 		split_line := strings.Split(line, " ")
