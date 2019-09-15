@@ -80,6 +80,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
     r, _ := regexp.Compile(pattern)
 
 	parameters := filename + "," + pattern + "\n"
+	fmt.Println(parameters)
 	fmt.Fprintf(conn, parameters)
 
 	w := bufio.NewWriter(os.Stdout)
