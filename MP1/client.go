@@ -13,7 +13,6 @@ import (
 	"net"
 	"regexp"
 	"github.com/gookit/color"
-	"reflect"
 )
 
 var mutex = &sync.Mutex{}
@@ -102,7 +101,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 		if strings.Contains(line, "<<EOF>>") {
 			closing_list := strings.Split(line, ",")
 			num_matches, _ := strconv.Atoi(closing_list[0])
-
+			fmt.Printf("[%s] Line count: %d\n", filename, num_matches)
 			fmt.Fprintf(w, "[%s] Line count: %d\n", filename, num_matches)
 			w.Flush()
 			break
