@@ -59,7 +59,7 @@ func distributedGrep(serverMap map[string]int, pattern string, filePrefix string
 	var err error
 
 	var fout *os.File
-	if terminal == true {
+	if terminal == false {
 		fout,err = os.Create(outFile)
 		if err != nil{
 			fmt.Printf("Error in creating file")
@@ -135,6 +135,9 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 
 			if !terminal {
 					fmt.Fprintf(foutput,"%s", line[next_start:])
+					//fmt.Printf("%s", line[next_start:])
+			}else{
+
 					fmt.Printf("%s", line[next_start:])
 			}
 			// fmt.Printf("%s", line[next_start:])
@@ -189,11 +192,13 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
 
    		outAddr := serverIP+":/home/cs425/MP1"
    		fmt.Printf("Trying %s\n",string(outAddr))
-   		_, err = exec.Command("scp", string(filename), string(outAddr)).Output()
+		cmdStr := "scp "+string(filename)+" "+string(outAddr)
+   		_, err = exec.Command(string(cmdStr)).Output()
+
 
 
    		if err != nil {
-   			fmt.Printf("Something wrong with the scp")
+   			fmt.Printf("%s \n",err)
    		}
 
    		// distributedGrep(serverMap,pattern,filePrefix,terminal)
@@ -218,7 +223,7 @@ func main(){
 	flag.Parse()
 
 	serverMap := parseServerFile(*serverFile)
-	// distributedGrep(serverMap, *pattern, *filePrefix, *terminal)
+	//distributedGrep(serverMap, *pattern, *filePrefix, *terminal)
 
 	// Testing part
 	// -- Create the log files and send to vms
