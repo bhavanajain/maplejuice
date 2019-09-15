@@ -56,7 +56,7 @@ func Server() {
 		}
 		closing := fmt.Sprintf("%d,<<EOF>>\n", num_matches)
 		fmt.Fprintf(conn, closing)
-		fmt.Printf("[Info] Completed sending line matches of", pattern, "in", filename)
+		fmt.Println("[Info] Completed sending line matches of", pattern, "in", filename)
 		conn.Close()
 	}
 }
