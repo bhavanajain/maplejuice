@@ -80,11 +80,11 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 	parameters := filename + "," + pattern + "\n"
 	fmt.Fprintf(conn, parameters)
 
-	var w *Writer
+	w := bufio.NewWriter(os.Stdout)
 
 	magenta := color.FgMagenta.Render
     bold := color.OpBold.Render
-    
+
 	if visual {
     	w = bufio.NewWriter(os.Stdout)
     } else {
