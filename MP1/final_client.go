@@ -129,8 +129,8 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			fmt.Fprintf(w, "%s", line[next_start:])
 			mutex.Unlock()
 		} else {
-			//fmt.Fprintf(w, "[%s] %d: %s", filename, linenum, line)
-			fmt.Fprintf(w, "%s", filename, linenum, line)
+			fmt.Fprintf(w, "[%s] %d: %s", filename, linenum, line)
+			// fmt.Fprintf(w, "%s", filename, linenum, line)
 		}
 	}
 
