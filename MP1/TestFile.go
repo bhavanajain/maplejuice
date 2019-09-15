@@ -202,7 +202,7 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
    		// 	_, err = exec.Command("scp testvm." + strconv)
 
    		// }
-   		fmt.Printf(serverIP)
+   		// fmt.Printf(serverIP)
 
    		// command := fmt.Sprintf("scp testvm.%d.log $vm01:/home/cs425/MP1", fileIdx)
    		// _, err = exec.Command(command).Output()
@@ -285,7 +285,7 @@ func file_server(serverIP string, fileName string) {
 		return
 	}
 	
-	fmt.Println("Dialing started! Connected ready for sending...")
+	fmt.Println("\nDialing started! Connected ready for sending...")
 	sendFileToClient(connection,fileName)
 	// for {
 	// 	connection, err := server.Accept()
@@ -300,7 +300,7 @@ func file_server(serverIP string, fileName string) {
 
 func main(){
 	serverFile := flag.String("server_file", "new_servers.in", "File containing the IP and idx for distributed machines")
-	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match in distributed files")
+	pattern := flag.String("pattern", "^[0-9]*[a-zA-Z]{5}", "regexp pattern to match in distributed files")
 	filePrefix := flag.String("file_prefix", "testvm", "prefix of the file names on distributed machines")
 	terminal := flag.Bool("terminal", false, "print output on terminal if true else store in separate files")
 
