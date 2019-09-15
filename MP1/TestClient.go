@@ -7,22 +7,10 @@ import (
 	"regexp"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 	"strconv"
 )
 
-package main
-
-import (
-	"net"
-	"os"
-	"bufio"
-	"regexp"
-	"fmt"
-	"io"
-	"strings"
-)
 
 func Server() {
 	ln, _ := net.Listen("tcp", ":8080")
