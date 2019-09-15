@@ -13,6 +13,7 @@ import (
 	"net"
 	"regexp"
 	"github.com/gookit/color"
+	"reflect"
 )
 
 var mutex = &sync.Mutex{}
@@ -26,7 +27,6 @@ func parseServerFile(serverFile string) map[string]int {
 		return serverMap
 	}
 	defer file.Close()
-
 
 	reader := bufio.NewReader(file)
 	var line string
@@ -71,7 +71,6 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 	filename := fmt.Sprintf("%s%d.log", filePrefix, fileIdx)
 
 	conn, err := net.DialTimeout("tcp", serverIP + ":8080", timeout)
-	fmt.Println(filename, pattern)
 	if err != nil {
 		fmt.Println("[Error] Unable to connect with the client", serverIP)
 		return
@@ -81,14 +80,9 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
     r, _ := regexp.Compile(pattern)
 
 	parameters := filename + "," + pattern + "\n"
-	fmt.Println(parameters)
 	fmt.Fprintf(conn, parameters)
 
-	w := bufio.NewWriter(os.Stdout)
-
-	magenta := color.FgMagenta.Render
-    bold := color.OpBold.Render
-
+	var w *bufio.Writer
 	if visual {
     	w = bufio.NewWriter(os.Stdout)
     } else {
@@ -108,7 +102,6 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 		if strings.Contains(line, "<<EOF>>") {
 			closing_list := strings.Split(line, ",")
 			num_matches, _ := strconv.Atoi(closing_list[0])
-			fmt.Printf("[%s] Line count: %d\n", filename, num_matches)
 
 			fmt.Fprintf(w, "[%s] Line count: %d\n", filename, num_matches)
 			w.Flush()
@@ -120,6 +113,8 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 		linenum, _ := strconv.Atoi(linenum_str)
 
 		if (visual) {
+			magenta := color.FgMagenta.Render
+    		bold := color.OpBold.Render
 			mutex.Lock()
 			fmt.Fprintf(w, "[%s] %d: ", filename, linenum)
 			indices_grid := r.FindAllStringIndex(line, -1)
@@ -131,11 +126,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			fmt.Fprintf(w, "%s", line[next_start:])
 			mutex.Unlock()
 		} else {
-			// fmt.Fprintf(w, "[%s] %d: %s", filename, linenum, line)
-			//fmt.Fprintf(w,"%s",string(line))
-			
-			//w.WriteString(line)
-			fmt.Fprintln(w, line[:len(line)-1])
+			fmt.Fprintln(w, "%d: %s", linenum, line[:len(line)-1])
 		}
 	}
 
