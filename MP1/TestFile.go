@@ -166,6 +166,79 @@ func RandStringRunes(n int) string {
     return string(b)
 }
 
+
+func checkOutPut(file1 string, file2 string) bool {
+
+	fp1, err := os.Open(file2)
+
+	if err != nil {
+		fmt.Printf("Error opening file")
+	}
+
+	file_reader := bufio.NewReader(fp1)
+
+	var toCheckFile []string
+
+	for {
+		line , err := file_reader.ReadString('\n')
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Error Reading file !!")
+			}
+			break
+		}
+		toCheckFile := append(toCheckFile, line[:len(line)-1])
+	}
+
+	checkTest := make([]bool, len(toCheckFile))
+	for i:= 0 ; i< len(toCheckFile); i++{
+		checkTest[i] = false
+	}
+
+	fp2, err := os.Open(file1)
+
+	if err != nil {
+		fmt.Printf("Error opening file")
+	}
+
+	file_readerN := bufio.NewReader(fp2)
+
+	for{
+		line, err := file_readerN.ReadString('\n')
+		if err != nil{
+			if err != io.EOF {
+				fmt.Printf("Error reading Output")
+			}
+			break
+		}
+
+		for j:= 0; j< len(toCheckFile); j++{
+			if line[:len(line)-1] == toCheckFile[j] {
+				checkTest[j] = true
+			}
+		}
+	}
+
+	flag := 1
+
+	for j:= 0; j< len(checkTest); j++{
+		if checkTest[j] == false{
+			flag = 0
+			break
+		}
+	}
+
+	if flag == 1 {
+		return true
+	}
+
+	return false
+
+
+
+	
+}
+
 func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal bool) {
 	fmt.Printf("Inside Test")
 	// numClient = len(serverMap)
@@ -222,6 +295,13 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
 
 	distributedGrep(serverMap,pattern,filePrefix,terminal)
 	 // Check the Output with set Patterns
+	outVal := checkOutPut("Out.txt","SampleOut.txt")
+
+	if outVal {
+		fmt.Printf("Correct outPut!!")
+	} else{
+		fmt.Printf("Error !!")
+	}
 
 
 
