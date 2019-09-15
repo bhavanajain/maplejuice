@@ -89,7 +89,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
     	w = bufio.NewWriter(os.Stdout)
     } else {
     	outfile_name := fmt.Sprintf("filtered-%s%d.out", filePrefix, fileIdx)
-    	outfile, err := os.Create(outfile_name)
+    	outfile, _ := os.Create(outfile_name)
     	w = bufio.NewWriter(outfile)
     }
 
