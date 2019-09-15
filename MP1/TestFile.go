@@ -414,9 +414,9 @@ func Test2(serverMap map[string]int, pattern string, filePrefix string, terminal
 
    		//fmt.Fprintf(f,"abcdefA09856\n")
    		if fileIdx == 10 {
-   			fmt.Fprintf(f,"abcdefB09856\n")
+   			fmt.Fprintf(f,"abcdef%%2jB09856\n")
    		}else{
-   			fmt.Fprintf(f,"abcdefA09856\n")
+   			fmt.Fprintf(f,"abcde%%2jfA09856\n")
    		}
    		err = f.Close()
 
