@@ -53,6 +53,7 @@ func client() {
 		conn.Close()
 		break
 	}
+	ln.Close()
 }
 
 func file_recv() {
@@ -60,7 +61,7 @@ func file_recv() {
 	if err != nil {
 		panic(err)
 	}
-	// defer connection.Close()
+	defer connection.Close()
 
 	connection, err := server.Accept()
 
