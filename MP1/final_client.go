@@ -108,9 +108,9 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 		if strings.Contains(line, "<<EOF>>") {
 			closing_list := strings.Split(line, ",")
 			num_matches, _ := strconv.Atoi(closing_list[0])
-			// fmt.Fprintf(w, "[%s] Line count: %d\n", filename, num_matches)
 			fmt.Printf("[%s] Line count: %d\n", filename, num_matches)
 
+			fmt.Fprintf(w, "[%s] Line count: %d\n", filename, num_matches)
 			w.Flush()
 			break
 		}
@@ -133,15 +133,9 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 		} else {
 			// fmt.Fprintf(w, "[%s] %d: %s", filename, linenum, line)
 			//fmt.Fprintf(w,"%s",string(line))
-			// if strings.Contains(line, "%") {
-			// 	fmt.Println( line)
-			// 	fmt.Printf("==========================================")
-			// 	line = strings.Replace(line, "%", "%%", -1)
-			// 	fmt.Println(line)
-			// }
+			
 			//w.WriteString(line)
 			fmt.Fprintln(w, line[:len(line)-1])
-			w.Flush()
 		}
 	}
 

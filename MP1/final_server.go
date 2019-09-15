@@ -52,7 +52,7 @@ func Server() {
 				matched_line := fmt.Sprintf("%d$$$$%s", linenum, line)
 				num_matches += 1
 				fmt.Fprintln(conn, matched_line[:len(matched_line)-1])
-				fmt.Println("[Info] packet: %s", matched_line)
+				// fmt.Println("[Info] packet: %s", matched_line)
 			}
 			if err != nil {
 				if err != io.EOF {
