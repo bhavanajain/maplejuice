@@ -13,7 +13,6 @@ import (
 	"net"
 	"regexp"
 	"github.com/gookit/color"
-	"reflect"
 	"math/rand"
 )
 
@@ -152,7 +151,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			mutex.Unlock()
 		} else {
 			mutex.Lock()
-			fmt.Fprintln(foutput, "[%s] %d: %s",filename,linenum, line[:len(line)-1])
+			fmt.Fprintf(foutput, "[%s] %d: %s",filename,linenum, line)
 			mutex.Unlock()
 		}
 	}
@@ -583,7 +582,7 @@ func Test3(serverMap map[string]int, pattern string, filePrefix string, terminal
 
 
 func main(){
-	serverFile := flag.String("server_file", "servers.in", "File containing the IP and idx for distributed machines")
+	serverFile := flag.String("server_file", "server_new.in", "File containing the IP and idx for distributed machines")
 	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match in distributed files")
 	filePrefix := flag.String("file_prefix", "testvm", "prefix of the file names on distributed machines")
 	visual := flag.Bool("visual", false, "highlight the matched instances of the pattern, install the color package using `go get github.com/gookit/color'")
@@ -600,8 +599,8 @@ func main(){
 	// Testing part
 	// -- Create the log files and send to vms
 	Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut1.txt")
-	Test2(serverMap,*pattern,*filePrefix,*visual,"SampleOut2.txt")
-	Test3(serverMap,*pattern,*filePrefix,*visual,"SampleOut3.txt")
+	Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut2.txt")
+	Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut3.txt")
 
 	// file_server()
 
