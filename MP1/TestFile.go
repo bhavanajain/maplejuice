@@ -495,8 +495,8 @@ func Test3(serverMap map[string]int, pattern string, filePrefix string, terminal
    		}
    		for ln := 20; ln<1000;ln++{
    			textStr := "abcdefA09856\n"
-   			fmt.Fprintf(f,\textStr)
-   			fmt.Fprintf(sample_out,"[%s] %d: %s\n",fileName,ln+1,textStr)
+   			fmt.Fprintf(f,textStr)
+   			fmt.Fprintf(sample_out,"[%s] %d: %s\n",filename,ln+1,textStr)
    		}
 
    		err = f.Close()
