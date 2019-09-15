@@ -204,8 +204,8 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
    		// }
    		fmt.Printf(serverIP)
 
-   		command := fmt.Sprintf("scp testvm.%d.log $vm01:/home/cs425/MP1", fileIdx)
-   		_, err = exec.Command(command).Output()
+   		// command := fmt.Sprintf("scp testvm.%d.log $vm01:/home/cs425/MP1", fileIdx)
+   		// _, err = exec.Command(command).Output()
 
 
    		if err != nil {
