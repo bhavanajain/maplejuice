@@ -70,6 +70,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 	filename := fmt.Sprintf("%s%d.log", filePrefix, fileIdx)
 
 	conn, err := net.DialTimeout("tcp", serverIP + ":8080", timeout)
+	fmt.Println(filename, pattern)
 	defer conn.Close()
 	if err != nil {
 		fmt.Printf("[Error] Unable to connect with the client %s", serverIP)
