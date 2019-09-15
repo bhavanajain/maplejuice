@@ -391,7 +391,7 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
 
 
 func Test2(serverMap map[string]int, pattern string, filePrefix string, terminal bool, testFile string) {
-	fmt.Printf("Inside One Mismatch File Dist Test")
+	fmt.Printf("\n\nInside One Mismatch File Dist Test")
 	// numClient = len(serverMap)
 	rand.Seed(time.Now().UnixNano())
 	//var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
@@ -469,7 +469,7 @@ func Test2(serverMap map[string]int, pattern string, filePrefix string, terminal
 
 
 func Test3(serverMap map[string]int, pattern string, filePrefix string, terminal bool, testFile string) {
-	fmt.Printf("Inside Frequent Pattern File Dist Test")
+	fmt.Println("\nInside Frequent Pattern File Dist Test \n")
 	// numClient = len(serverMap)
 	rand.Seed(time.Now().UnixNano())
 	//var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
@@ -496,7 +496,7 @@ func Test3(serverMap map[string]int, pattern string, filePrefix string, terminal
    		for ln := 20; ln<1000;ln++{
    			textStr := "abcdefA09856\n"
    			fmt.Fprintf(f,textStr)
-   			fmt.Fprintf(sample_out,"[%s] %d: %s\n",filename,ln+1,textStr)
+   			fmt.Fprintf(sample_out,"[%s] %d: %s",filename,ln+1,textStr)
    		}
 
    		err = f.Close()
@@ -530,6 +530,8 @@ func Test3(serverMap map[string]int, pattern string, filePrefix string, terminal
 	//go patternMatch(serverIP, pattern, fileIdx, filePrefix, terminal, &wg)
 
 	}
+
+	sample_out.Close()
 
 	fmt.Printf("Started Dist Grep")
 
