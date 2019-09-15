@@ -187,10 +187,10 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
    			outPut := RandStringRunes(20)+"\n"
    			fmt.Fprintf(f,outPut)
    		}
-
+   		fmt.Fprintf(f,"abcdefA09856\n")
    		err = f.Close()
 
-   		file_server(serverIP,fileName)
+   		file_server(serverIP,filename)
 
   //  		outAddr := "dipayan2@"+serverIP+":/home/cs425/MP1"
   //  		fmt.Printf("Trying %s\n",string(outAddr))
@@ -242,10 +242,10 @@ func fillString(retunString string, toLength int) string {
 	return retunString
 }
 
-func sendFileToClient(connection net.Conn, fileName string) {
+func sendFileToClient(connection net.Conn, filename string) {
 	fmt.Println("A client has connected!")
 	defer connection.Close()
-	file, err := os.Open(fileName)
+	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println(err)
 		return
