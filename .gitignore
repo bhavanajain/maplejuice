@@ -2,3 +2,4 @@
 scratch/
 *.log
 testing_lang/
+*.sh
