@@ -34,6 +34,7 @@ func parseServerFile(serverFile string) map[string]int {
 		if (line[len(line) - 1] != '\n') {
 			line = line + "\n"
 		}
+		fmt.Printf(line)
 
 		line = line[:len(line)-1]
 		split_line := strings.Split(line, " ")
