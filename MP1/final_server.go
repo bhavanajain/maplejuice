@@ -43,7 +43,7 @@ func Server() {
 				if line[len(line) - 1] != '\n'{
 					line = line + "\n"
 				}
-				matched_line = fmt.Sprintf("%d$$$$%s", linenum, line)
+				matched_line := fmt.Sprintf("%d$$$$%s", linenum, line)
 				num_matches += 1
 				fmt.Fprintf(conn, matched_line)
 			}
@@ -54,7 +54,7 @@ func Server() {
 				break
 			}
 		}
-		closing := num_matches + "," + "<<EOF>>\n"
+		closing := fmt.Sprintf("%d,<<EOF>>\n", num_matches)
 		fmt.Fprintf(conn, closing)
 		fmt.Printf("[Info] Completed sending line matches of", pattern, "in", filename)
 		conn.Close()
