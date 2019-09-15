@@ -2,90 +2,72 @@ package main
 
 import (
 	"net"
-	"fmt"
-	"time"
-	"sync"
-	"strings"
+	"os"
 	"bufio"
-    "github.com/gookit/color"
-    "regexp"
-    "strconv"
+	"regexp"
+	"fmt"
+	"io"
+	"strings"
 )
 
-var client [2]string = [2]string{"10.193.204.136","172.16.197.192"}
-var validIP [2]bool = [2]bool{true,true}
+func Server() {
+	ln, _ := net.Listen("tcp", ":8080")
+	for {
+		conn, _ := ln.Accept()
+		fmt.Println("[Info] Accepted a new connection")		
 
-var mutex = &sync.Mutex{}
+		conn_reader := bufio.NewReader(conn)
 
-func distributedGrep(pattern string){
-	timeOut := time.Duration(10) * time.Second
+		params, _ := conn_reader.ReadString('\n')
+		params = params[:len(params)-1]
+		params_list := strings.Split(params, ",")
+		filename, pattern := params_list[0], params_list[1]
+		fmt.Println("[Info] filename: ", filename, "pattern: ", pattern)
 
-	r, _ := regexp.Compile(pattern)
-
-	magenta := color.FgMagenta.Render
-    bold := color.OpBold.Render
-
-	for i:=0; i<len(client); i++ {
-		mutex.Lock()
-		isAlive := validIP[i]
-		mutex.Unlock()
-
-		if isAlive {
-			conn, err := net.DialTimeout("tcp", client[i] + ":8080", timeOut)
-			if err != nil {
-				fmt.Printf("Error connecting with client %d: %s", i, client[i])
-				mutex.Lock()
-				validIP[i] = false
-				mutex.Unlock()
-				continue
-			}
-			for {
-
-				filename := fmt.Sprintf("machine.%d.log", i)
-				fmt.Println(filename)
-				parameters := filename + "," + pattern + "\n"
-				fmt.Fprintf(conn, parameters)
-
-				reader := bufio.NewReader(conn)
-				var done bool = false
-				var idx_arr [][]int
-				for {
-					results,_ := reader.ReadString('\n')
-					if strings.Contains(results, "<EOF>"){
-						done = true
-						break
-					}
-					split_results := strings.Split(results, ":")
-					linenum_str, line := split_results[0], split_results[1]
-					linenum, _ := strconv.Atoi(linenum_str)
-
-					fmt.Printf("%d:", linenum)
-					idx_arr = r.FindAllStringIndex(line, -1)
-					var i int = 0
-            		for _, element := range idx_arr {
-                		fmt.Printf("%s%s", line[i:element[0]], bold(magenta(line[element[0]:element[1]])))
-                		i = element[1]
-            		}
-           			fmt.Printf("%s", line[i:])
-
-				}
-				if done {
-					break
-				}
-				//color part will be handled by the master
-			}
+		r, err := regexp.Compile(pattern)
+		if err != nil {
+			fmt.Println("[Error] regexp cannot compile the pattern")
 			conn.Close()
+			continue
 		}
-
+		file, err := os.Open(filename)
+		if err != nil {
+			fmt.Println("[Error] Couldn't open the file", filename)
+			conn.Close()
+			continue
+		}
+		defer file.Close()
+		
+		file_reader := bufio.NewReader(file)
+		var linenum int = 0
+		var num_matches int = 0
+		
+		for {
+			line, err := file_reader.ReadString('\n')
+			linenum += 1
+			if len(line) > 0 && r.MatchString(line) {
+				if line[len(line) - 1] != '\n'{
+					line = line + "\n"
+				}
+				matched_line := fmt.Sprintf("%d$$$$%s", linenum, line)
+				num_matches += 1
+				fmt.Fprintln(conn, matched_line[:len(matched_line)-1])
+				// fmt.Println("[Info] packet: %s", matched_line)
+			}
+			if err != nil {
+				if err != io.EOF {
+					fmt.Println("[Error] Unknown error while reading file", filename)
+				}
+				break
+			}
+		}
+		closing := fmt.Sprintf("%d,<<EOF>>\n", num_matches)
+		fmt.Fprintf(conn, closing)
+		fmt.Println("[Info] Completed sending line matches of", pattern, "in", filename)
+		conn.Close()
 	}
-
 }
-
-
-
-
 
 func main() {
-	distributedGrep("te")
+	Server()
 }
-
