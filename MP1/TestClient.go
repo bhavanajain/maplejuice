@@ -99,9 +99,18 @@ func file_recv() {
 }
 const BUFFERSIZE = 1024
 
-func main() {
-	//client()
+
+func Test1() {
+	fmt.Printf("Test1")
 	file_recv()
 	fmt.Printf("Client Started Waiting for grep")
 	client()
+}
+
+
+func main() {
+	//client()
+	Test1()
+	Test1()
+	Test1()
 }

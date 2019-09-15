@@ -239,80 +239,7 @@ func checkOutPut(file1 string, file2 string) bool {
 	
 }
 
-func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal bool) {
-	fmt.Printf("Inside Test")
-	// numClient = len(serverMap)
-	rand.Seed(time.Now().UnixNano())
-	//var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
 
-
-	// Creating files
-	for serverIP, fileIdx := range(serverMap) {
-		filename := fmt.Sprintf("testvm%d.log",fileIdx)
-		f,err := os.Create(filename)
-		if err != nil {
-	        fmt.Println(err)
-	        f.Close()
-	        continue
-   		}
-
-   		for ln := 0;ln<20;ln++ {
-   			outPut := RandStringRunes(20)+"\n"
-   			fmt.Fprintf(f,outPut)
-   		}
-   		if fileIdx == 10 {
-   			fmt.Fprintf(f,"abcdefB09856\n")
-   		}else{
-   			fmt.Fprintf(f,"abcdefA09856\n")
-   		}
-   		err = f.Close()
-
-   		file_server(serverIP,filename)
-
-  //  		outAddr := "dipayan2@"+serverIP+":/home/cs425/MP1"
-  //  		fmt.Printf("Trying %s\n",string(outAddr))
-		// cmdStr := "scp "+string(filename)+" "+string(outAddr)
-  //  		_, err = exec.Command(string(cmdStr)).Output()
-
-   		// for o := 1; o <= 10; o++ {
-   		// 	command := fmt.Sprintf("")
-   		// 	_, err = exec.Command("scp testvm." + strconv)
-
-   		// }
-   		// fmt.Printf(serverIP)
-
-   		// command := fmt.Sprintf("scp testvm.%d.log $vm01:/home/cs425/MP1", fileIdx)
-   		// _, err = exec.Command(command).Output()
-
-
-   		if err != nil {
-   			fmt.Printf("%s \n",err)
-   		}
-
-   		// distributedGrep(serverMap,pattern,filePrefix,terminal)
-
-   		// Match the outPut file
-
-	//go patternMatch(serverIP, pattern, fileIdx, filePrefix, terminal, &wg)
-
-	}
-
-	fmt.Printf("Started Dist Grep")
-
-	distributedGrep(serverMap,pattern,filePrefix,terminal)
-	 // Check the Output with set Patterns
-	outVal := checkOutPut("Out.txt","SampleOut.txt")
-
-	if outVal {
-		fmt.Printf("Correct outPut!!")
-	} else{
-		fmt.Printf("Error !!")
-	}
-
-
-
-	
-}
 
 const BUFFERSIZE = 1024
 
@@ -384,6 +311,244 @@ func file_server(serverIP string, fileName string) {
 	// }
 }
 
+
+func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal bool, testFile string) {
+	fmt.Printf("Inside Basic Dist Test")
+	// numClient = len(serverMap)
+	rand.Seed(time.Now().UnixNano())
+	//var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
+
+
+	// Creating files
+	for serverIP, fileIdx := range(serverMap) {
+		filename := fmt.Sprintf("testvm%d.log",fileIdx)
+		f,err := os.Create(filename)
+		if err != nil {
+	        fmt.Println(err)
+	        f.Close()
+	        continue
+   		}
+
+   		for ln := 0;ln<20;ln++ {
+   			outPut := RandStringRunes(20)+"\n"
+   			fmt.Fprintf(f,outPut)
+   		}
+
+   		fmt.Fprintf(f,"abcdefA09856\n")
+   		// if fileIdx == 10 {
+   		// 	fmt.Fprintf(f,"abcdefB09856\n")
+   		// }else{
+   		// 	fmt.Fprintf(f,"abcdefA09856\n")
+   		// }
+   		err = f.Close()
+
+   		file_server(serverIP,filename)
+
+  //  		outAddr := "dipayan2@"+serverIP+":/home/cs425/MP1"
+  //  		fmt.Printf("Trying %s\n",string(outAddr))
+		// cmdStr := "scp "+string(filename)+" "+string(outAddr)
+  //  		_, err = exec.Command(string(cmdStr)).Output()
+
+   		// for o := 1; o <= 10; o++ {
+   		// 	command := fmt.Sprintf("")
+   		// 	_, err = exec.Command("scp testvm." + strconv)
+
+   		// }
+   		// fmt.Printf(serverIP)
+
+   		// command := fmt.Sprintf("scp testvm.%d.log $vm01:/home/cs425/MP1", fileIdx)
+   		// _, err = exec.Command(command).Output()
+
+
+   		if err != nil {
+   			fmt.Printf("%s \n",err)
+   		}
+
+   		// distributedGrep(serverMap,pattern,filePrefix,terminal)
+
+   		// Match the outPut file
+
+	//go patternMatch(serverIP, pattern, fileIdx, filePrefix, terminal, &wg)
+
+	}
+
+	fmt.Printf("Started Dist Grep")
+
+	distributedGrep(serverMap,pattern,filePrefix,terminal)
+	 // Check the Output with set Patterns
+	outVal := checkOutPut("Out.txt",testFile)
+
+	if outVal {
+		fmt.Printf("\nCorrect outPut!!")
+	} else{
+		fmt.Printf("\nError !!")
+	}
+
+
+
+	
+}
+
+
+func Test2(serverMap map[string]int, pattern string, filePrefix string, terminal bool, testFile string) {
+	fmt.Printf("Inside One Mismatch File Dist Test")
+	// numClient = len(serverMap)
+	rand.Seed(time.Now().UnixNano())
+	//var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
+
+
+	// Creating files
+	for serverIP, fileIdx := range(serverMap) {
+		filename := fmt.Sprintf("testvm%d.log",fileIdx)
+		f,err := os.Create(filename)
+		if err != nil {
+	        fmt.Println(err)
+	        f.Close()
+	        continue
+   		}
+
+   		for ln := 0;ln<20;ln++ {
+   			outPut := RandStringRunes(20)+"\n"
+   			fmt.Fprintf(f,outPut)
+   		}
+
+   		//fmt.Fprintf(f,"abcdefA09856\n")
+   		if fileIdx == 10 {
+   			fmt.Fprintf(f,"abcdefB09856\n")
+   		}else{
+   			fmt.Fprintf(f,"abcdefA09856\n")
+   		}
+   		err = f.Close()
+
+   		file_server(serverIP,filename)
+
+  //  		outAddr := "dipayan2@"+serverIP+":/home/cs425/MP1"
+  //  		fmt.Printf("Trying %s\n",string(outAddr))
+		// cmdStr := "scp "+string(filename)+" "+string(outAddr)
+  //  		_, err = exec.Command(string(cmdStr)).Output()
+
+   		// for o := 1; o <= 10; o++ {
+   		// 	command := fmt.Sprintf("")
+   		// 	_, err = exec.Command("scp testvm." + strconv)
+
+   		// }
+   		// fmt.Printf(serverIP)
+
+   		// command := fmt.Sprintf("scp testvm.%d.log $vm01:/home/cs425/MP1", fileIdx)
+   		// _, err = exec.Command(command).Output()
+
+
+   		if err != nil {
+   			fmt.Printf("%s \n",err)
+   		}
+
+   		// distributedGrep(serverMap,pattern,filePrefix,terminal)
+
+   		// Match the outPut file
+
+	//go patternMatch(serverIP, pattern, fileIdx, filePrefix, terminal, &wg)
+
+	}
+
+	fmt.Printf("Started Dist Grep")
+
+	distributedGrep(serverMap,pattern,filePrefix,terminal)
+	 // Check the Output with set Patterns
+	outVal := checkOutPut("Out.txt",testFile)
+
+	if outVal {
+		fmt.Printf("\nCorrect outPut!!")
+	} else{
+		fmt.Printf("\n Error !!")
+	}
+
+
+
+	
+}
+
+
+func Test3(serverMap map[string]int, pattern string, filePrefix string, terminal bool, testFile string) {
+	fmt.Printf("Inside Frequent Pattern File Dist Test")
+	// numClient = len(serverMap)
+	rand.Seed(time.Now().UnixNano())
+	//var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
+	sample_out,err := os.Create(testFile)
+	if err != nil {
+	        fmt.Println("Sample File Not created!!")
+	        sample_out.Close()
+   		}
+
+	// Creating files
+	for serverIP, fileIdx := range(serverMap) {
+		filename := fmt.Sprintf("testvm%d.log",fileIdx)
+		f,err := os.Create(filename)
+		if err != nil {
+	        fmt.Println(err)
+	        f.Close()
+	        continue
+   		}
+
+   		for ln := 0;ln<20;ln++ {
+   			outPut := RandStringRunes(20)+"\n"
+   			fmt.Fprintf(f,outPut)
+   		}
+   		for ln := 20; ln<1000;ln++{
+   			textStr := "abcdefA09856\n"
+   			fmt.Fprintf(f,\textStr)
+   			fmt.Fprintf(sample_out,"[%s] %d: %s\n",fileName,ln+1,textStr)
+   		}
+
+   		err = f.Close()
+
+   		file_server(serverIP,filename)
+
+  //  		outAddr := "dipayan2@"+serverIP+":/home/cs425/MP1"
+  //  		fmt.Printf("Trying %s\n",string(outAddr))
+		// cmdStr := "scp "+string(filename)+" "+string(outAddr)
+  //  		_, err = exec.Command(string(cmdStr)).Output()
+
+   		// for o := 1; o <= 10; o++ {
+   		// 	command := fmt.Sprintf("")
+   		// 	_, err = exec.Command("scp testvm." + strconv)
+
+   		// }
+   		// fmt.Printf(serverIP)
+
+   		// command := fmt.Sprintf("scp testvm.%d.log $vm01:/home/cs425/MP1", fileIdx)
+   		// _, err = exec.Command(command).Output()
+
+
+   		if err != nil {
+   			fmt.Printf("%s \n",err)
+   		}
+
+   		// distributedGrep(serverMap,pattern,filePrefix,terminal)
+
+   		// Match the outPut file
+
+	//go patternMatch(serverIP, pattern, fileIdx, filePrefix, terminal, &wg)
+
+	}
+
+	fmt.Printf("Started Dist Grep")
+
+	distributedGrep(serverMap,pattern,filePrefix,terminal)
+	 // Check the Output with set Patterns
+	outVal := checkOutPut("Out.txt",testFile)
+
+	if outVal {
+		fmt.Printf("\nCorrect outPut!!")
+	} else{
+		fmt.Printf("\n Error !!")
+	}
+
+
+
+	
+}
+
+
 func main(){
 	serverFile := flag.String("server_file", "new_servers.in", "File containing the IP and idx for distributed machines")
 	pattern := flag.String("pattern", "^[0-9]*[a-zA-Z]{5}", "regexp pattern to match in distributed files")
@@ -397,7 +562,9 @@ func main(){
 
 	// Testing part
 	// -- Create the log files and send to vms
-	Test1(serverMap,*pattern,*filePrefix,*terminal)
+	Test1(serverMap,*pattern,*filePrefix,*terminal,"SampleOut.txt")
+	Test2(serverMap,*pattern,*filePrefix,*terminal,"SampleOut.txt")
+	Test3(serverMap,*pattern,*filePrefix,*terminal,"SampleOutFreq.txt")
 
 	// file_server()
 
