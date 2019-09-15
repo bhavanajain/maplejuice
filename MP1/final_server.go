@@ -51,7 +51,7 @@ func Server() {
 					fmt.Printf("======================\n")
 					fmt.Printf(matched_line)
 				}
-				//fmt.Printf("[Info] packet: %s", matched_line)
+				fmt.Printf("[Info] packet: %s", matched_line)
 			}
 			if err != nil {
 				if err != io.EOF {
