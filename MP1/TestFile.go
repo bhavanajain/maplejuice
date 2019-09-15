@@ -14,7 +14,7 @@ import (
 	"net"
 	"regexp"
 	// "github.com/gookit/color"
-	"os/exec"
+	// "os/exec"
 	"math/rand"
 )
 
