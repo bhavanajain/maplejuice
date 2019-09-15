@@ -48,6 +48,8 @@ func Server() {
 				fmt.Fprintf(conn, matched_line)
 				if strings.Contains(matched_line, "%") {
 					fmt.Println(matched_line)
+					fmt.Printf("======================\n")
+					fmt.Printf(matched_line)
 				}
 				//fmt.Printf("[Info] packet: %s", matched_line)
 			}
