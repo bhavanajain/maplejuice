@@ -39,7 +39,7 @@ func Server() {
 		for {
 			line, err := file_reader.ReadString('\n')
 			linenum += 1
-			if r.MatchString(line) {
+			if len(line) > 0 && r.MatchString(line) {
 				if line[len(line) - 1] != '\n'{
 					line = line + "\n"
 				}
