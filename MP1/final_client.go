@@ -80,14 +80,15 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 	parameters := filename + "," + pattern + "\n"
 	fmt.Fprintf(conn, parameters)
 
+	var w *Writer
 	if visual {
-    	w := bufio.NewWriter(os.Stdout)
+    	w = bufio.NewWriter(os.Stdout)
     	magenta := color.FgMagenta.Render
     	bold := color.OpBold.Render
     } else {
     	outfile_name := fmt.Sprintf("filtered-%s%d.out", filePrefix, fileIdx)
     	outfile, err := os.Create(outfile_name)
-    	w := bufio.NewWriter(outfile)
+    	w = bufio.NewWriter(outfile)
     }
 
 	reader := bufio.NewReader(conn)
@@ -99,8 +100,8 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			break
 		}
 		if strings.Contains(line, "<<EOF>>") {
-			closing_list = strings.Split(line, ",")
-			num_matches = strconv.Atoi(closing_list[0])
+			closing_list := strings.Split(line, ",")
+			num_matches, _ := strconv.Atoi(closing_list[0])
 			fmt.Fprintf(w, "[%s] Line count: %s", filename, num_matches)
 			break
 		}
