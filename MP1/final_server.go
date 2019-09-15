@@ -50,7 +50,7 @@ func Server() {
 			}
 			if err != nil {
 				if err != io.EOF {
-					fmt.Printf("[Error] Unknown error while reading file", filename)
+					fmt.Println("[Error] Unknown error while reading file", filename)
 				}
 				break
 			}

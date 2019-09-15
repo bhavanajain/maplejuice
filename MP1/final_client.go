@@ -43,7 +43,7 @@ func parseServerFile(serverFile string) map[string]int {
 
 		if err != nil {
 			if err != io.EOF {
-				fmt.Printf("[Error] Unknown error while reading file", serverFile)
+				fmt.Println("[Error] Unknown error while reading file", serverFile)
 			}
 			break
 		}		
@@ -73,7 +73,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 	conn, err := net.DialTimeout("tcp", serverIP + ":8080", timeout)
 	fmt.Println(filename, pattern)
 	if err != nil {
-		fmt.Printf("[Error] Unable to connect with the client %s", serverIP)
+		fmt.Println("[Error] Unable to connect with the client", serverIP)
 		return
 	}
 	defer conn.Close()
@@ -102,7 +102,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
-			fmt.Printf("[Error] Server %s has crashed", serverIP)
+			fmt.Printf("[Error] Server %s has crashed\n", serverIP)
 			break
 		}
 		if strings.Contains(line, "<<EOF>>") {
