@@ -187,7 +187,7 @@ func checkOutPut(file1 string, file2 string) bool {
 			}
 			break
 		}
-		toCheckFile := append(toCheckFile, line[:len(line)-1])
+		toCheckFile = append(toCheckFile, line[:len(line)-1])
 	}
 
 	checkTest := make([]bool, len(toCheckFile))
