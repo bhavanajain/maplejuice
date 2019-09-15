@@ -136,7 +136,7 @@ func main(){
 	serverFile := flag.String("server_file", "servers.in", "File containing the IP and idx for distributed machines")
 	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match in distributed files")
 	filePrefix := flag.String("file_prefix", "vm", "prefix of the file names on distributed machines")
-	visual := flag.Bool("visual", true, "highlight the matched instances of the pattern, install the color package using `go get github.com/gookit/color'")
+	visual := flag.Bool("visual", false, "highlight the matched instances of the pattern, install the color package using `go get github.com/gookit/color'")
 	
 	flag.Parse()
 
