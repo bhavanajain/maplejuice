@@ -12,11 +12,23 @@ import (
 	"strconv"
 )
 
-func client() {
+package main
+
+import (
+	"net"
+	"os"
+	"bufio"
+	"regexp"
+	"fmt"
+	"io"
+	"strings"
+)
+
+func Server() {
 	ln, _ := net.Listen("tcp", ":8080")
 	for {
 		conn, _ := ln.Accept()
-		// defer conn.Close()
+		fmt.Println("[Info] Accepted a new connection")		
 
 		conn_reader := bufio.NewReader(conn)
 
@@ -24,38 +36,53 @@ func client() {
 		params = params[:len(params)-1]
 		params_list := strings.Split(params, ",")
 		filename, pattern := params_list[0], params_list[1]
+		fmt.Println("[Info] filename: ", filename, "pattern: ", pattern)
 
-		r, _ := regexp.Compile(pattern)
+		r, err := regexp.Compile(pattern)
+		if err != nil {
+			fmt.Println("[Error] regexp cannot compile the pattern")
+			conn.Close()
+			continue
+		}
 		file, err := os.Open(filename)
 		if err != nil {
-			log.Fatal("Error: Couldn't access the file\n")
+			fmt.Println("[Error] Couldn't open the file", filename)
+			conn.Close()
+			continue
 		}
 		defer file.Close()
-
+		
 		file_reader := bufio.NewReader(file)
-
 		var linenum int = 0
+		var num_matches int = 0
+		
 		for {
 			line, err := file_reader.ReadString('\n')
 			linenum += 1
-			if r.MatchString(line) {
+			if len(line) > 0 && r.MatchString(line) {
+				if line[len(line) - 1] != '\n'{
+					line = line + "\n"
+				}
 				matched_line := fmt.Sprintf("%d$$$$%s", linenum, line)
-				fmt.Fprintf(conn, matched_line)
+				num_matches += 1
+				fmt.Fprintln(conn, matched_line[:len(matched_line)-1])
+				// fmt.Println("[Info] packet: %s", matched_line)
 			}
 			if err != nil {
 				if err != io.EOF {
-					fmt.Printf("Unknown error while reading file %s", filename)
+					fmt.Println("[Error] Unknown error while reading file", filename)
 				}
 				break
 			}
 		}
-		fmt.Fprintf(conn, "<EOF>" + "\n")
+		closing := fmt.Sprintf("%d,<<EOF>>\n", num_matches)
+		fmt.Fprintf(conn, closing)
+		fmt.Println("[Info] Completed sending line matches of", pattern, "in", filename)
 		conn.Close()
 		break
 	}
 	ln.Close()
 }
-
 func file_recv() {
 	server, err := net.Listen("tcp", ":27001")
 	if err != nil {
@@ -97,6 +124,7 @@ func file_recv() {
 		receivedBytes += BUFFERSIZE
 	}
 	fmt.Println("Received file completely!")
+	return
 }
 const BUFFERSIZE = 1024
 
@@ -105,7 +133,7 @@ func Test1() {
 	fmt.Printf("Test1")
 	file_recv()
 	fmt.Printf("Client Started Waiting for grep")
-	client()
+	Server()
 }
 
 
