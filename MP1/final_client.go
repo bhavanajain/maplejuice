@@ -142,5 +142,8 @@ func main(){
 	flag.Parse()
 
 	serverMap := parseServerFile(*serverFile)
+	for ip, idx := range(serverMap) {
+		fmt.Println(ip, idx)
+	}
 	distributedGrep(serverMap, *pattern, *filePrefix, *visual)
 }
