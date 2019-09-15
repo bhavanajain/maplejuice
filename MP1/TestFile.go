@@ -260,7 +260,11 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
    			outPut := RandStringRunes(20)+"\n"
    			fmt.Fprintf(f,outPut)
    		}
-   		fmt.Fprintf(f,"abcdefA09856\n")
+   		if fileIdx == 10 {
+   			fmt.Fprintf(f,"abcdefB09856\n")
+   		}else{
+   			fmt.Fprintf(f,"abcdefA09856\n")
+   		}
    		err = f.Close()
 
    		file_server(serverIP,filename)
