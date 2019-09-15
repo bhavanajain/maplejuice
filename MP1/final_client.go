@@ -132,7 +132,16 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			mutex.Unlock()
 		} else {
 			// fmt.Fprintf(w, "[%s] %d: %s", filename, linenum, line)
-			fmt.Fprintf(w, line)
+			//fmt.Fprintf(w,"%s",string(line))
+			if strings.Contains(line, "%") {
+				fmt.Println( line)
+				fmt.Printf("==========================================")
+				line = strings.Replace(line, "%", "%%", -1)
+				fmt.Println(line)
+			}
+			//w.WriteString(line)
+			fmt.Fprintln(w,line[:len(line)-1])
+			w.Flush()
 		}
 	}
 
