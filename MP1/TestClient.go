@@ -51,6 +51,7 @@ func client() {
 		}
 		fmt.Fprintf(conn, "<EOF>" + "\n")
 		conn.Close()
+		break
 	}
 }
 
