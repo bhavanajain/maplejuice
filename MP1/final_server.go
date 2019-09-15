@@ -24,11 +24,17 @@ func Server() {
 		filename, pattern := params_list[0], params_list[1]
 		fmt.Println("[Info] filename: ", filename, "pattern: ", pattern)
 
-		r, _ := regexp.Compile(pattern)
+		r, err := regexp.Compile(pattern)
+		if err != nil {
+			fmt.Println("[Error] regexp cannot compile the pattern")
+			conn.Close()
+			continue
+		}
 		file, err := os.Open(filename)
 		if err != nil {
 			fmt.Println("[Error] Couldn't open the file", filename)
-			break
+			conn.Close()
+			continue
 		}
 		defer file.Close()
 		
@@ -46,12 +52,7 @@ func Server() {
 				matched_line := fmt.Sprintf("%d$$$$%s", linenum, line)
 				num_matches += 1
 				fmt.Fprintln(conn, matched_line[:len(matched_line)-1])
-				if strings.Contains(matched_line, "%") {
-					fmt.Println(matched_line)
-					fmt.Printf("======================\n")
-					fmt.Printf(matched_line)
-				}
-				fmt.Printf("[Info] packet: %s", matched_line)
+				fmt.Println("[Info] packet: %s", matched_line)
 			}
 			if err != nil {
 				if err != io.EOF {
