@@ -61,7 +61,7 @@ func file_recv() {
 	if err != nil {
 		panic(err)
 	}
-	defer connection.Close()
+	defer server.Close()
 
 	connection, err := server.Accept()
 
