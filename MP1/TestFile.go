@@ -18,6 +18,41 @@ import (
 
 var mutex = &sync.Mutex{}
 
+// func parseServerFile(serverFile string) map[string]int {
+// 	serverMap := make(map[string]int)
+
+// 	file, err := os.Open(serverFile)
+// 	if err != nil {
+// 		fmt.Println("[Error] Couldn't open the file", serverFile)
+// 		return serverMap
+// 	}
+// 	defer file.Close()
+
+
+// 	reader := bufio.NewReader(file)
+// 	var line string
+// 	for {
+// 		line, err = reader.ReadString('\n')
+// 		if len(line) > 0 {
+// 			if line[len(line)-1] != '\n' {
+// 				line = line + "\n"
+// 			}
+// 			line = line[:len(line)-1]
+// 			split_line := strings.Split(line, " ")
+// 			serverMap[split_line[0]], _ = strconv.Atoi(split_line[1])
+// 		}		
+
+// 		if err != nil {
+// 			if err != io.EOF {
+// 				fmt.Println("[Error] Unknown error while reading file", serverFile)
+// 			}
+// 			break
+// 		}		
+// 	}
+
+// 	return serverMap
+// }
+
 func parseServerFile(serverFile string) map[string]int {
 	serverMap := make(map[string]int)
 
@@ -27,7 +62,6 @@ func parseServerFile(serverFile string) map[string]int {
 		return serverMap
 	}
 	defer file.Close()
-
 
 	reader := bufio.NewReader(file)
 	var line string
@@ -67,7 +101,6 @@ func distributedGrep(serverMap map[string]int, pattern string, filePrefix string
 		if err != nil{
 			fmt.Printf("Error in creating file")
 		}
-
 	}
 
 	for serverIP, fileIdx := range(serverMap) {
@@ -75,6 +108,7 @@ func distributedGrep(serverMap map[string]int, pattern string, filePrefix string
 	}
 
 	wg.Wait()
+	fout.Close()
 }
 
 // func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, visual bool) {
@@ -327,9 +361,9 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
 	//var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
 	sample_out,err := os.Create(testFile)
 	if err != nil {
-	        fmt.Println("Sample File Not created!!")
-	        sample_out.Close()
-   		}
+        fmt.Println("Sample File Not created!!")
+        sample_out.Close()
+	}
 
 	// Creating files
 	for serverIP, fileIdx := range(serverMap) {
@@ -590,6 +624,7 @@ func main(){
 	flag.Parse()
 
 	serverMap := parseServerFile(*serverFile)
+	fmt.Printf("Printing serverMap\n")
 	for ip, idx := range(serverMap) {
 		fmt.Println(ip, idx)
 	}

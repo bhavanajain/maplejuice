@@ -69,7 +69,7 @@ func Server() {
 		conn.Close()
 		break
 	}
-	ln.Close()
+	// ln.Close()
 }
 func file_recv() {
 	server, err := net.Listen("tcp", ":27001")
