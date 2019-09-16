@@ -53,19 +53,19 @@ func parseServerFile(serverFile string) map[string]int {
 	return serverMap
 }
 
-func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, visual bool) {
+func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, visual bool, fout *os.File) {
 	var wg sync.WaitGroup
 	num_servers := len(serverMap)
 	wg.Add(num_servers)
 
 	for serverIP, fileIdx := range(serverMap) {
-		go patternMatch(serverIP, pattern, fileIdx, filePrefix, visual, &wg)
+		go patternMatch(serverIP, pattern, fileIdx, filePrefix, visual, fout, &wg)
 	}
 
 	wg.Wait()
 }
 
-func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix string, visual bool, wg *sync.WaitGroup) {
+func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix string, visual bool, fout *os.File, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	timeout := time.Duration(20) * time.Second
@@ -127,7 +127,9 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			fmt.Fprintf(w, "%s", line[next_start:])
 			mutex.Unlock()
 		} else {
-			fmt.Fprintln(w, "%d: %s", linenum, line[:len(line)-1])
+			mutex.Lock()
+			fmt.Fprintln(fout, "[%s] %d: %s", filename, linenum, line[:len(line)-1])
+			mutex.Unlock()
 		}
 	}
 
@@ -191,6 +193,68 @@ func SendFile(serverIP string, filename string) {
 
 }
 
+func CheckOutput(file1 string, file2 string) bool {
+	fp1, err := os.Open(file2)
+	if err != nil {
+		fmt.Printf("Error opening file")
+	}
+
+	file_reader := bufio.NewReader(fp1)
+
+	var toCheckFile []string
+
+	for {
+		line , err := file_reader.ReadString('\n')
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("Error Reading file !!")
+			}
+			break
+		}
+		toCheckFile = append(toCheckFile, line[:len(line)-1])
+	}
+
+	checkTest := make([]bool, len(toCheckFile))
+	for i:= 0 ; i< len(toCheckFile); i++{
+		checkTest[i] = false
+	}
+
+	fp2, err := os.Open(file1)
+
+	if err != nil {
+		fmt.Printf("Error opening file")
+	}
+
+	file_readerN := bufio.NewReader(fp2)
+
+	for{
+		line, err := file_readerN.ReadString('\n')
+		if err != nil{
+			if err != io.EOF {
+				fmt.Printf("Error reading Output")
+			}
+			break
+		}
+
+		for j:= 0; j< len(toCheckFile); j++{
+			if line[:len(line)-1] == toCheckFile[j] {
+				checkTest[j] = true
+			}
+		}
+	}
+
+	flag := 1
+
+	for j:= 0; j< len(checkTest); j++{
+		if checkTest[j] == false{
+			flag = 0
+			break
+		}
+	}
+
+	return (flag != 0)
+}
+
 func main(){
 	serverFile := flag.String("server_file", "servers.in", "path to the file containing server IPs and index")
 	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match")
@@ -206,11 +270,25 @@ func main(){
 
 	rand.Seed(time.Now().UnixNano())
 
-	expectedOutput, err := os.Create("expected.out")
+	expectedOutput_freq, err := os.Create("expected_freq.out")
 	if err != nil {
-		fmt.Printf("[Test Client] Couldn't create expected file\n")
+		fmt.Printf("[Test Client] Couldn't create expected frequent file\n")
 		return
 	}
+	expectedOutput_mod, err := os.Create("expected_mod.out")
+	if err != nil {
+		fmt.Printf("[Test Client] Couldn't create expected moderate file\n")
+		return
+	}
+	expectedOutput_inf, err := os.Create("expected_inf.out")
+	if err != nil {
+		fmt.Printf("[Test Client] Couldn't create expected infrequent file\n")
+		return
+	}
+
+	frequent := "abcde"
+	infrequent := "qwerty"
+	moderate := "12345"
 
 	for serverIP, fileIdx := range(serverMap) {
 		filename := fmt.Sprintf("testvm%d.log", fileIdx)
@@ -220,22 +298,56 @@ func main(){
 			return
 		}
 
-		for ln:=0; ln<20; ln++ {
-   			output := "7365645723827856" + "\n"
+		for ln:=0; ln<1000; ln++ {
+			val: = rand.Intn(1000)
+			var output string
+			if val < 700 {
+				output = frequent + "\n"
+				fmt.Fprintf(expectedOutput_freq,"[%s] %d: %s", filename, ln+1, output)
+			} else if val < 900{
+				output = moderate + "\n"
+				fmt.Fprintf(expectedOutput_mod,"[%s] %d: %s", filename, ln+1, output)
+			} else{
+				output = infrequent + "\n"
+				fmt.Fprintf(expectedOutput_inf,"[%s] %d: %s", filename, ln+1, output)
+			}
    			fmt.Fprintf(f, output)
    		}
-   		for ln:=20; ln<21; ln++{
-   			textStr := "abcdefA09856\n"
-   			fmt.Fprintf(f, textStr)
-   			fmt.Fprintf(expectedOutput,"[%s] %d: %s", filename, ln+1, textStr)
-   		}
+   		
    		fmt.Printf("[Test Client] Created file for %s %d\n", serverIP, fileIdx)
    		f.Close()
 
    		SendFile(serverIP, filename)
 	}
 
-	expectedOutput.Close()
+	expectedOutput_freq.Close()
+	expectedOutput_mod.Close()
+	expectedOutput_inf.Close()
 
-	distributedGrep(serverMap, *pattern, *filePrefix, *visual)
+	freq_results, _ := os.Create("freq_results.out")
+	mod_results, _ := os.Create("mod_results.out")
+	inf_results, _ := os.Create("inf_results.out")
+
+	distributedGrep(serverMap, frequent, *filePrefix, *visual, freq_results)
+	distributedGrep(serverMap, moderate, *filePrefix, *visual, mod_results)
+	distributedGrep(serverMap, infrequent, *filePrefix, *visual, inf_results)
+
+	if CheckOutput("freq_results.out", "expectedOutput_freq.out") {
+		fmt.Printf("[Test Passed] Frequent pattern matched")
+	} else {
+		fmt.Printf("[Test Failed] Frequent pattern does not match")
+	}
+
+	if CheckOutput("inf_results.out", "expectedOutput_inf.out") {
+		fmt.Printf("[Test Passed] Infrequent pattern matched")
+	} else {
+		fmt.Printf("[Test Failed] Infrequent pattern does not match")
+	}
+
+	if CheckOutput("mod_results.out", "expectedOutput_mod.out") {
+		fmt.Printf("[Test Passed] Moderate pattern matched")
+	} else {
+		fmt.Printf("[Test Failed] Moderate pattern does not match")
+	}	
+
 }
