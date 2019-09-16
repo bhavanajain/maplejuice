@@ -110,6 +110,13 @@ func ReceiveFile() {
 }
 
 func main() {
+	var wg sync.WaitGroup
+	wg.Add(2)
+
 	go ReceiveFile()
 	go Server()
+
+	wg.Wait()
+	
+
 }
