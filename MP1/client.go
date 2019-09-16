@@ -133,10 +133,11 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 }
 
 func main(){
-	serverFile := flag.String("server_file", "servers.in", "File containing the IP and idx for distributed machines")
-	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match in distributed files")
-	filePrefix := flag.String("file_prefix", "vm", "prefix of the file names on distributed machines")
-	visual := flag.Bool("visual", false, "highlight the matched instances of the pattern, install the color package using `go get github.com/gookit/color'")
+	serverFile := flag.String("server_file", "servers.in", "path to the file containing server IPs and index")
+	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match")
+	filePrefix := flag.String("file_prefix", "vm", "prefix of the files before <i>.log")
+	visual := flag.Bool("visual", false, "boolean flag, when set, prints annotated matches to the terminal and highlights patterns.	
+		when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log'")
 	
 	flag.Parse()
 
