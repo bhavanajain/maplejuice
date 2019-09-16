@@ -599,8 +599,8 @@ func main(){
 	// Testing part
 	// -- Create the log files and send to vms
 	Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut1.txt")
-	Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut2.txt")
-	Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut3.txt")
+	// Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut2.txt")
+	// Test1(serverMap,*pattern,*filePrefix,*visual,"SampleOut3.txt")
 
 	// file_server()
 
