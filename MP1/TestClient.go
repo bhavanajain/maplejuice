@@ -74,14 +74,14 @@ func file_recv() {
 	if err != nil {
 		panic(err)
 	}
-	defer server.Close()
+	// defer server.Close()
 
 	connection, err := server.Accept()
 
 	if err !=nil{
 		fmt.Printf("Unable to accept")
 	}
-	defer connection.Close()
+	// defer connection.Close()
 	fmt.Println("Connected to server, start receiving the file name and file size")
 	bufferFileName := make([]byte, 64)
 	bufferFileSize := make([]byte, 10)
@@ -110,6 +110,8 @@ func file_recv() {
 		receivedBytes += BUFFERSIZE
 	}
 	fmt.Println("Received file completely!")
+	connection.Close()
+	server.Close()
 	return
 }
 const BUFFERSIZE = 1024

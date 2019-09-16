@@ -380,7 +380,7 @@ func fillString(retunString string, toLength int) string {
 
 func sendFileToClient(connection net.Conn, filename string) {
 	fmt.Println("A client has connected!")
-	defer connection.Close()
+	// defer connection.Close()
 	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println(err)
@@ -423,6 +423,7 @@ func file_server(serverIP string, fileName string) {
 	
 	fmt.Println("\nDialing started! Connected ready for sending...")
 	sendFileToClient(connection,fileName)
+	connection.Close()
 	// for {
 	// 	connection, err := server.Accept()
 	// 	if err != nil {
@@ -500,7 +501,7 @@ func Test1(serverMap map[string]int, pattern string, filePrefix string, terminal
 
 	sample_out.Close()
 
-	fmt.Printf("Started Dist Grep")
+	fmt.Printf("Started Dist Grep\n")
 
 	distributedGrep(serverMap,pattern,filePrefix,terminal)
 	 // Check the Output with set Patterns
