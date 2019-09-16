@@ -21,3 +21,8 @@
 	when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log', default is false \
 
 	`go run client.go -server_file=servers.in -pattern=GET -file_prefix=vm -visual=false`
+	
+6. Unit testing \
+    To run the test servers, `go run testServer.go` \
+    To run the test client, `go run testClient.go -server_file=servers.in -file_prefix=testvm -visual=false`
+   
