@@ -336,19 +336,19 @@ func main(){
 	distributedGrep(serverMap, moderate, *filePrefix, *visual, mod_results)
 	distributedGrep(serverMap, infrequent, *filePrefix, *visual, inf_results)
 
-	if CheckOutput("freq_results.out", "expectedOutput_freq.out") {
+	if CheckOutput("freq_results.out", "expected_freq.out") {
 		fmt.Printf("[Test Passed] Frequent pattern matched")
 	} else {
 		fmt.Printf("[Test Failed] Frequent pattern does not match")
 	}
 
-	if CheckOutput("inf_results.out", "expectedOutput_inf.out") {
+	if CheckOutput("inf_results.out", "expected_inf.out") {
 		fmt.Printf("[Test Passed] Infrequent pattern matched")
 	} else {
 		fmt.Printf("[Test Failed] Infrequent pattern does not match")
 	}
 
-	if CheckOutput("mod_results.out", "expectedOutput_mod.out") {
+	if CheckOutput("mod_results.out", "expected_mod.out") {
 		fmt.Printf("[Test Passed] Moderate pattern matched")
 	} else {
 		fmt.Printf("[Test Failed] Moderate pattern does not match")
