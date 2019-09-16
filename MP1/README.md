@@ -12,13 +12,12 @@
 	`go run server.go`
 
 5. Client takes in multiple commandline flag \
-    server_file: path to the file containing server IPs and index, default is servers.in \
-    pattern: regexp pattern to match, default is ^[0-9]*[a-z]{5} \
-    file_prefix: prefix of the files before <i>.log, default is vm \
+    **server_file**: path to the file containing server IPs and index, default is servers.in \
+    **pattern**: regexp pattern to match, default is ^[0-9]*[a-z]{5} \
+    **file_prefix**: prefix of the files before <i>.log, default is vm \
     Example, the prefix for vm<i>.log is "vm" and for machine.<i>.log is "machine." \
-    visual: boolean flag, when set, prints annotated matches to the terminal and highlights patterns. \ 
-    github.com/gookit/color is used for the colored highlighting. \
-    when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log', default is false \
+    **visual**: boolean flag, when set, prints annotated matches to the terminal and highlights patterns. github.com/gookit/color is used for the colored highlighting. \
+    when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log', default is false
 
 	`go run client.go -server_file=servers.in -pattern=GET -file_prefix=vm -visual=false`
 	
