@@ -13,6 +13,7 @@ import (
 	"net"
 	"regexp"
 	"github.com/gookit/color"
+	"math/rand"
 )
 
 var mutex = &sync.Mutex{}
@@ -205,7 +206,7 @@ func main(){
 
 	rand.Seed(time.Now().UnixNano())
 
-	expectedOutput, err := os.Create('expected.out')
+	expectedOutput, err := os.Create("expected.out")
 	if err != nil {
 		fmt.Printf("[Test Client] Couldn't create expected file\n")
 		return
