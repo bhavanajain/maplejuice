@@ -128,7 +128,7 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			mutex.Unlock()
 		} else {
 			mutex.Lock()
-			fmt.Fprintln(fout, "[%s] %d: %s", filename, linenum, line[:len(line)-1])
+			fmt.Fprintf(fout, "[%s] %d: %s", filename, linenum, line)
 			mutex.Unlock()
 		}
 	}
@@ -196,7 +196,7 @@ func SendFile(serverIP string, filename string) {
 func CheckOutput(file1 string, file2 string) bool {
 	fp1, err := os.Open(file2)
 	if err != nil {
-		fmt.Printf("Error opening file")
+		fmt.Printf("[File Checker]: Cannot open file %s", file2)
 	}
 
 	file_reader := bufio.NewReader(fp1)
@@ -252,7 +252,11 @@ func CheckOutput(file1 string, file2 string) bool {
 		}
 	}
 
-	return (flag != 0)
+	if flag == 1 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func main(){
@@ -262,6 +266,7 @@ func main(){
 	visual := flag.Bool("visual", false, "boolean flag, when set, prints annotated matches to the terminal and highlights patterns.	when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log'")
 	
 	flag.Parse()
+	fmt.Printf("Dummy print: %s", *pattern)
 
 	serverMap := parseServerFile(*serverFile)
 	for ip, idx := range(serverMap) {
