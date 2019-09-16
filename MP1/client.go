@@ -136,8 +136,7 @@ func main(){
 	serverFile := flag.String("server_file", "servers.in", "path to the file containing server IPs and index")
 	pattern := flag.String("pattern", "^[0-9]*[a-z]{5}", "regexp pattern to match")
 	filePrefix := flag.String("file_prefix", "vm", "prefix of the files before <i>.log")
-	visual := flag.Bool("visual", false, "boolean flag, when set, prints annotated matches to the terminal and highlights patterns.	
-		when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log'")
+	visual := flag.Bool("visual", false, "boolean flag, when set, prints annotated matches to the terminal and highlights patterns.	when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log'")
 	
 	flag.Parse()
 
