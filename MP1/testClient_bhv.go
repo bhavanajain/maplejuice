@@ -299,7 +299,7 @@ func main(){
 		}
 
 		for ln:=0; ln<1000; ln++ {
-			val: = rand.Intn(1000)
+			val := rand.Intn(1000)
 			var output string
 			if val < 700 {
 				output = frequent + "\n"
