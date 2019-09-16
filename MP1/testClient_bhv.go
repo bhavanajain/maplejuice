@@ -193,71 +193,70 @@ func SendFile(serverIP string, filename string) {
 
 }
 
-func CheckOutput(file1 string, file2 string) bool {
-	fp1, err := os.Open(file2)
+func CheckOutput(expectedname string, generatedname string) bool {
+	expected, err := os.Open(expectedname)
 	if err != nil {
-		fmt.Printf("[File Checker]: Cannot open file %s", file2)
-	}
-
-	file_reader := bufio.NewReader(fp1)
-
-	var toCheckFile []string
-
-	for {
-		line , err := file_reader.ReadString('\n')
-		if err != nil {
-			if err != io.EOF {
-				fmt.Printf("Error Reading file !!")
-			}
-			break
-		}
-		toCheckFile = append(toCheckFile, line[:len(line)-1])
-	}
-
-	checkTest := make([]bool, len(toCheckFile))
-	for i:= 0 ; i< len(toCheckFile); i++{
-		checkTest[i] = false
-	}
-
-	fp2, err := os.Open(file1)
-
-	if err != nil {
-		fmt.Printf("Error opening file")
-	}
-
-	file_readerN := bufio.NewReader(fp2)
-
-	for{
-		line, err := file_readerN.ReadString('\n')
-		if err != nil{
-			if err != io.EOF {
-				fmt.Printf("Error reading Output")
-			}
-			break
-		}
-
-		for j:= 0; j< len(toCheckFile); j++{
-			if line[:len(line)-1] == toCheckFile[j] {
-				checkTest[j] = true
-			}
-		}
-	}
-
-	flag := 1
-
-	for j:= 0; j< len(checkTest); j++{
-		if checkTest[j] == false{
-			flag = 0
-			break
-		}
-	}
-
-	if flag == 1 {
-		return true
-	} else {
+		fmt.Printf("[Output Checker] Can't open file %s\n", expectedname)
 		return false
 	}
+
+	reader1 := bufio.NewReader(expected)
+	var expectedlines []string
+
+	for {
+		line, err := reader1.ReadString('\n')
+		if len(line) > 0 {
+			expectedlines = append(expectedlines, line[:len(line)-1])
+		}
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("[File Checker] Unknown error while reading file %s", expectedname)
+				return false
+			}
+			break
+		}
+	}
+
+	matchedlines := make([]bool, len(expectedlines))
+	for i:=0; i<len(expectedlines); i++ {
+		matchedlines[i] = false
+	}
+
+	generated, err := os.Open(generatedname)
+	if err != nil {
+		fmt.Printf("[Output Checker] Can't open file %s\n", generatedname)
+		return false
+	}
+
+	reader2 := bufio.NewReader(generated)
+	for {
+		line, err := reader2.ReadString('\n')
+		if len(line) > 0 {
+			for j:=0; j<len(expectedlines); j++ {
+				if line[:len(line)-1] == expectedlines[j] {
+					matchedlines[j] = true
+				}
+			}
+		}
+		if err != nil {
+			if err != io.EOF {
+				fmt.Printf("[File Checker] Unknown error while reading file %s", expectedname)
+				return false
+			}
+			break
+		}
+	}
+
+	for k:=0; k<len(matchedlines); k++ {
+		if !matchedlines[k] {
+			return false
+		}
+	}
+
+	return true
 }
+
+
 
 func main(){
 	serverFile := flag.String("server_file", "servers.in", "path to the file containing server IPs and index")
