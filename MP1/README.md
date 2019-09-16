@@ -3,13 +3,13 @@
 	(HTTPS) git clone https://gitlab.engr.illinois.edu/dipayan2/cs425.git
 
 2. Install the golang color toolkit. This is required for the -visual boolean flag for highlighting matches for terminal output
-	go get github.com/gookit/color
+	`go get github.com/gookit/color`
 
 3. change directory to MP1
-	cd MP1
+	`cd MP1`
 
 4. Run the servers using
-	go run server.go
+	`go run server.go`
 
 5. Client takes in multiple commandline flag 
 	-server_file: path to the file containing server IPs and index, default is servers.in
@@ -20,4 +20,4 @@
 	github.com/gookit/color is used for the colored highlighting.
 	when false, the each server output is stored separately in 'filtered-<file_prefix><i>.log', default is false
 
-	go run client.go -server_file=servers.in -pattern=GET -file_prefix=vm -visual=false
+	`go run client.go -server_file=servers.in -pattern=GET -file_prefix=vm -visual=false`
