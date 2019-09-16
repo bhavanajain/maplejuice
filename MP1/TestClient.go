@@ -11,7 +11,6 @@ import (
 	"strconv"
 )
 
-
 func Server() {
 	ln, _ := net.Listen("tcp", ":8080")
 	for {
@@ -32,6 +31,7 @@ func Server() {
 			conn.Close()
 			continue
 		}
+
 		file, err := os.Open(filename)
 		if err != nil {
 			fmt.Println("[Error] Couldn't open the file", filename)
@@ -54,7 +54,6 @@ func Server() {
 				matched_line := fmt.Sprintf("%d$$$$%s", linenum, line)
 				num_matches += 1
 				fmt.Fprintln(conn, matched_line[:len(matched_line)-1])
-				// fmt.Println("[Info] packet: %s", matched_line)
 			}
 			if err != nil {
 				if err != io.EOF {
@@ -65,12 +64,11 @@ func Server() {
 		}
 		closing := fmt.Sprintf("%d,<<EOF>>\n", num_matches)
 		fmt.Fprintf(conn, closing)
-		fmt.Println("[Info] Completed sending line matches of", pattern, "in", filename)
+		fmt.Println("[Info] Completed sending", num_matches, "line matches of", pattern, "in", filename)
 		conn.Close()
-		break
 	}
-	// ln.Close()
 }
+
 func file_recv() {
 	server, err := net.Listen("tcp", ":27001")
 	if err != nil {

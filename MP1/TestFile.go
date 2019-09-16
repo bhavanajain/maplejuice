@@ -87,42 +87,129 @@ func parseServerFile(serverFile string) map[string]int {
 	return serverMap
 }
 
-func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, terminal bool) {
-	var wg sync.WaitGroup
-	num_servers := len(serverMap)
-	wg.Add(num_servers)
-
-	outFile := "Out.txt"
-	var err error
-
-	var fout *os.File
-	if terminal == false {
-		fout,err = os.Create(outFile)
-		if err != nil{
-			fmt.Printf("Error in creating file")
-		}
-	}
-
-	for serverIP, fileIdx := range(serverMap) {
-		go patternMatch(serverIP, pattern, fileIdx, filePrefix, terminal, &wg, fout) // added fout
-	}
-
-	wg.Wait()
-	fout.Close()
-}
-
-// func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, visual bool) {
+// func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, terminal bool) {
 // 	var wg sync.WaitGroup
 // 	num_servers := len(serverMap)
 // 	wg.Add(num_servers)
 
+// 	outFile := "Out.txt"
+// 	var err error
+
+// 	var fout *os.File
+// 	if terminal == false {
+// 		fout,err = os.Create(outFile)
+// 		if err != nil{
+// 			fmt.Printf("Error in creating file")
+// 		}
+// 	}
+
 // 	for serverIP, fileIdx := range(serverMap) {
-// 		go patternMatch(serverIP, pattern, fileIdx, filePrefix, visual, &wg)
+// 		go patternMatch(serverIP, pattern, fileIdx, filePrefix, terminal, &wg, fout) // added fout
 // 	}
 
 // 	wg.Wait()
+// 	fout.Close()
 // }
-func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix string, visual bool, wg *sync.WaitGroup,foutput *os.File) {
+
+// // func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, visual bool) {
+// // 	var wg sync.WaitGroup
+// // 	num_servers := len(serverMap)
+// // 	wg.Add(num_servers)
+
+// // 	for serverIP, fileIdx := range(serverMap) {
+// // 		go patternMatch(serverIP, pattern, fileIdx, filePrefix, visual, &wg)
+// // 	}
+
+// // 	wg.Wait()
+// // }
+// func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix string, visual bool, wg *sync.WaitGroup,foutput *os.File) {
+// 	defer wg.Done()
+
+// 	timeout := time.Duration(20) * time.Second
+// 	filename := fmt.Sprintf("%s%d.log", filePrefix, fileIdx)
+
+// 	conn, err := net.DialTimeout("tcp", serverIP + ":8080", timeout)
+// 	if err != nil {
+// 		fmt.Println("[Error] Unable to connect with the client", serverIP)
+// 		return
+// 	}
+// 	defer conn.Close()
+
+//     r, _ := regexp.Compile(pattern)
+
+// 	parameters := filename + "," + pattern + "\n"
+// 	fmt.Fprintf(conn, parameters)
+
+// 	var w *bufio.Writer
+// 	if visual {
+//     	w = bufio.NewWriter(os.Stdout)
+//     } else {
+//     	outfile_name := fmt.Sprintf("filtered-%s%d.out", filePrefix, fileIdx)
+//     	outfile, _ := os.Create(outfile_name)
+//     	w = bufio.NewWriter(outfile)
+//     }
+
+// 	reader := bufio.NewReader(conn)
+
+// 	for {
+// 		line, err := reader.ReadString('\n')
+// 		if err != nil {
+// 			fmt.Printf("[Error] Server %s has crashed\n", serverIP)
+// 			break
+// 		}
+// 		if strings.Contains(line, "<<EOF>>") {
+// 			closing_list := strings.Split(line, ",")
+// 			num_matches, _ := strconv.Atoi(closing_list[0])
+// 			fmt.Printf("[%s] Line count: %d\n", filename, num_matches)
+// 			fmt.Fprintf(w, "[%s] Line count: %d\n", filename, num_matches)
+// 			w.Flush()
+// 			break
+// 		}
+
+// 		split_line := strings.Split(line, "$$$$")
+// 		linenum_str, line := split_line[0], split_line[1]
+// 		linenum, _ := strconv.Atoi(linenum_str)
+
+// 		if (visual) {
+// 			magenta := color.FgMagenta.Render
+//     		bold := color.OpBold.Render
+// 			mutex.Lock()
+// 			fmt.Fprintf(w, "[%s] %d: ", filename, linenum)
+// 			indices_grid := r.FindAllStringIndex(line, -1)
+// 			next_start := 0
+// 			for _, indices := range indices_grid {
+// 				fmt.Fprintf(w, "%s%s", line[next_start:indices[0]], bold(magenta(line[indices[0]:indices[1]])))
+// 				next_start = indices[1]
+// 			}
+// 			fmt.Fprintf(w, "%s", line[next_start:])
+// 			mutex.Unlock()
+// 		} else {
+// 			mutex.Lock()
+// 			fmt.Fprintf(foutput, "[%s] %d: %s",filename,linenum, line)
+// 			mutex.Unlock()
+// 		}
+// 	}
+
+// 	return
+// }
+
+// func init() {
+//     rand.Seed(time.Now().UnixNano())
+// }
+
+func distributedGrep(serverMap map[string]int, pattern string, filePrefix string, visual bool) {
+	var wg sync.WaitGroup
+	num_servers := len(serverMap)
+	wg.Add(num_servers)
+
+	for serverIP, fileIdx := range(serverMap) {
+		go patternMatch(serverIP, pattern, fileIdx, filePrefix, visual, &wg)
+	}
+
+	wg.Wait()
+}
+
+func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix string, visual bool, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	timeout := time.Duration(20) * time.Second
@@ -184,18 +271,12 @@ func patternMatch(serverIP string, pattern string, fileIdx int, filePrefix strin
 			fmt.Fprintf(w, "%s", line[next_start:])
 			mutex.Unlock()
 		} else {
-			mutex.Lock()
-			fmt.Fprintf(foutput, "[%s] %d: %s",filename,linenum, line)
-			mutex.Unlock()
+			fmt.Fprintln(w, "%d: %s", linenum, line[:len(line)-1])
 		}
 	}
 
 	return
 }
-
-// func init() {
-//     rand.Seed(time.Now().UnixNano())
-// }
 
 var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$^&*()")
 
