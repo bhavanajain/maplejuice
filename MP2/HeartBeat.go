@@ -47,6 +47,24 @@ import (
 
 // var myIP string
 
+func getmyIP() string {
+	addrs, err := net.InterfaceAddrs()
+	var myip string = "-1"
+	if err != nil {
+		os.Stderr.WriteString("Oops: " + err.Error() + "\n")
+		myip = "-1"
+	}
+
+	for _, a := range addrs {
+		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				myip = ipnet.IP.String()
+			}
+		}
+	}
+	return myip
+}
+
 var HeartBeatCount = make(map[string]int64)
 
 var HeartNeigh = []string{"172.22.152.108","172.22.156.103"} 
@@ -80,7 +98,7 @@ func recv_heartbeat() {
 	p := make([]byte, 2048)
     addr := net.UDPAddr{
         Port: 8080,
-        IP: net.ParseIP(myIP),    // need to setUp my IP
+        IP: net.ParseIP(getmyIP()),    // need to setUp my IP
     }
     ser, err := net.ListenUDP("udp", &addr)
     if err != nil {
@@ -111,7 +129,7 @@ func track_targets() {
 	for{
 		curr_time := time.Now().Unix()
 		for k,v := range HeartBeatCount{
-			if curr_time - v> 2*heartbeatPeriod {
+			if curr_time - v > 4 {
 				fmt.Println("[Log] Node %s is in trouble",k)
 				// go check_suspiscion(v.vid, v.IP)
 			}
