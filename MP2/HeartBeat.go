@@ -80,7 +80,7 @@ func send_heartbeat() {
 			if err != nil {
 				fmt.Println("[Error] Error in Heartbeat to  ", neighIP)
 			} 
-			msg_UDP := strconv.Itoa(time.Now().Unix())
+			msg_UDP := strconv.FormatInt(time.Now().Unix(),10)
 			fmt.Fprintf(conn, msg_UDP)
 			conn.Close()
 		}
