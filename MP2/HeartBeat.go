@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	"net"
+	"os"
 )
 
 // var heartbeatPeriod = 2
@@ -74,7 +75,7 @@ func send_heartbeat() {
 	for{
 
 		for _, neighIP := range HeartNeigh{
-			conn, err := net.Dial("udp", elem +":8080")
+			conn, err := net.Dial("udp", neighIP +":8080")
 			// Is it possible to keep a map of monitorid -> UDP connection with it? 
 
 			if err != nil {
@@ -106,10 +107,11 @@ func recv_heartbeat() {
         return
     }
     for {
+    	fmt.Println("[Log] Waiting for connection heartbeat")
         _,remoteaddr,err := ser.ReadFromUDP(p)
         fmt.Printf("Read a message from %v %s \n", remoteaddr, p)
         // Modify the map
-        HeartBeatCount[remoteaddr] = time.Now().Unix()
+        HeartBeatCount[remoteaddr.String()] = time.Now().Unix()
         if err !=  nil {
             fmt.Printf("Some error  %v", err)
             continue
