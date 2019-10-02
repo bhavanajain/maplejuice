@@ -142,9 +142,13 @@ func track_targets() {
 }
 
 func main() {
-
+	var wg sync.WaitGroup
+	wg.Add(2)
 	go recv_heartbeat()
 	go track_targets()
+	wg.Wait()
+	return
+
 	
 }
 
