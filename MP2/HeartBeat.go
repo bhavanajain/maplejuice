@@ -6,6 +6,7 @@ import (
 	"time"
 	"net"
 	"os"
+	"sync"
 )
 
 // var heartbeatPeriod = 2
