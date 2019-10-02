@@ -1,15 +1,13 @@
 package main
 
 import (
-	"strings"
 	"strconv"
-	"os"
 	"fmt"
 	"time"
 	"net"
 )
 
-var heartbeatPeriod = 2
+// var heartbeatPeriod = 2
 
 // type Node struct {
 //     IP string
@@ -111,14 +109,14 @@ func check_suspiscion(virt_id int, node_IP string) {
 func track_targets() {
 
 	for{
-		curr_time = time.Now().Unix()
+		curr_time := time.Now().Unix()
 		for k,v := range HeartBeatCount{
 			if curr_time - v> 2*heartbeatPeriod {
 				fmt.Println("[Log] Node %s is in trouble",k)
 				// go check_suspiscion(v.vid, v.IP)
 			}
 		}
-		time.Sleep(heartbeatPeriod * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 }
