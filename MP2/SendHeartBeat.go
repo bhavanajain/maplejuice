@@ -124,9 +124,6 @@ func track_targets() {
 }
 
 func main() {
-
-	go recv_heartbeat()
-	go track_targets()
-	
+	send_heartbeat()
 }
 
