@@ -290,8 +290,9 @@ func completeJoinRequests() (err error) {
 
 func listenOtherPort() (err error) {
 	// setup other port
-	udpAddress, err := net.ResolveUDPAddr("udp", strconv.Itoa(otherPort))
-	if err != nil {
+
+	udpAddress, err := net.ResolveUDPAddr("udp", myIP + ":" + strconv.Itoa(otherPort))
+	if err != nil { 
 		glog.Warning("Unable to resolve my UDP address")
 		return err
 	}
@@ -390,7 +391,7 @@ func sendJoinRequest() {
 	defer conn.Close()
 	conn.Write([]byte(message))
 
-	fmt.Println("Sent a join request to the introducer %s", introducer)
+	glog.Info("Sent a join request to the introducer %s", introducer)
 	return
 }
 
@@ -429,11 +430,11 @@ func main() {
 		
 		go completeJoinRequests()
 
+	} else{
+		sendJoinRequest()
 	}
 
-	sendJoinRequest()
 	go listenOtherPort()
-
 
 	wg.Wait()
 	return
