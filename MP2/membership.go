@@ -311,11 +311,16 @@ func listenOtherPort() (err error) {
 
 	for {
 		var buf [64]byte
+		fmt.Println("Before Read from the otherport conn")
 		n, addr, err := otherportconn.ReadFromUDP(buf[0:])
+		fmt.Println("After Read from the otherport conn")
+
 		if err != nil {
 			glog.Warning("Could not read  message on otherport %s", otherPort)
 		}
+
 		message := string(buf[0:n])
+		fmt.Println(message)
 		split_message := strings.Split(message, delimiter)
 		fmt.Println(message, split_message[0])
 		message_type := split_message[0]
