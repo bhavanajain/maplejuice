@@ -44,7 +44,8 @@ var suspects []int 	// remove from suspects when leave or crash
 var otherPort = 8081
 var delimiter = ","
 var myIP string
-var introducer = "172.22.152.106"
+// var introducer = "172.22.152.106"
+var introducer = "172.22.154.104"
 var introducerPort = 8082
 // var otherportconn *net.UDPConn
 // var heartbeatconn *net.UDPConn
@@ -291,14 +292,12 @@ func completeJoinRequests() (err error) {
 }
 
 func listenOtherPort() (err error) {
-	// setup other port
+	var myaddr net.UDPAddr
+	myaddr.IP = net.ParseIP(myIP)
+	myaddr.Port = otherPort
 
-	var addr net.UDPAddr
-	addr.IP = net.ParseIP(myIP)
-	addr.Port = otherPort
+	otherportconn, err := net.ListenUDP("udp", &myaddr)
 
-	
-	otherportconn, err := net.ListenUDP("udp", &addr)
 	if err != nil {
 		glog.Error("Unable to listen on the heartbeat port %s", otherPort)
 		return err
