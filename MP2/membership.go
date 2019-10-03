@@ -254,6 +254,9 @@ func completeJoinRequests() (err error) {
 		if err != nil {
 			glog.Warning("Could not read  message on otherport %s", introducerPort)
 		}
+
+		fmt.Println("Received a join request from ip=%s", addr.IP.String())
+
 		newVid := len(memberMap)
 
 		var newnode MemberNode
@@ -386,6 +389,8 @@ func sendJoinRequest() {
 	message := "1"
 	defer conn.Close()
 	conn.Write([]byte(message))
+
+	fmt.Println("Sent a join request to the introducer %s", introducer)
 	return
 }
 
@@ -427,6 +432,7 @@ func main() {
 	}
 
 	sendJoinRequest()
+	go listenOtherPort()
 
 
 	wg.Wait()
