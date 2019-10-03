@@ -170,7 +170,11 @@ func sendMessageAddr(ip string, message string) {
 		glog.Warning("Unable to send message to ip=%s", ip)
 	}
 	defer conn.Close()
-	conn.Write([]byte(message))
+	_, err := conn.Write([]byte(message))
+	if err != nil {
+		fmt.Println(err, "Unable to write member messages")
+	}
+	fmt.Println("Successfully wrote member message")
 	return
 
 }
