@@ -264,7 +264,7 @@ func completeJoinRequests() (err error) {
 		newVid := len(memberMap)
 
 		var newnode MemberNode
-		newnode.ip = addr.String()
+		newnode.ip = addr.IP.String()
 		newnode.timestamp = time.Now().Unix()
 		newnode.alive = true
 		memberMap[newVid] = &newnode
