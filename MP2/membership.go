@@ -271,6 +271,8 @@ func completeJoinRequests() (err error) {
 		message = fmt.Sprintf("MEMBER,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		sendMessageAddr(newnode.ip, message)
 
+		fmt.Println("Sent member messages to the new node")
+
 		// message = fmt.Sprintf("JOIN,%d,%s,%d", new_vid, newnode.ip, newnode.timestamp)
 		// massMail(message) 
 
@@ -302,6 +304,8 @@ func listenOtherPort() (err error) {
 		return err
 	}
 
+	fmt.Println("I am listening on otherport %d", otherPort)
+
 	for {
 		var buf [64]byte
 		n, addr, err := otherportconn.ReadFromUDP(buf[0:])
@@ -315,6 +319,7 @@ func listenOtherPort() (err error) {
 
 		switch message_type {
 		case "MEMBER":
+			fmt.Println("Received a MEMBER message")
 			var newnode MemberNode
 			newnode.ip = split_message[2]
 			newnode.timestamp, err = strconv.ParseInt(split_message[3], 10, 64)
