@@ -314,6 +314,7 @@ func listenOtherPort() (err error) {
 		}
 		message := string(buf[0:n])
 		split_message := strings.Split(message, delimiter)
+		fmt.Println(message, split_message[0])
 		message_type := split_message[0]
 		subject, _ := strconv.Atoi(split_message[1])
 
