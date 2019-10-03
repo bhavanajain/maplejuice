@@ -293,12 +293,12 @@ func completeJoinRequests() (err error) {
 func listenOtherPort() (err error) {
 	// setup other port
 
-	udpAddress, err := net.ResolveUDPAddr("udp", myIP + ":" + strconv.Itoa(otherPort))
-	if err != nil { 
-		glog.Warning("Unable to resolve my UDP address")
-		return err
-	}
-	otherportconn, err := net.ListenUDP("udp", udpAddress)
+	var addr net.UDPAddr
+	addr.IP = net.ParseIP(myIP)
+	addr.Port = otherPort
+
+	
+	otherportconn, err := net.ListenUDP("udp", &addr)
 	if err != nil {
 		glog.Error("Unable to listen on the heartbeat port %s", otherPort)
 		return err
