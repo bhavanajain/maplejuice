@@ -127,7 +127,7 @@ func receiveHeartbeat() {
 		if err != nil {
 			glog.Warning("Could not read heartbeat message")
 		}
-		children[addr.String()].timestamp = time.Now().Unix()
+		children[addr.IP.String()].timestamp = time.Now().Unix()
 	}
 }
 
@@ -209,7 +209,7 @@ func checkSuspicion(vid int) {
 	return
 }
 
-func massMail (message string) {
+func massMail(message string) {
 	for vid, node := range(memberMap) {
 		if (vid == myVid || node.alive == false) {
 			continue
@@ -277,8 +277,8 @@ func completeJoinRequests() (err error) {
 
 		fmt.Println("Sent member messages to the new node")
 
-		// message = fmt.Sprintf("JOIN,%d,%s,%d", new_vid, newnode.ip, newnode.timestamp)
-		// massMail(message) 
+		message = fmt.Sprintf("JOIN,%d,%s,%d", new_vid, newnode.ip, newnode.timestamp)
+		massMail(message) 
 
 		// sendMemberMap(addr)
 
@@ -340,6 +340,7 @@ func listenOtherPort() (err error) {
 			fmt.Printf("Added a new entry to the member map - vid=%d, ip=%s, timestamp=%d", subject, newnode.ip, newnode.timestamp)
 
 		case "JOIN":
+			fmt.Println("Received a JOIN message")
 			var newnode MemberNode
 			newnode.ip = split_message[2]
 			newnode.timestamp, err = strconv.ParseInt(split_message[3], 10, 64)
@@ -348,6 +349,9 @@ func listenOtherPort() (err error) {
 			}
 			newnode.alive = true
 			memberMap[subject] = &newnode
+
+			message = fmt.Sprintf("MEMBER,%d,%s,%d", 0, myVid, myIP, memberMap[myVid].timestamp)
+			sendMessage(subject, message)
 
 		case "LEAVE", "CRASH":
 			memberMap[subject].alive = false
