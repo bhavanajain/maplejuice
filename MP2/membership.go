@@ -277,7 +277,7 @@ func completeJoinRequests() (err error) {
 
 		fmt.Println("Sent member messages to the new node")
 
-		message = fmt.Sprintf("JOIN,%d,%s,%d", new_vid, newnode.ip, newnode.timestamp)
+		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		massMail(message) 
 
 		// sendMemberMap(addr)
