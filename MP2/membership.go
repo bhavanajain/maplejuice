@@ -44,7 +44,7 @@ var suspects []int 	// remove from suspects when leave or crash
 var otherPort = 8081
 var delimiter = ","
 var myIP string
-var introducer = "0.0.0.0"
+var introducer = "172.22.152.106"
 var introducerPort = 8082
 // var otherportconn *net.UDPConn
 // var heartbeatconn *net.UDPConn
