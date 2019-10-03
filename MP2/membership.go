@@ -269,7 +269,7 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
-		message := fmt.Sprintf("MEMBER,%d,%s,%d", 0, introducer, memberMap[0].timestamp)
+		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessageAddr(newnode.ip, message)
 
 		message = fmt.Sprintf("MEMBER,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
