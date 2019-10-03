@@ -9,6 +9,76 @@ import (
 	"sync"
 )
 
+var introducer = "172.22.152.106:8000"
+
+type Node struct {
+	virt_id int
+	ip string
+	timestamp int64
+	conn     *net.UDPConn
+}
+
+var members = []Node
+
+func join(){
+	for {
+		conn, err := net.Dial("udp", introducer)
+		if err != nil {
+			fmt.Println("[Join] Unable to send JOIN request to the introducer %s", introducer)
+		}
+		defer conn.Close()
+		dummy := "JOIN"
+		fmt.Fprintf(conn, dummy)
+		// TODO: receive an ack, break out of the loop
+	}
+	return
+}
+
+type Message struct {
+	event string // JOIN, LEAVE, CRASH
+	userId string
+}
+
+func disseminate(m Message){
+	msgString = packMessage(m)
+	for i, node := members {
+		conn, err := net.Dial("udp", node.ip + port)
+		if err != nil {
+			fmt.Println("[Error] Cannot disseminate to ", node.ip)
+		}
+		defer conn.Close()
+		fmt.Fprintf(conn, msgString)
+		// todo: udp packets may be dropped
+	}
+}
+
+func leave(){
+	for i, node := range(members) {
+		conn, err := net.Dial("udp", neighIP +":8080")
+			// Is it possible to keep a map of monitorid -> UDP connection with it? 
+
+			if err != nil {
+				fmt.Println("[Error] Error in Heartbeat to  ", neighIP)
+			} 
+			msg_UDP := strconv.FormatInt(time.Now().Unix(),10)
+			fmt.Fprintf(conn, msg_UDP)
+			conn.Close()
+
+
+
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
 // var heartbeatPeriod = 2
 
 // type Node struct {
