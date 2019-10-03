@@ -330,7 +330,7 @@ func listenOtherPort() (err error) {
 			fmt.Println("Received a MEMBER message")
 			var newnode MemberNode
 			newnode.ip = split_message[2]
-			newnode.timestamp, err = strconv.ParseInt(split_message[3], 10, 64)
+			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
 			if err != nil {
 				glog.Error("Cannot convert string timestamp to int64")
 			}
