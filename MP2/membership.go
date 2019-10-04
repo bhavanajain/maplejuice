@@ -351,6 +351,7 @@ func completeJoinRequests() (err error) {
 		// sendMessageAddr(newnode.ip, message)
 		sendMessage(newVid, message)
 
+		time.Sleep(5 * time.Second)
 
 		// send pred, succ
 		findAndSendMonitors(newVid)
