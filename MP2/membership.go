@@ -510,7 +510,7 @@ func listenOtherPort() (err error) {
 			memberMap[subject] = &newnode
 
 			glog.Info(myVid, myIP)
-			glog.Info(memberMap[my])
+			glog.Info(memberMap[myVid].timestamp)
 
 			message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
 			sendMessage(subject, message)
