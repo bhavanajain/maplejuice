@@ -96,6 +96,7 @@ var garbage []int
 // }
 
 func sendHeartbeat() {
+	glog.Info("Started sending heartbeats", )
 	for {
 		for _, node := range(monitors) {
 			// dummy = strconv.FormatInt(time.Now().Unix(), 10)
@@ -103,6 +104,7 @@ func sendHeartbeat() {
 			if err != nil {
 				glog.Warning("Could not send heartbeat myip=%s myvid=%d", myIP, myVid)
 			}
+			glog.Info("Sent heartbeat to", node.vid)
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
@@ -118,6 +120,8 @@ func receiveHeartbeat() {
 	if err != nil {
 		glog.Error("Unable to listen on the heartbeat port %s", heartbeatPort)
 	}
+
+	glog.Info("Started listening on the heartbeat port", heartbeatPort)
 
 	for {
 		var buf [4]byte
@@ -141,6 +145,8 @@ func receiveHeartbeat() {
 }
 
 func checkChildren() {
+	glog.Info("Started tracker to detect failures\n")
+	
 	for {
 		currTime := time.Now().Unix()
 		for child_vid, cnode := range children {
@@ -376,6 +382,7 @@ func listenOtherPort() (err error) {
 	myaddr.Port = otherPort
 
 	otherportconn, err := net.ListenUDP("udp", &myaddr)
+	glog.Info("Listening on port", otherPort)
 
 	if err != nil {
 		glog.Error("Unable to listen on the otherport port %s", otherPort)
@@ -642,10 +649,7 @@ func main() {
 		node.timestamp = time.Now().Unix()
 		node.alive = true
 		memberMap[0] = &node
-		// Need to have a fixed map where we map each introducer to a specific ID, and that will be set up, and then loop over all the remaining nodes to check if they are fine
 		go completeJoinRequests()
-
-
 	} else{
 		sendJoinRequest()
 		fmt.Println("---------------------")
