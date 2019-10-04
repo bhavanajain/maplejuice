@@ -690,6 +690,7 @@ func main() {
 	myIP = getmyIP()
 	fmt.Println(myIP)
 	if myIP == introducer {
+		myVid = 0
 		var node MemberNode
 		node.ip = myIP
 		node.timestamp = time.Now().Unix()
