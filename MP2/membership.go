@@ -347,7 +347,7 @@ func completeJoinRequests() (err error) {
 		sendMessage(newVid, message)
 
 
-		message = fmt.Sprintf("MEMBER,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
+		message = fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		// sendMessageAddr(newnode.ip, message)
 		sendMessage(newVid, message)
 
@@ -480,6 +480,11 @@ func listenOtherPort() (err error) {
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
 			sendMessageAddr(newnode.ip, message)
 
+		case "YOU":
+			myVid = subject
+			newnode := createMember(split_message[2], split_message[3])
+			memberMap[subject] = &newnode
+			glog.Info("Got my VID", myVid)
 
 		case "MEMBER":
 			// fmt.Println("[MEMBER] %d %s", subject, split_message[2])
@@ -503,6 +508,9 @@ func listenOtherPort() (err error) {
 
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
+
+			glog.Info(myVid, myIP)
+			glog.Info(memberMap[my])
 
 			message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
 			sendMessage(subject, message)
