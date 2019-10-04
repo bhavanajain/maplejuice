@@ -479,7 +479,7 @@ func listenOtherPort() (err error) {
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
-			message := fmt.Sprintf("MEMBER,%d,%s,%d", 0, myVid, myIP, memberMap[myVid].timestamp)
+			message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
 			sendMessage(subject, message)
 
 			newpred := getPredecessor(myVid)
