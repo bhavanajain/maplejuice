@@ -183,7 +183,6 @@ func sendMessageAddr(ip string, message string) {
 	if err != nil {
 		fmt.Println(err, "Unable to write member messages")
 	}
-	fmt.Println("Successfully wrote member message")
 	return
 
 }
@@ -391,9 +390,7 @@ func listenOtherPort() (err error) {
 		}
 
 		message := string(buf[0:n])
-		fmt.Println(message)
 		split_message := strings.Split(message, delimiter)
-		fmt.Println(message, split_message[0])
 		message_type := split_message[0]
 		subject, _ := strconv.Atoi(split_message[1])
 
@@ -650,15 +647,14 @@ func main() {
 
 	} else{
 		sendJoinRequest()
+		fmt.Println("---------------------")
 	}
 
 	go listenOtherPort()
 
-	//go sendHeartbeat()
-
-	//go receiveHeartbeat()
-
-	//go checkChildren()
+	go sendHeartbeat()
+	go receiveHeartbeat()
+	go checkChildren()
 
 	wg.Wait()
 	return
