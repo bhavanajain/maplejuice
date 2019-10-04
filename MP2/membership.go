@@ -330,11 +330,14 @@ func completeJoinRequests() (err error) {
 		memberMap[newVid] = &newnode
 
 		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
-		sendMessageAddr(newnode.ip, message)
+		// sendMessageAddr(newnode.ip, message)
+		sendMessage(newVid, message)
 
 
 		message = fmt.Sprintf("MEMBER,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
-		sendMessageAddr(newnode.ip, message)
+		// sendMessageAddr(newnode.ip, message)
+		sendMessage(newVid, message)
+		
 
 		// send pred, succ
 		findAndSendMonitors(newVid)
