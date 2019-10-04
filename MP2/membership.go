@@ -26,7 +26,6 @@ type MonitorNode struct {
 
 type ChildNode struct {
 	timestamp int64
-	vid int
 }
 
 // todo
@@ -34,7 +33,7 @@ type ChildNode struct {
 // 	message_type 
 // }
 
-var monitors [3]MonitorNode
+var monitors = make(map[string]*MonitorNode)
 var memberMap = make(map[int]*MemberNode)
 var heartbeatPort = 8080
 var myVid int	// this will be populated after join by introducer
@@ -46,8 +45,7 @@ var delimiter = ","
 var myIP string
 var introducer = "172.22.152.106"
 var introducerPort = 8082
-// var otherportconn *net.UDPConn
-// var heartbeatconn *net.UDPConn
+var garbage []int
 
 func getMonitor(vid int) (node1 MonitorNode, err error) {
 	var node MonitorNode
@@ -101,7 +99,7 @@ func sendHeartbeat() {
 	for {
 		for _, node := range(monitors) {
 			// dummy = strconv.FormatInt(time.Now().Unix(), 10)
-			_, err := node.conn.Write([]byte("1"))
+			_, err := node.conn.Write([]byte(myVid))
 			if err != nil {
 				glog.Warning("Could not send heartbeat myip=%s myvid=%d", myIP, myVid)
 			}
@@ -112,11 +110,11 @@ func sendHeartbeat() {
 
 func receiveHeartbeat() {
 
-	udpAddress, err := net.ResolveUDPAddr("udp", strconv.Itoa(heartbeatPort))
-	if err != nil {
-		glog.Warning("Unable to resolve my UDP address")
-	}
-	heartbeatconn, err := net.ListenUDP("udp", udpAddress)
+	var myaddr net.UDPAddr
+	myaddr.IP = net.ParseIP(myIP)
+	myaddr.Port = heartbeatPort
+
+	heartbeatconn, err := net.ListenUDP("udp", &myaddr)
 	if err != nil {
 		glog.Error("Unable to listen on the heartbeat port %s", heartbeatPort)
 	}
@@ -127,7 +125,10 @@ func receiveHeartbeat() {
 		if err != nil {
 			glog.Warning("Could not read heartbeat message")
 		}
+		// put key as IP because I do not have a reverse index
 		children[addr.IP.String()].timestamp = time.Now().Unix()
+		glog.Info("Received heartbeat from ip=%s at time=%d", addr.IP.String(), children[addr.IP.String()].timestamp)
+
 	}
 }
 
@@ -241,6 +242,41 @@ func massMail(message string) {
 
 // }
 
+func findAndSendMonitors(vid int) {
+	var pred, succ1, succ2, n int
+	n = len(memberMap)
+	pred = (vid - 1) % n
+	for {
+		if memberMap[pred].alive == true {
+			break
+		}
+		pred = (pred - 1) % n
+	}
+	message = fmt.Sprintf("PRED,%d,%s,%s", pred, memberMap[pred].ip, memberMap[pred].timestamp)
+	sendMessage(vid, message)
+
+	succ1 = (vid + 1) % n
+	for {
+		if memberMap[succ1].alive == true {
+			break
+		}
+		succ1 = (succ1 + 1) % n
+	}
+	message = fmt.Sprintf("SUCC1,%d,%s,%s", succ1, memberMap[succ1].ip, memberMap[succ1].timestamp)
+	sendMessage(vid, message)
+
+	succ2 = (succ1 + 1) % n
+	for {
+		if memberMap[succ2].alive == true {
+			break
+		}
+		succ2 = (succ2 + 1) % n
+	}
+	message = fmt.Sprintf("SUCC2,%d,%s,%s", succ2, memberMap[succ2].ip, memberMap[succ2].timestamp)
+	sendMessage(vid, message)
+}
+
+
 func completeJoinRequests() (err error) {
 
 	var addr net.UDPAddr
@@ -261,7 +297,14 @@ func completeJoinRequests() (err error) {
 
 		fmt.Println("Received a join request from ip=%s", addr.IP.String())
 
-		newVid := len(memberMap)
+		var newVid int
+
+		if len(garbage) == 0 {
+			newVid = len(memberMap)
+		} else {
+			newVid = garbage[0]
+			garbage = garbage[1:]
+		}
 
 		var newnode MemberNode
 		newnode.ip = addr.IP.String()
@@ -274,6 +317,9 @@ func completeJoinRequests() (err error) {
 
 		message = fmt.Sprintf("MEMBER,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		sendMessageAddr(newnode.ip, message)
+
+		// send pred, succ
+		findAndSendMonitors(newVid)
 
 		fmt.Println("Sent member messages to the new node")
 
@@ -292,6 +338,11 @@ func completeJoinRequests() (err error) {
 	}
 	return nil
 	
+}
+
+func addToDead(vid int) {
+	time.Sleep(6 * time.Second)
+	garbage = append(garbage, vid)
 }
 
 func listenOtherPort() (err error) {
@@ -326,6 +377,73 @@ func listenOtherPort() (err error) {
 		subject, _ := strconv.Atoi(split_message[1])
 
 		switch message_type {
+		case "PRED":
+			// add to monitors and modify membersMap
+			var node monitorNode
+			node.vid = subject
+			node.ip = split_message[2]
+
+			var pred_addr net.UDPAddr
+			pred_addr.IP = net.ParseIP(node.ip)
+			pred_addr.Port = heartbeatPort
+
+			node.conn, err = net.DialUDP("udp", nil, &pred_addr)
+
+			monitorMap['pred'] = &node
+
+			var newnode MemberNode
+			newnode.ip = split_message[2]
+			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
+			if err != nil {
+				glog.Error("Cannot convert string timestamp to int64")
+			}
+			newnode.alive = true
+			memberMap[subject] = &newnode
+
+		case 'SUCC1':
+			var node monitorNode
+			node.vid = subject
+			node.ip = split_message[2]
+
+			var succ1_addr net.UDPAddr
+			succ1_addr.IP = net.ParseIP(node.ip)
+			succ1_addr.Port = heartbeatPort
+
+			node.conn, err = net.DialUDP("udp", nil, &succ1_addr)
+
+			monitorMap['succ1'] = &node
+
+			var newnode MemberNode
+			newnode.ip = split_message[2]
+			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
+			if err != nil {
+				glog.Error("Cannot convert string timestamp to int64")
+			}
+			newnode.alive = true
+			memberMap[subject] = &newnode
+
+		case 'SUCC2':
+			var node monitorNode
+			node.vid = subject
+			node.ip = split_message[2]
+
+			var succ2_addr net.UDPAddr
+			succ2_addr.IP = net.ParseIP(node.ip)
+			succ2_addr.Port = heartbeatPort
+
+			node.conn, err = net.DialUDP("udp", nil, &succ2_addr)
+
+			monitorMap['succ2'] = &node
+
+			var newnode MemberNode
+			newnode.ip = split_message[2]
+			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
+			if err != nil {
+				glog.Error("Cannot convert string timestamp to int64")
+			}
+			newnode.alive = true
+			memberMap[subject] = &newnode
+
 		case "MEMBER":
 			fmt.Println("Received a MEMBER message")
 			var newnode MemberNode
@@ -338,6 +456,7 @@ func listenOtherPort() (err error) {
 			memberMap[subject] = &newnode 
 			glog.Info("Added a new entry to the member map - vid=%d, ip=%s, timestamp=%d", subject, newnode.ip, newnode.timestamp)
 			fmt.Printf("Added a new entry to the member map - vid=%d, ip=%s, timestamp=%d", subject, newnode.ip, newnode.timestamp)
+
 
 		case "JOIN":
 			fmt.Println("Received a JOIN message")
@@ -355,6 +474,9 @@ func listenOtherPort() (err error) {
 
 		case "LEAVE", "CRASH":
 			memberMap[subject].alive = false
+			if myIP == introducer {
+				go addToDead(subject)
+			}
 
 		case "SUSPECT":
 			var found = false
@@ -379,6 +501,9 @@ func listenOtherPort() (err error) {
 			if status == 1 {
 				// declare node as crashed
 				memberMap[subject].alive = false
+				if myIP == introducer {
+					go addToDead(subject)
+				}
 				message = fmt.Sprintf("CRASH%s%d", delimiter, subject)
 				massMail(message) 
 			} else {
