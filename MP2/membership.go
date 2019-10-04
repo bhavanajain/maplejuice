@@ -688,6 +688,8 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	go listenOtherPort()
+
 	myIP = getmyIP()
 	fmt.Println(myIP)
 	if myIP == introducer {
@@ -701,8 +703,6 @@ func main() {
 	} else{
 		sendJoinRequest()
 	}
-
-	go listenOtherPort()
 
 	go sendHeartbeat()
 	go receiveHeartbeat()
