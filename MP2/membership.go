@@ -213,7 +213,9 @@ func getPredecessor(vid int) (int) {
 	glog.Info("pred = ", pred)
 	for {
 		if memberMap[pred].alive == true {
-			break
+			if pred != vid {
+				break
+			}
 		}
 		pred = mod(pred - 1, n)
 	}
@@ -225,14 +227,32 @@ func getPredecessor(vid int) (int) {
 func getSuccessor(vid int) (int) {
 	n := len(memberMap)
 
-	succ1 := (vid + 1) % n
+	succ := (vid + 1) % n
 	for {
-		if memberMap[succ1].alive == true {
-			break
+		if memberMap[succ].alive == true {
+			if succ != vid {
+				break
+			}
 		}
-		succ1 = (succ1 + 1) % n
+		succ = (succ + 1) % n
 	}
-	return succ1
+	return succ
+}
+
+func getSuccessor2(vid int) (int) {
+	succ1 = getSuccessor(vid)
+	n := len(memberMap)
+
+	succ2 := (succ1 + 1) % n
+	for {
+		if memberMap[succ2].alive == true {
+			if succ2 != vid {
+				break
+			}
+		}
+		succ2 = (succ2 + 1) % n
+	}
+	return succ2
 }
 
 func checkSuspicion(vid int) {
@@ -301,7 +321,7 @@ func findAndSendMonitors(vid int) {
 	message = fmt.Sprintf("SUCC1,%d,%s,%d", succ1, memberMap[succ1].ip, memberMap[succ1].timestamp)
 	sendMessage(vid, message)
 
-	succ2 = getSuccessor(succ1)
+	succ2 = getSuccessor2(vid)
 	message = fmt.Sprintf("SUCC2,%d,%s,%d", succ2, memberMap[succ2].ip, memberMap[succ2].timestamp)
 	sendMessage(vid, message)
 }
@@ -343,21 +363,78 @@ func completeJoinRequests() (err error) {
 		memberMap[newVid] = &newnode
 
 		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
-		// sendMessageAddr(newnode.ip, message)
 		sendMessage(newVid, message)
-
 
 		message = fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
-		// sendMessageAddr(newnode.ip, message)
 		sendMessage(newVid, message)
 
-		time.Sleep(5 * time.Second)
-
-		// send pred, succ
 		findAndSendMonitors(newVid)
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		massMail(message)
+
+		newpred := getPredecessor(myVid)
+		_, ok := monitors["pred"]
+		if ok {
+			if newpred != monitors["pred"].vid {
+				oldpred := monitors["pred"].vid
+				monitor_node := createMonitor(newpred)
+				monitors["pred"] = &monitor_node
+
+				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+				sendMessage(newpred, message)
+				message = fmt.Sprintf("REMOVE,%d", myVid)
+				sendMessage(oldpred, message)
+			}
+		} else {
+			monitor_node := createMonitor(newpred)
+			monitors["pred"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newpred, message)
+		} 
+
+		newsucc1 := getSuccessor(myVid)
+		_, ok := monitors["succ1"]
+		if ok {
+			if newsucc1 != monitors["succ1"].vid {
+				oldsucc1 := monitors["succ1"].vid
+				monitor_node := createMonitor(newsucc1)
+				monitors["succ1"] = &monitor_node
+
+				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+				sendMessage(newsucc1, message)
+				message = fmt.Sprintf("REMOVE,%d", myVid)
+				sendMessage(oldsucc1, message)
+			}
+		} else{
+			monitor_node := createMonitor(newsucc1)
+			monitors["succ1"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newsucc1, message)
+		}
+
+		newsucc2 := getSuccessor2(myVid)
+		_, ok := monitors["succ2"]
+		if ok {
+			if newsucc2 != monitors["succ2"].vid {
+				oldsucc2 := monitors["succ2"].vid
+				monitor_node := createMonitor(newsucc2)
+				monitors["succ2"] = &monitor_node
+
+				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+				sendMessage(newsucc2, message)
+				message = fmt.Sprintf("REMOVE,%d", myVid)
+				sendMessage(oldsucc2, message)
+			}
+		} else{
+			monitor_node := createMonitor(newsucc2)
+			monitors["succ2"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newsucc2, message)
+		}
 	}
 	return nil
 	
