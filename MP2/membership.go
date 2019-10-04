@@ -146,7 +146,7 @@ func receiveHeartbeat() {
 
 func checkChildren() {
 	glog.Info("Started tracker to detect failures\n")
-	
+
 	for {
 		currTime := time.Now().Unix()
 		for child_vid, cnode := range children {
