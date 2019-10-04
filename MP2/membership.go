@@ -644,14 +644,21 @@ func main() {
 		node.timestamp = time.Now().Unix()
 		node.alive = true
 		memberMap[0] = &node
-		
+		// Need to have a fixed map where we map each introducer to a specific ID, and that will be set up, and then loop over all the remaining nodes to check if they are fine
 		go completeJoinRequests()
+
 
 	} else{
 		sendJoinRequest()
 	}
 
 	go listenOtherPort()
+
+	//go sendHeartbeat()
+
+	//go receiveHeartbeat()
+
+	//go checkChildren()
 
 	wg.Wait()
 	return
