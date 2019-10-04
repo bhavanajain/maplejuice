@@ -240,7 +240,7 @@ func getSuccessor(vid int) (int) {
 }
 
 func getSuccessor2(vid int) (int) {
-	succ1 = getSuccessor(vid)
+	succ1 := getSuccessor(vid)
 	n := len(memberMap)
 
 	succ2 := (succ1 + 1) % n
@@ -395,7 +395,7 @@ func completeJoinRequests() (err error) {
 		} 
 
 		newsucc1 := getSuccessor(myVid)
-		_, ok := monitors["succ1"]
+		_, ok = monitors["succ1"]
 		if ok {
 			if newsucc1 != monitors["succ1"].vid {
 				oldsucc1 := monitors["succ1"].vid
@@ -416,7 +416,7 @@ func completeJoinRequests() (err error) {
 		}
 
 		newsucc2 := getSuccessor2(myVid)
-		_, ok := monitors["succ2"]
+		_, ok = monitors["succ2"]
 		if ok {
 			if newsucc2 != monitors["succ2"].vid {
 				oldsucc2 := monitors["succ2"].vid
