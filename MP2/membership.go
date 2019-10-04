@@ -271,15 +271,15 @@ func findAndSendMonitors(vid int) {
 	var pred, succ1, succ2 int
 	// n = len(memberMap)
 	pred = getPredecessor(vid)
-	message := fmt.Sprintf("PRED,%d,%s,%s", pred, memberMap[pred].ip, memberMap[pred].timestamp)
+	message := fmt.Sprintf("PRED,%d,%s,%d", pred, memberMap[pred].ip, memberMap[pred].timestamp)
 	sendMessage(vid, message)
 
 	succ1 = getSuccessor(vid)
-	message = fmt.Sprintf("SUCC1,%d,%s,%s", succ1, memberMap[succ1].ip, memberMap[succ1].timestamp)
+	message = fmt.Sprintf("SUCC1,%d,%s,%d", succ1, memberMap[succ1].ip, memberMap[succ1].timestamp)
 	sendMessage(vid, message)
 
 	succ2 = getSuccessor(succ1)
-	message = fmt.Sprintf("SUCC2,%d,%s,%s", succ2, memberMap[succ2].ip, memberMap[succ2].timestamp)
+	message = fmt.Sprintf("SUCC2,%d,%s,%d", succ2, memberMap[succ2].ip, memberMap[succ2].timestamp)
 	sendMessage(vid, message)
 }
 
