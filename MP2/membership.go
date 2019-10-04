@@ -362,7 +362,7 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
-		time.Sleep(5 * time.Second)
+		// time.Sleep(5 * time.Second)
 
 		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessage(newVid, message)
@@ -372,7 +372,7 @@ func completeJoinRequests() (err error) {
 
 		findAndSendMonitors(newVid)
 
-		time.Sleep(5 * time.Second)
+		// time.Sleep(5 * time.Second)
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		massMail(message)
@@ -770,6 +770,8 @@ func main() {
 	wg.Add(1)
 
 	go listenOtherPort()
+
+	time.Sleep(1 * time.Second)
 
 	myIP = getmyIP()
 	fmt.Println(myIP)
