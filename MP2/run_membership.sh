@@ -1,0 +1,1 @@
+go run membership.go -stderrthreshold=INFO
