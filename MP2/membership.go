@@ -124,7 +124,7 @@ func receiveHeartbeat() {
 	glog.Info("Started listening on the heartbeat port", heartbeatPort)
 
 	for {
-		var buf [4]byte
+		var buf [512]byte
 		n, addr, err := heartbeatconn.ReadFromUDP(buf[0:])
 		if err != nil {
 			glog.Warning("Could not read heartbeat message")
@@ -306,7 +306,7 @@ func completeJoinRequests() (err error) {
 		return err
 	}
 	for {
-		var buf [64]byte
+		var buf [512]byte
 		_, addr, err := introducerConn.ReadFromUDP(buf[0:])
 		if err != nil {
 			glog.Warning("Could not read  message on otherport %s", introducerPort)
@@ -394,7 +394,7 @@ func listenOtherPort() (err error) {
 	}
 
 	for {
-		var buf [64]byte
+		var buf [512]byte
 		glog.Info("before")
 		n, addr, err := otherportconn.ReadFromUDP(buf[0:])
 		glog.Info("after")
