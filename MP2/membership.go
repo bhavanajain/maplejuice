@@ -199,13 +199,17 @@ func sendMessageAddr(ip string, message string) {
 
 func getPredecessor(vid int) (int) {
 	n := len(memberMap)
+	glog.Info("n = ", n)
 	pred := (vid - 1) % n
+	glog.Info("pred = ", pred)
 	for {
 		if memberMap[pred].alive == true {
 			break
 		}
 		pred = (pred - 1) % n
 	}
+	glog.Info("just beofe returning pred = ", pred)
+
 	return pred
 }
 
@@ -337,7 +341,7 @@ func completeJoinRequests() (err error) {
 		message = fmt.Sprintf("MEMBER,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		// sendMessageAddr(newnode.ip, message)
 		sendMessage(newVid, message)
-		
+
 
 		// send pred, succ
 		findAndSendMonitors(newVid)
