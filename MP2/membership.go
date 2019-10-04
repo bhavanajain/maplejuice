@@ -9,7 +9,6 @@ import (
 	"sync"
 	"github.com/golang/glog"
 	"strings"
-	"flag"
 )
 
 
@@ -662,8 +661,6 @@ func getmyIP() (string) {
 
 
 func main() {
-
-	flag.Parse()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
