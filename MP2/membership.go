@@ -150,6 +150,7 @@ func checkChildren() {
 				go checkSuspicion(child_vid)
 			}
 		}
+		time.Sleep(time.Duration(heartbeatPeriod/2) * time.Second)
 	}
 	return
 }
