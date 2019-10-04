@@ -173,6 +173,7 @@ func sendMessage(vid int, message string) {
 	}
 	defer conn.Close()
 	conn.Write([]byte(message))
+	glog.Info("Sent message %s to %s", message, vid)
 	return
 }
 
