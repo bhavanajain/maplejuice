@@ -351,6 +351,7 @@ func completeJoinRequests() (err error) {
 		// sendMessageAddr(newnode.ip, message)
 		sendMessage(newVid, message)
 
+		time.Sleep(5 * time.Second)
 
 		// send pred, succ
 		findAndSendMonitors(newVid)
@@ -687,6 +688,8 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	go listenOtherPort()
+
 	myIP = getmyIP()
 	fmt.Println(myIP)
 	if myIP == introducer {
@@ -700,8 +703,6 @@ func main() {
 	} else{
 		sendJoinRequest()
 	}
-
-	go listenOtherPort()
 
 	go sendHeartbeat()
 	go receiveHeartbeat()
