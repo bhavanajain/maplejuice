@@ -362,6 +362,8 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
+		time.Sleep(5 * time.Second)
+
 		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessage(newVid, message)
 
