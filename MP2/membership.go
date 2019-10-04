@@ -197,16 +197,24 @@ func sendMessageAddr(ip string, message string) {
 
 }
 
+func mod(a int, b int) int {
+    m := a % b
+    if a < 0 && b > 0 {
+        m += b
+    }
+    return m
+}
+
 func getPredecessor(vid int) (int) {
 	n := len(memberMap)
 	glog.Info("n = ", n)
-	pred := (vid - 1) % n
+	pred := mod(vid - 1, n)
 	glog.Info("pred = ", pred)
 	for {
 		if memberMap[pred].alive == true {
 			break
 		}
-		pred = (pred - 1) % n
+		pred = mod(pred - 1, n)
 	}
 	glog.Info("just beofe returning pred = ", pred)
 
