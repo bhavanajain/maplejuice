@@ -188,8 +188,10 @@ func sendMessageAddr(ip string, message string) {
 	defer conn.Close()
 	_, err = conn.Write([]byte(message))
 	if err != nil {
-		fmt.Println(err, "Unable to write member messages")
-	}
+		fmt.Printf("Unable to write message %s", message)
+	}	
+	glog.Info("Sent message %s to %s", message, ip)
+
 	return
 
 }
@@ -329,6 +331,7 @@ func completeJoinRequests() (err error) {
 		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessageAddr(newnode.ip, message)
 
+
 		message = fmt.Sprintf("MEMBER,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		sendMessageAddr(newnode.ip, message)
 
@@ -465,7 +468,7 @@ func listenOtherPort() (err error) {
 			// 	glog.Error("Cannot convert string timestamp to int64")
 			// }
 			// newnode.alive = true
-			// memberMap[subject] = &newnode 
+			// memberMap[subject] = &newnode
 
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
