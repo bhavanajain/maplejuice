@@ -47,7 +47,7 @@ var introducer = "172.22.152.106"
 var introducerPort = 8082
 var garbage []int
 
-func getMonitor(vid int) (node1 MonitorNode, err error) {
+func getMonitor(vid int) (MonitorNode, err error) {
 	var node MonitorNode
 	node.vid = vid
 	node.ip = memberMap[vid].ip
@@ -341,6 +341,31 @@ func addToDead(vid int) {
 	garbage = append(garbage, vid)
 }
 
+func createMonitor(vid int) (MonitorNode) {
+	var node monitorNode
+	node.vid = vid
+	node.ip = memberMap[vid].ip
+
+	var addr net.UDPAddr
+	addr.IP = net.ParseIP(node.ip)
+	addr.Port = heartbeatPort
+
+	node.conn, err = net.DialUDP("udp", nil, &addr)
+	return node
+}
+
+func createMember(ip string, str_timestamp string) (MemberNode){
+	var node MemberNode
+	node.ip = ip
+	node.timestamp, err = strconv.ParseInt(string(str_timestamp), 10, 64)
+	if err != nil {
+		glog.Error("Cannot convert string timestamp to int64")
+	}
+	node.alive = true
+	return node
+}
+
+
 func listenOtherPort() (err error) {
 	var myaddr net.UDPAddr
 	myaddr.IP = net.ParseIP(myIP)
@@ -391,110 +416,95 @@ func listenOtherPort() (err error) {
 
 		//todo condense handling of PRED, SUCC1, SUCC2
 		case "PRED":
-			// add to monitors and modify membersMap
-			var node monitorNode
-			node.vid = subject
-			node.ip = split_message[2]
+			newnode := createMember(split_message[2], split_message[3])
+			memberMap[subject] = &newnode
 
-			var pred_addr net.UDPAddr
-			pred_addr.IP = net.ParseIP(node.ip)
-			pred_addr.Port = heartbeatPort
-
-			node.conn, err = net.DialUDP("udp", nil, &pred_addr)
-
+			node := createMonitor(subject)			
 			monitorMap["pred"] = &node
 
-			var newnode MemberNode
-			newnode.ip = split_message[2]
-			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
-			if err != nil {
-				glog.Error("Cannot convert string timestamp to int64")
-			}
-			newnode.alive = true
-			memberMap[subject] = &newnode
-
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessageAddr(pred_addr.IP, message)
+			sendMessageAddr(newnode.IP, message)
 
 		case "SUCC1":
-			var node monitorNode
-			node.vid = subject
-			node.ip = split_message[2]
-
-			var succ1_addr net.UDPAddr
-			succ1_addr.IP = net.ParseIP(node.ip)
-			succ1_addr.Port = heartbeatPort
-
-			node.conn, err = net.DialUDP("udp", nil, &succ1_addr)
-
-			monitorMap["succ1"] = &node
-
-			var newnode MemberNode
-			newnode.ip = split_message[2]
-			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
-			if err != nil {
-				glog.Error("Cannot convert string timestamp to int64")
-			}
-			newnode.alive = true
+			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
+			node := createMonitor(subject)			
+			monitorMap["succ1"] = &node
+
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessageAddr(succ1_addr.IP, message)
+			sendMessageAddr(newnode.IP, message)
 
 
 		case "SUCC2":
-			var node monitorNode
-			node.vid = subject
-			node.ip = split_message[2]
-
-			var succ2_addr net.UDPAddr
-			succ2_addr.IP = net.ParseIP(node.ip)
-			succ2_addr.Port = heartbeatPort
-
-			node.conn, err = net.DialUDP("udp", nil, &succ2_addr)
-
-			monitorMap["succ2"] = &node
-
-			var newnode MemberNode
-			newnode.ip = split_message[2]
-			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
-			if err != nil {
-				glog.Error("Cannot convert string timestamp to int64")
-			}
-			newnode.alive = true
+			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
+			node := createMonitor(subject)			
+			monitorMap["succ2"] = &node
+
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessageAddr(succ2_addr.IP, message)
+			sendMessageAddr(newnode.IP, message)
 
 
 		case "MEMBER":
-			fmt.Println("[MEMBER] %d %s", subject, split_message[2])
-			var newnode MemberNode
-			newnode.ip = split_message[2]
-			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
-			if err != nil {
-				glog.Error("Cannot convert string timestamp to int64")
-			}
-			newnode.alive = true
-			memberMap[subject] = &newnode 
+			// fmt.Println("[MEMBER] %d %s", subject, split_message[2])
+			// var newnode MemberNode
+			// newnode.ip = split_message[2]
+			// newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
+			// if err != nil {
+			// 	glog.Error("Cannot convert string timestamp to int64")
+			// }
+			// newnode.alive = true
+			// memberMap[subject] = &newnode 
+
+			newnode := createMember(split_message[2], split_message[3])
+			memberMap[subject] = &newnode
+
 			glog.Info("Added a new entry to the member map - vid=%d, ip=%s, timestamp=%d", subject, newnode.ip, newnode.timestamp)
 
 
 		case "JOIN":
 			glog.Info("[JOIN] %d %s", subject, split_message[2])
 
-			var newnode MemberNode
-			newnode.ip = split_message[2]
-			newnode.timestamp, err = strconv.ParseInt(split_message[3], 10, 64)
-			if err != nil {
-				glog.Error("Cannot convert string timestamp to int64")
-			}
-			newnode.alive = true
+			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
-			message = fmt.Sprintf("MEMBER,%d,%s,%d", 0, myVid, myIP, memberMap[myVid].timestamp)
+			message := fmt.Sprintf("MEMBER,%d,%s,%d", 0, myVid, myIP, memberMap[myVid].timestamp)
 			sendMessage(subject, message)
+
+			newpred := getPredecessor(myVid)
+			if newpred != monitors["pred"].vid {
+				oldpred := monitors["pred"].vid
+				monitors["pred"] = createMonitor(newpred)
+
+				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+				sendMessage(newpred, message)
+				message = fmt.Sprintf("REMOVE,%d", myVid)
+				sendMessage(oldpred, message)
+			}
+
+			newsucc1 = getSuccessor(myVid)
+			if newsucc1 != monitors["succ1"].vid {
+				oldsucc1 := monitors["succ1"].vid
+				monitors["succ1"] = createMonitor(newsucc1)
+
+				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+				sendMessage(newsucc1, message)
+				message = fmt.Sprintf("REMOVE,%d", myVid)
+				sendMessage(oldsucc1, message)
+			}
+
+			newsucc2 = getSuccessor(newsucc1)
+			if newsucc2 != monitors["succ2"].vid {
+				oldsucc2 := monitors["succ2"].vid
+				monitors["succ2"] = createMonitor(newsucc2)
+
+				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+				sendMessage(newsucc2, message)
+				message = fmt.Sprintf("REMOVE,%d", myVid)
+				sendMessage(oldsucc2, message)
+			}
 
 		case "LEAVE", "CRASH":
 			memberMap[subject].alive = false
@@ -505,16 +515,33 @@ func listenOtherPort() (err error) {
 			for type_, node := range(monitors) {
 				if subject == node.vid {
 					// Baby you're in trouble
+					var newMonitorID int
 					switch type_ {
 					case "pred":
-						new_pred = getPredecessor(myVid)
-						monitors["pred"] = 
-					case "succ1"
+						newMonitorID = getPredecessor(myVid)
+					case "succ1":
+						newMonitorID = getSuccessor(myVid)
+					case "succ2":
+						newMonitorID = getSuccessor(monitors["succ2"].vid)
 					}
+					var node monitorNode
+					node.vid = newMonitorID
+					node.ip = memberMap[newMonitorID].ip
+
+					var node_addr net.UDPAddr
+					node_addr.IP = net.ParseIP(node.ip)
+					node_addr.Port = heartbeatPort
+
+					node.conn, err = net.DialUDP("udp", nil, &node_addr)
+
+					monitorMap[type_] = &node
+
+					message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+					sendMessageAddr(node_addr.IP, message)
+
+					break
 				}
 			}
-
-
 
 		case "SUSPECT":
 			var alive = false
