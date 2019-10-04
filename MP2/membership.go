@@ -578,7 +578,9 @@ func listenOtherPort() (err error) {
 			// }
 			// newnode.alive = true
 			// memberMap[subject] = &newnode
-
+			if subject == myVid {
+				break
+			}
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
@@ -586,6 +588,9 @@ func listenOtherPort() (err error) {
 
 
 		case "JOIN":
+			if subject == myVid {
+				break
+			}
 			glog.Info("[JOIN] %d %s", subject, split_message[2])
 
 			newnode := createMember(split_message[2], split_message[3])
