@@ -669,9 +669,9 @@ func main() {
 
 	go listenOtherPort()
 
-	go sendHeartbeat()
-	go receiveHeartbeat()
-	go checkChildren()
+	// go sendHeartbeat()
+	// go receiveHeartbeat()
+	// go checkChildren()
 
 	wg.Wait()
 	return
