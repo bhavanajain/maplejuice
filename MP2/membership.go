@@ -370,6 +370,8 @@ func completeJoinRequests() (err error) {
 
 		findAndSendMonitors(newVid)
 
+		time.Sleep(5 * time.Second)
+
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		massMail(message)
 
@@ -489,9 +491,9 @@ func listenOtherPort() (err error) {
 
 	for {
 		var buf [512]byte
-		glog.Info("before")
+		// glog.Info("before")
 		n, addr, err := otherportconn.ReadFromUDP(buf[0:])
-		glog.Info("after")
+		// glog.Info("after")
 
 		if err != nil {
 			glog.Warning("Could not read  message on otherport %s", otherPort)
