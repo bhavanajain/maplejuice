@@ -42,8 +42,8 @@ var memberMap = make(map[int]*MemberNode)
 var monitors = make(map[string]*MonitorNode)
 var children = make(map[int]*ChildNode)
 
-var eventMap = make(map[int]int64)
-var fingerTable = []int{}
+var eventTimeMap = make(map[int]int64)
+var fingerTable = make(map[int]int)
 var fingerTablePeriod int64 = 10
 
 // var timerMap = make(map[int] int64) // Map to store the last time a meesage has been received
@@ -212,9 +212,8 @@ func mod(a int, b int) int {
     return m
 }
 
-func max( a int, b int) int {
-
-	if a > b{
+func max(a int, b int) int {
+	if a > b {
 		return a
 	}
 	return b
@@ -270,16 +269,30 @@ func getSuccessor2(vid int) (int) {
 
 func updateFingerTable() {
 	for {
-		fingerTable = []int{}
 		n := maxID + 1
 		factor := 1
+		idx := 0
 		for {
+			if (n < 2) {
+				break
+			}
+
 			val := (myVid + factor) % n
 			entry := getSuccessor(val)
-			fingerTable = append(fingerTable, entry)
+			fingerTable[idx] = entry
+
+			idx = idx + 1
 			factor = factor * 2
 			if factor >= n {
 				break
+			}
+		}
+
+		stale_idx := len(fingerTable)
+		for i:=idx; i<stale_idx; i++ {
+			_, ok := fingerTable[i]
+			if ok {
+				delete(fingerTable, i)
 			}
 		}
 		glog.Infof("[FINGER TABLE %d] Updated fingerTable to %v", myVid, fingerTable)
@@ -568,8 +581,6 @@ func updateMonitors() {
 
 	if !reflect.DeepEqual(old_monitors, new_monitors) {
 		glog.Infof("[HEARTBEAT %d]Updated monitors from %v to %v", myVid, old_monitors, new_monitors)
-		// glog.Infof("[MONITOR] Old monitors of %d: %v", myVid, old_monitors)
-		// glog.Infof("[MONITOR] New monitors of %d: %v", myVid, new_monitors)
 	}
 }
 
@@ -710,9 +721,9 @@ func listenOtherPort() (err error) {
 			
 
 			// Check the timerMap
-			_, ok := eventMap[subject]
-			if (!ok || eventMap[subject] < origin_time) {
-				eventMap[subject] = origin_time
+			_, ok := eventTimeMap[subject]
+			if (!ok || eventTimeMap[subject] < origin_time) {
+				eventTimeMap[subject] = origin_time
 				disseminate(message)
 			} 
 
@@ -744,9 +755,9 @@ func listenOtherPort() (err error) {
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
 			// Check the timerMap
-			_, ok = eventMap[subject]
-			if (!ok || eventMap[subject] < origin_time){
-				eventMap[subject] = origin_time
+			_, ok = eventTimeMap[subject]
+			if (!ok || eventTimeMap[subject] < origin_time){
+				eventTimeMap[subject] = origin_time
 				disseminate(message)
 			} 
 
