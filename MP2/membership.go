@@ -254,7 +254,8 @@ func getSuccessor2(vid int) (int) {
 
 	succ2 := (succ1 + 1) % n
 	for {
-		if memberMap[succ2].alive == true {
+		_,ok := memberMap[succ2]
+		if ok && memberMap[succ2].alive == true {
 			if succ2 != vid {
 				break
 			}
