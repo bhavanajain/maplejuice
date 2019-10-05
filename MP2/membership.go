@@ -350,7 +350,7 @@ func disseminate(message string) {
 
 func checkIntroducer(){
 	for{
-		time.Sleep(time.Duration(fingerPeriod)*time.Second)
+		time.Sleep(time.Duration(10)*time.Second)
 		if memberMap[0].alive == false {
 				// Send a message to particular message to the introducer
 				message:= fmt.Sprintf("INTRODUCER,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID)
