@@ -717,10 +717,10 @@ func garbageCollection(){ // Part of the introducer rejoin thing run every 30 se
 				_,ok := memberMap[i]
 				if ok{
 					if memberMap[i].alive == false{
-						garbage = append(garbage, vid)
+						garbage = append(garbage, i)
 					}
 				}else{
-					garbage = append(garbage, vid)
+					garbage = append(garbage, i)
 				}
 			}
 		}
