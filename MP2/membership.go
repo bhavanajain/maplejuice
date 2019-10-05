@@ -287,6 +287,8 @@ func updateFingerTable() {
 			}
 		}
 
+		glog.Infof("[VFINGER %d] Updating the finger table, memberMap Len %d",myVid,n)
+
 		eidx := len(fingerNode)
 		if eidx > idx{
 			for i:= idx ; i < eidx; i++{
@@ -300,7 +302,7 @@ func updateFingerTable() {
 			}
 		}
 
-		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
+		glog.Infof("[FFINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
 
 		time.Sleep(time.Duration(fingerPeriod) * time.Second)
 
