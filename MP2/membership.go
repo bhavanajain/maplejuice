@@ -219,7 +219,7 @@ func mod(a int, b int) int {
 
 func getPredecessor(vid int) (int) {
 	n := len(memberMap)
-	fmt.Printf("Size of pred list is %d\n",n)
+	// fmt.Printf("Size of pred list is %d\n",n)
 	pred := mod(vid - 1, n)
 	for {
 		_,ok := memberMap[pred]
@@ -744,9 +744,14 @@ func listenOtherPort() (err error) {
 					memberMap[subject] = &newnode
 					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
 					time.Sleep(6*time.Second)
-					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,time.Now().Unix())
-					updateMonitors()
-					fmt.Println("End of Monitos")
+					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
+					monitor_node := createMonitor(subject)
+					monitors["pred"] = &monitor_node
+					monitors["succ1"] = &monitor_node
+					monitors["succ1"] = &monitor_node
+					message := fmt.Sprintf("ADD,%d,%s,%d", subject, memberMap[subject].ip, memberMap[subject].timestamp)
+					sendMessage(subject, message)
+					// fmt.Println("End of Monitos")
 					disseminate(message)
 					glog.Infof("[DISS INTRODUCER %d] Received an introducer message from %d",0,subject)
 
@@ -783,6 +788,7 @@ func listenOtherPort() (err error) {
 			}
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
+
 			updateMonitors() // as new entry comes along we need to modify the Monitor list
 
 
