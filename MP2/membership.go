@@ -739,6 +739,7 @@ func listenOtherPort() (err error) {
 					memberMap[subject] = &newnode
 					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
+					updateMonitors()
 					disseminate(message)
 
 				}
