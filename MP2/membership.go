@@ -740,7 +740,9 @@ func listenOtherPort() (err error) {
 					time.Sleep(6*time.Second)
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,time.Now().Unix())
 					updateMonitors()
+					fmt.Println("End of Monitos")
 					disseminate(message)
+					glog.Infof("[DISS INTRODUCER %d] Received an introducer message from %d",0,subject)
 
 				}
 			}
