@@ -1025,6 +1025,7 @@ func main() {
 	go receiveHeartbeat()
 	go checkChildren()
 
+	// Introducer and Finger Table and dissemination done
 
 	wg.Wait()
 	return
