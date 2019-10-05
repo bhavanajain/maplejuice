@@ -237,7 +237,7 @@ func getSuccessor(vid int) (int) {
 
 	succ := (vid + 1) % n
 	for {
-		_,ok := memberMap[succ]
+		_,ok := memberMap[succ] // checking if succ is in the memberMap
 		if ok && memberMap[succ].alive == true {
 			if succ != vid {
 				break
@@ -327,6 +327,22 @@ func disseminate(message string) {
 		sendMessage(node,message)
 	}// Not added yet
 	
+}
+
+
+func checkIntroducer(){
+	for{
+		time.Sleep(time.Duration(fingerPeriod)*time.Second)
+		if memberMap[0].alive == false {
+				// Send a message to particular message to the introducer
+				message:= fmt.Sprintf("INTRODUCER,%d,%s,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp)
+				sendMessage(0,message) // periodically send the message
+		}
+
+
+
+		
+	}
 }
 
 func massMail(message string) {
@@ -447,7 +463,7 @@ func completeJoinRequests() (err error) {
 
 		time.Sleep(100 * time.Millisecond)
 
-		message = fmt.Sprintf("JOIN,%d,%s,%d,%d", newVid, newnode.ip, newnode.timestamp,time.Now().Unix())
+		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		disseminate(message)
 		// massMail(message)
 
@@ -713,6 +729,19 @@ func listenOtherPort() (err error) {
 				delete(children, subject)
 			}
 
+
+		case "INTRODUCER":
+			if myVid == 0 {
+				if len(memberMap) < 5 { // Handles 3 failure
+					newnode := createMember(split_message[2],split_message[3])
+					memberMap[subject] = &newnode
+
+					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
+					disseminate(message)
+
+				}
+			}
+
 		case "PRED", "SUCC1", "SUCC2":
 			var newnode MemberNode
 			newnode = createMember(split_message[2], split_message[3])
@@ -743,6 +772,7 @@ func listenOtherPort() (err error) {
 			}
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
+			updateMonitors() // as new entry comes along we need to modify the Monitor list
 
 
 
@@ -918,12 +948,14 @@ func main() {
 		go completeJoinRequests()
 	} else{
 		sendJoinRequest()
+		go checkIntroducer()
 
 	}
 
 	go sendHeartbeat()
 	go receiveHeartbeat()
 	go checkChildren()
+
 
 	wg.Wait()
 	return
