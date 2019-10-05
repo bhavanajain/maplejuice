@@ -237,7 +237,8 @@ func getSuccessor(vid int) (int) {
 
 	succ := (vid + 1) % n
 	for {
-		if memberMap[succ].alive == true {
+		_,ok := memberMap[succ]
+		if ok && memberMap[succ].alive == true {
 			if succ != vid {
 				break
 			}
@@ -278,7 +279,6 @@ func updateFingerTable() {
 				break
 			}
 			nval := (myVid+mult) % n
-			glog.Infof("[ERR FINGER %d] Updating the finger table, memberMap node %d",myVid,nval)
 			newVid := getSuccessor(nval)
 			fingerNode[idx] = newVid
 			idx = idx+1
@@ -288,7 +288,6 @@ func updateFingerTable() {
 			}
 		}
 
-		glog.Infof("[VFINGER %d] Updating the finger table, memberMap Len %d",myVid,n)
 
 		eidx := len(fingerNode)
 		if eidx > idx{
@@ -303,7 +302,7 @@ func updateFingerTable() {
 			}
 		}
 
-		glog.Infof("[FFINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
+		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
 
 		time.Sleep(time.Duration(fingerPeriod) * time.Second)
 
