@@ -60,7 +60,7 @@ func sendHeartbeat() {
 			if err != nil {
 				glog.Warning("[HEARTBEAT] Could not send heartbeat to ", type_, node.vid)
 			}
-			glog.Info("[HEARTBEAT] Sent heartbeat to ", type_, node.vid)
+			glog.Infof("[HEARTBEAT %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
@@ -73,28 +73,28 @@ func receiveHeartbeat() {
 
 	heartbeatConn, err := net.ListenUDP("udp", &myaddr)
 	if err != nil {
-		glog.Errorln("[HEARTBEAT] Unable to setup Listen on heartbeat port ", heartbeatPort)
+		glog.Errorf("[HEARTBEAT %d] Unable to setup Listen on heartbeat port %d\n", myVid, heartbeatPort)
 	}
 
 	for {
 		var buf [512]byte
 		n, addr, err := heartbeatConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warning("[HEARTBEAT] Could not read message on heartbeat port\n")
+			glog.Warningf("[HEARTBEAT %d] Could not read message on heartbeat port\n", myVid, heartbeatPort)
 		}
 
 		child_vid, err := strconv.Atoi(string(buf[0:n]))
 		if err != nil {
-			glog.Error("[HEARTBEAT] Could not map a heartbeat message to a virtual ID\n")
+			glog.Errorf("[HEARTBEAT %d] Could not map a heartbeat message to a virtual ID\n", myVid)
 		}
 
 		// Check if the sender vid is in your children map
 		_, ok := children[child_vid]
 		if ok {
 			children[child_vid].timestamp = time.Now().Unix()
-			glog.Infof("[HEARTBEAT] Received heartbeat from vid=%d, ip=%s\n", child_vid, addr.IP.String())
+			glog.Infof("[HEARTBEAT %d] Received heartbeat from vid=%d, ip=%s\n", myVid, child_vid, addr.IP.String())
 		} else{
-			glog.Infof("[HEARTBEAT] Received a non-child heartbeat from vid=%s, ip=%s", child_vid, addr.IP.String())
+			glog.Infof("[HEARTBEAT %d] Received a non-child heartbeat from vid=%s, ip=%s", myVid, child_vid, addr.IP.String())
 
 		}
 	}
@@ -105,7 +105,7 @@ func checkChildren() {
 		currTime := time.Now().Unix()
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
-				glog.Warningf("[HEARTBEAT] Haven't received heartbeat from %s since two heartbeat periods", child_vid)
+				glog.Warningf("[**SUSPICION %d **] Haven't received heartbeat from %s since two heartbeat periods\n", myVid, child_vid)
 				suspects = append(suspects, child_vid)
 				go checkSuspicion(child_vid)
 			}
@@ -143,7 +143,7 @@ func checkSuspicion(vid int) {
 			if ok {
 				delete(children, vid)
 			}
-			
+
 			message := fmt.Sprintf("CRASH,%d", vid)		
 			massMail(message)
 			updateMonitors()
