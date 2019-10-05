@@ -340,10 +340,7 @@ func checkIntroducer(){
 				sendMessage(0,message) // periodically send the message
 				glog.Infof("[INTRODUCER %d] Sent message ",myVid)
 		}
-
-
-
-		
+	
 	}
 }
 
@@ -588,6 +585,8 @@ func Difference(a, b []int) (diff []int) {
 
 func updateMonitors() {
 
+	glog.Infof("[MONITOR %d]  This code runs ",myVid)
+
 	var old_monitors []int
 	var new_monitors []int
 
@@ -739,7 +738,7 @@ func listenOtherPort() (err error) {
 					memberMap[subject] = &newnode
 					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
 					time.Sleep(6*time.Second)
-					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
+					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,time.Now().Unix())
 					updateMonitors()
 					disseminate(message)
 
@@ -938,7 +937,7 @@ func main() {
 
 	go listenOtherPort()
 
-	time.Sleep(5 * time.Second)
+	
 
 	myIP = getmyIP()
 	fmt.Println(myIP)
@@ -949,8 +948,10 @@ func main() {
 		node.timestamp = time.Now().Unix()
 		node.alive = true
 		memberMap[0] = &node
+		time.Sleep(5 * time.Second)
 		go completeJoinRequests()
 	} else{
+		time.Sleep(5 * time.Second)
 		sendJoinRequest()
 		go checkIntroducer()
 
