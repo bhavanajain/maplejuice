@@ -295,6 +295,8 @@ func updateFingerTable() {
 			delete(fingerNode,idx)
 		}
 
+		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
+
 		time.Sleep(time.Duration(fingerPeriod) * time.Second)
 
 	}
