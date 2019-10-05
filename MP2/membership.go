@@ -78,7 +78,7 @@ func sendHeartbeat() {
 			if err != nil {
 				glog.Warning("[HEARTBEAT] Could not send heartbeat to ", type_, node.vid)
 			}
-			glog.Infof("[HEARTBEAT %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
+			// glog.Infof("[HEARTBEAT %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
@@ -110,7 +110,7 @@ func receiveHeartbeat() {
 		_, ok := children[child_vid]
 		if ok {
 			children[child_vid].timestamp = time.Now().Unix()
-			glog.Infof("[HEARTBEAT %d] Received heartbeat from vid=%d, ip=%s\n", myVid, child_vid, addr.IP.String())
+			// glog.Infof("[HEARTBEAT %d] Received heartbeat from vid=%d, ip=%s\n", myVid, child_vid, addr.IP.String())
 		} else{
 			glog.Infof("[HEARTBEAT %d] Received a non-child heartbeat from vid=%s, ip=%s", myVid, child_vid, addr.IP.String())
 
@@ -208,9 +208,9 @@ func sendMessageAddr(ip string, message string) {
 	defer conn.Close()
 	_, err = conn.Write([]byte(message))
 	if err != nil {
-		fmt.Printf("Unable to write message %s", message)
+		glog.Warningf("[vid %d] Unable to write message to %s", myVid, ip)
 	}	
-	glog.Info("Sent message %s to %s", message, ip)
+	// glog.Info("Sent message %s to %s", message, ip)
 
 	return
 }
@@ -235,7 +235,6 @@ func max( a int, b int) int {
 func getPredecessor(vid int) (int) {
 	// n := len(memberMap)
 	n := maxID + 1
-	// fmt.Printf("Size of pred list is %d\n",n)
 	pred := mod(vid - 1, n)
 	for {
 		_,ok := memberMap[pred]
@@ -797,7 +796,6 @@ func listenOtherPort() (err error) {
 					} else{
 						updateMonitors()
 					}
-					// fmt.Println("End of Monitos")
 					disseminate(message)
 					glog.Infof("[DISS INTRODUCER %d] Received an introducer message from %d",0,subject)
 
