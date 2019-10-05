@@ -293,7 +293,10 @@ func updateFingerTable() {
 				if n <3 {
 					break
 				}
-				delete(fingerNode,i)
+				_,ok := fingerNode[i]
+				if ok{
+					delete(fingerNode,i)
+				}
 			}
 		}
 
