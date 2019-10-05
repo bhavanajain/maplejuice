@@ -271,7 +271,7 @@ func checkSuspicion(vid int) {
 	}
 	time.Sleep(time.Duration(500) * time.Millisecond) // time duration after which we said that this node is crashed
 
-	suspect_idx = -1
+	suspect_idx := -1
 	for i, suspect := range(suspects) {
 		if suspect == vid {
 
