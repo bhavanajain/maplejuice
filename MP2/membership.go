@@ -825,6 +825,7 @@ func listenOtherPort() (err error) {
 				go updateFingerTable()
 				initRun = false
 			}
+			go checkIntroducer()
 
 		case "MEMBER":
 			if subject == myVid {
@@ -1012,7 +1013,7 @@ func main() {
 	} else{
 		time.Sleep(5 * time.Second)
 		sendJoinRequest()
-		go checkIntroducer()
+		// go checkIntroducer()
 
 	}
 
