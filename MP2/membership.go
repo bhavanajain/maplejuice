@@ -713,8 +713,8 @@ func garbageCollection(){ // Part of the introducer rejoin thing run every 30 se
 		for{
 			time.Sleep(30 * time.Second)
 			for i:=1; i<=maxID; i++{
-				mnode, isavailable = memberMap[i]
-				if !isavailable or !mnode.alive {
+				mnode, isavailable := memberMap[i]
+				if (!isavailable || !mnode.alive) {
 					garbage = append(garbage, i)
 				}
 				// _, ok := memberMap[i]
