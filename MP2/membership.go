@@ -10,6 +10,7 @@ import (
 	"github.com/golang/glog"
 	"strings"
 	"flag"
+	"reflect"
 )
 
 type MemberNode struct {
@@ -41,14 +42,16 @@ var memberMap = make(map[int]*MemberNode)
 var monitors = make(map[string]*MonitorNode)
 var children = make(map[int]*ChildNode)
 
-var timerMap = make(map[int] int64) // Map to store the last time a meesage has been received
-var fingerNode = make(map[int] int)
+var eventMap = make(map[int]int64)
+var fingerTable = []int{}
+var fingerTablePeriod int64 = 10
+
+// var timerMap = make(map[int] int64) // Map to store the last time a meesage has been received
 
 var initRun = true // To run updateFinger table
 
 var heartbeatPort = 8080
 var heartbeatPeriod int64 = 2
-var fingerPeriod int64 = 10
 var suspects []int 	// remove from suspects when leave or crash 
 var garbage = []int{}
 
@@ -265,62 +268,80 @@ func getSuccessor2(vid int) (int) {
 	return succ2
 }
 
-
 func updateFingerTable() {
 	for {
+		fingerTable = []int{}
 		n := maxID + 1
-		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d", myVid, n)
-		mult := 1
-		idx := 0
-
-		for{
-			if n < 2 {
-				break
-			}
-			nval := (myVid+mult) % n
-			newVid := getSuccessor(nval)
-			fingerNode[idx] = newVid
-			idx = idx+1
-			mult = mult*2
-			if (mult >= n){
+		factor := 1
+		for {
+			val := (myVid + factor) % n
+			entry := getSuccessor(val)
+			fingerTable = append(fingerTable, entry)
+			factor = factor * 2
+			if factor >= n {
 				break
 			}
 		}
+		glog.Infof("[FINGER TABLE %d] Updated fingerTable to %v", myVid, fingerTable)
+		time.Sleep(time.Duration(fingerTablePeriod) * time.Second)
+	}
+}
 
-		eidx := len(fingerNode)
-		if eidx > idx{
-			for i:= idx ; i < eidx; i++{
-				if n <2 {
-					break
-				}
-				_,ok := fingerNode[i]
-				if ok{
-					delete(fingerNode,i)
-				}
-			}
-		}
+// func updateFingerTable() {
+// 	for {
+// 		n := maxID + 1
+// 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d", myVid, n)
+// 		mult := 1
+// 		idx := 0
+
+// 		for{
+// 			if n < 2 {
+// 				break
+// 			}
+// 			nval := (myVid+mult) % n
+// 			newVid := getSuccessor(nval)
+// 			fingerNode[idx] = newVid
+// 			idx = idx+1
+// 			mult = mult*2
+// 			if (mult >= n){
+// 				break
+// 			}
+// 		}
+
+// 		eidx := len(fingerNode)
+// 		if eidx > idx{
+// 			for i:= idx ; i < eidx; i++{
+// 				if n <2 {
+// 					break
+// 				}
+// 				_,ok := fingerNode[i]
+// 				if ok{
+// 					delete(fingerNode,i)
+// 				}
+// 			}
+// 		}
 
 		
-		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
+// 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
 
-		time.Sleep(time.Duration(fingerPeriod) * time.Second)
-	}
-	return
-}
+// 		time.Sleep(time.Duration(fingerPeriod) * time.Second)
+// 	}
+// 	return
+// }
 
 func disseminate(message string) {
 
-	// Send to the neighbourhood Nodes, code from heartbeat
 	for _, node := range(monitors) {
 		sendMessage(node.vid, message)
 	}
 
-	for _, node := range(fingerNode) {
-		if node == myVid{
+	for _, node := range(fingerTable) {
+		// [TODO] if the node is not alive, don't send that message
+		if (node == myVid) {
 			continue
 		}
 		sendMessage(node,message)
-	}// Not added yet
+	}
 }
 
 
@@ -337,18 +358,18 @@ func checkIntroducer(){
 	}
 }
 
-func massMail(message string) {
-	for vid, node := range(memberMap) {
-		if (vid == myVid || node.alive == false) {
-			continue
-		}
-		sendMessage(vid, message)
-	}
-}
+// func massMail(message string) {
+// 	for vid, node := range(memberMap) {
+// 		if (vid == myVid || node.alive == false) {
+// 			continue
+// 		}
+// 		sendMessage(vid, message)
+// 	}
+// }
 
 func findAndSendMonitors(vid int) {
 	var pred, succ1, succ2 int
-	// n = len(memberMap)
+
 	pred = getPredecessor(vid)
 	message := fmt.Sprintf("PRED,%d,%s,%d", pred, memberMap[pred].ip, memberMap[pred].timestamp)
 	sendMessage(vid, message)
@@ -414,7 +435,6 @@ func completeJoinRequests() (err error) {
 			initRun = false
 		}
 		
-
 		time.Sleep(100 * time.Millisecond)
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
@@ -423,7 +443,6 @@ func completeJoinRequests() (err error) {
 		updateMonitors()
 	}
 	return nil
-	
 }
 
 // func addToDead(vid int) {
@@ -544,22 +563,25 @@ func updateMonitors() {
 		sendMessage(vid, message)
 	}
 
-	glog.Infof("[MONITOR] Old monitors of %d: %v", myVid, old_monitors)
-	glog.Infof("[MONITOR] New monitors of %d: %v", myVid, new_monitors)
+	if !reflect.DeepEqual(old_monitors, new_monitors) {
+		glog.Infof("[HEARTBEAT %d]Updated monitors from %v to %v", myVid, old_monitors, new_monitors)
+		// glog.Infof("[MONITOR] Old monitors of %d: %v", myVid, old_monitors)
+		// glog.Infof("[MONITOR] New monitors of %d: %v", myVid, new_monitors)
+	}
 }
 
 
-func garbageCollection() { // Part of the introducer rejoin thing run every 30 seconds
-		for {
-			time.Sleep(30 * time.Second)
+func garbageCollection() {
+	for {
+		time.Sleep(30 * time.Second)
 
-			for i:=1; i<=maxID; i++ {
-				mnode, isavailable := memberMap[i]
-				if (!isavailable || !mnode.alive) {
-					garbage = append(garbage, i)
-				}
+		for i:=1; i<=maxID; i++ {
+			mnode, isavailable := memberMap[i]
+			if (!isavailable || !mnode.alive) {
+				garbage = append(garbage, i)
 			}
 		}
+	}
 }
 
 
@@ -685,9 +707,9 @@ func listenOtherPort() (err error) {
 			
 
 			// Check the timerMap
-			_, ok := timerMap[subject]
-			if (!ok || timerMap[subject] < origin_time) {
-				timerMap[subject] = origin_time
+			_, ok := eventMap[subject]
+			if (!ok || eventMap[subject] < origin_time) {
+				eventMap[subject] = origin_time
 				disseminate(message)
 			} 
 
@@ -719,9 +741,9 @@ func listenOtherPort() (err error) {
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
 			// Check the timerMap
-			_, ok = timerMap[subject]
-			if (!ok || timerMap[subject] < origin_time){
-				timerMap[subject] = origin_time
+			_, ok = eventMap[subject]
+			if (!ok || eventMap[subject] < origin_time){
+				eventMap[subject] = origin_time
 				disseminate(message)
 			} 
 
@@ -793,7 +815,6 @@ func getmyIP() (string) {
 		glog.Fatal("Cannot get my IP :(")
 		os.Exit(1)
 	}
-
 	for _, a := range addrs {
 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
 			if ipnet.IP.To4() != nil {
