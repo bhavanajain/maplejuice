@@ -550,7 +550,7 @@ func updateMonitors() {
 
 
 func garbageCollection() { // Part of the introducer rejoin thing run every 30 seconds
-		for{
+		for {
 			time.Sleep(30 * time.Second)
 
 			for i:=1; i<=maxID; i++ {
@@ -612,19 +612,19 @@ func listenOtherPort() (err error) {
 				if len(memberMap) < 5 { // Handles 3 failure
 					newnode := createMember(split_message[2],split_message[3])
 					memberMap[subject] = &newnode
-					tempmax,_ := strconv.Atoi(split_message[4])
+					tempmax, _ := strconv.Atoi(split_message[4])
 					maxID = max(maxID,tempmax)
 					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
 					time.Sleep(6 * time.Second)
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
 					monitor_node := createMonitor(subject)
-					if initMessageCount == 0{
+					if initMessageCount == 0 {
 						monitors["pred"] = &monitor_node
 						monitors["succ1"] = &monitor_node
-						monitors["succ1"] = &monitor_node
+						monitors["succ2"] = &monitor_node
 						message = fmt.Sprintf("ADD,%d,%s,%d", 0, memberMap[0].ip, memberMap[0].timestamp)
 						sendMessage(subject, message)
-						initMessageCount = initMessageCount+1
+						initMessageCount = initMessageCount + 1
 					} else{
 						updateMonitors()
 					}
@@ -681,12 +681,12 @@ func listenOtherPort() (err error) {
 
 			// Read the sender of the message
 			// len_msg := len(split_message)
-			origin_time,_ := strconv.ParseInt(string(split_message[3]), 10, 64)
+			origin_time, _ := strconv.ParseInt(string(split_message[3]), 10, 64)
 			
 
 			// Check the timerMap
-			_,ok := timerMap[subject]
-			if (ok || timerMap[subject] < origin_time){
+			_, ok := timerMap[subject]
+			if (!ok || timerMap[subject] < origin_time) {
 				timerMap[subject] = origin_time
 				disseminate(message)
 			} 
@@ -697,22 +697,20 @@ func listenOtherPort() (err error) {
 
 			// check if it is currently marked alive or not
 			glog.Infof("Received CRASH for %d",subject)
-			_,ok := memberMap[subject]
+			_, ok := memberMap[subject]
 			if ok {
 
-				if memberMap[subject].alive == false{
+				if memberMap[subject].alive == false {
 					break;
 				}
+
 				memberMap[subject].alive = false
-				// if myIP == introducer {
-				// 	//go addToDead(subject)
-				// }
-				
 				
 				_, ok = children[subject]
 				if ok {
 					delete(children, subject)
 				}
+
 				updateMonitors()
 			}
 
@@ -722,7 +720,7 @@ func listenOtherPort() (err error) {
 
 			// Check the timerMap
 			_, ok = timerMap[subject]
-			if (ok || timerMap[subject] < origin_time){
+			if (!ok || timerMap[subject] < origin_time){
 				timerMap[subject] = origin_time
 				disseminate(message)
 			} 
@@ -823,38 +821,33 @@ func main() {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	go listenOtherPort()
-
 	myIP = getmyIP()
-	glog.Info(myIP)
 
 	if myIP == introducer {
 		myVid = 0
-		// maxID = 1
 		var node MemberNode
 		node.ip = myIP
 		node.timestamp = time.Now().Unix()
 		node.alive = true
 		memberMap[0] = &node
+	}
 
-		time.Sleep(5 * time.Second)		// why is this sleep required?
+	go listenOtherPort()
 
+	time.Sleep(5 * time.Second)
+
+	glog.Info(myIP)
+
+	if myIP == introducer {
 		go completeJoinRequests()
 		go garbageCollection()
-
 	} else{
-		time.Sleep(5 * time.Second)		// why is this sleep required?
-
 		sendJoinRequest()
-
-		// go checkIntroducer()
 	}
 
 	go sendHeartbeat()
 	go receiveHeartbeat()
 	go checkChildren()
-
-	// Introducer and Finger Table and dissemination done
 
 	wg.Wait()
 	return
