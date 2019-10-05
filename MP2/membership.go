@@ -464,72 +464,115 @@ func createMember(ip string, str_timestamp string) (MemberNode){
 	return node
 }
 
+func Difference(a, b []int) (diff []int) {
+      m := make(map[int]bool)
+
+      for _, item := range b {
+              m[item] = true
+      }
+
+      for _, item := range a {
+              if _, ok := m[item]; !ok {
+                      diff = append(diff, item)
+              }
+      }
+      return
+}
+
 func updateMonitors() {
 
+	var old_monitors []int
+	var new_monitors []int
+
 	newpred := getPredecessor(myVid)
+	new_monitors = append(new_monitors, newpred)
+
 	_, ok := monitors["pred"]
+
 	if !ok {
 		monitor_node := createMonitor(newpred)
 		monitors["pred"] = &monitor_node
 
-		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		sendMessage(newpred, message)
+		// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+		// sendMessage(newpred, message)
 	} else {
 		oldpred := monitors["pred"].vid
+		old_monitors = append(old_monitors, oldpred)
+
 		if oldpred != newpred {
 			monitor_node := createMonitor(newpred)
 			monitors["pred"] = &monitor_node
 
-			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessage(newpred, message)
+			// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			// sendMessage(newpred, message)
 
-			message = fmt.Sprintf("REMOVE,%d", myVid)
-			sendMessage(oldpred, message)
+			// message = fmt.Sprintf("REMOVE,%d", myVid)
+			// sendMessage(oldpred, message)
 		}
 	}
 
 	newsucc1 := getSuccessor(myVid)
+	new_monitors = append(new_monitors, newsucc1)
+
 	_, ok = monitors["succ1"]
 	if !ok {
 		monitor_node := createMonitor(newsucc1)
 		monitors["succ1"] = &monitor_node
 
-		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		sendMessage(newsucc1, message)
+		// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+		// sendMessage(newsucc1, message)
 	} else {
 		oldsucc1 := monitors["succ1"].vid
+		old_monitors = append(old_monitors, oldsucc1)
+
 		if newsucc1 != oldsucc1 {
 			monitor_node := createMonitor(newsucc1)
 			monitors["succ1"] = &monitor_node
 
-			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessage(newsucc1, message)
+			// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			// sendMessage(newsucc1, message)
 
-			message = fmt.Sprintf("REMOVE,%d", myVid)
-			sendMessage(oldsucc1, message)
+			// message = fmt.Sprintf("REMOVE,%d", myVid)
+			// sendMessage(oldsucc1, message)
 		}
 	}
 
 	newsucc2 := getSuccessor2(myVid)
+	new_monitors = append(new_monitors, newsucc2)
+
 	_, ok = monitors["succ2"]
 	if !ok {
 		monitor_node := createMonitor(newsucc2)
 		monitors["succ2"] = &monitor_node
 
-		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		sendMessage(newsucc2, message)
+		// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+		// sendMessage(newsucc2, message)
 	} else {
 		oldsucc2 := monitors["succ2"].vid
+		old_monitors = append(old_monitors, oldsucc2)
+
 		if newsucc2 != oldsucc2 {
 			monitor_node := createMonitor(newsucc2)
 			monitors["succ2"] = &monitor_node
 
-			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessage(newsucc2, message)
+			// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			// sendMessage(newsucc2, message)
 
-			message = fmt.Sprintf("REMOVE,%d", myVid)
-			sendMessage(oldsucc2, message)
+			// message = fmt.Sprintf("REMOVE,%d", myVid)
+			// sendMessage(oldsucc2, message)
 		}
+	}
+
+	to_add := Difference(new_monitors, old_monitors)
+	for _, vid := range(to_add) {
+		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+		sendMessage(vid, message)
+	}
+
+	to_remove := Difference(old_monitors, new_monitors)
+	for _, vid := range(to_remove) {
+		message := fmt.Sprintf("REMOVE,%d", myVid)
+		sendMessage(vid, message)
 	}
 }
 
