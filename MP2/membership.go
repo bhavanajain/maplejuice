@@ -278,6 +278,7 @@ func updateFingerTable() {
 				break
 			}
 			nval := (myVid+mult) % n
+			glog.Infof("[ERR FINGER %d] Updating the finger table, memberMap node %d",myVid,nval)
 			newVid := getSuccessor(nval)
 			fingerNode[idx] = newVid
 			idx = idx+1
