@@ -274,11 +274,11 @@ func updateFingerTable() {
 
 		for{
 
-			if n < 3 {
+			if n < 2 {
 				break
 			}
-
-			newVid := getSuccessor(( (myVid -1)+mult)%n)
+			nval := (myVid+mult) % n
+			newVid := getSuccessor(nval)
 			fingerNode[idx] = newVid
 			idx = idx+1
 			mult = mult*2
@@ -292,7 +292,7 @@ func updateFingerTable() {
 		eidx := len(fingerNode)
 		if eidx > idx{
 			for i:= idx ; i < eidx; i++{
-				if n <3 {
+				if n <2{
 					break
 				}
 				_,ok := fingerNode[i]
@@ -319,6 +319,9 @@ func disseminate(message string) {
 	}
 
 	for _, node := range(fingerNode) {
+		if node == myVid{
+			continue
+		}
 		sendMessage(node,message)
 	}// Not added yet
 	
