@@ -138,6 +138,12 @@ func checkSuspicion(vid int) {
 			if myIP == introducer {
 				go addToDead(vid)
 			}
+
+			_, ok := children[vid]
+			if ok {
+				delete(children, vid)
+			}
+			
 			message := fmt.Sprintf("CRASH,%d", vid)		
 			massMail(message)
 			updateMonitors()
@@ -149,6 +155,7 @@ func checkSuspicion(vid int) {
 		suspects[suspect_idx] = suspects[len(suspects)-1]
 		suspects = suspects[:len(suspects)-1]
 	}
+
 	
 	return
 }
@@ -616,7 +623,12 @@ func listenOtherPort() (err error) {
 			if myIP == introducer {
 				go addToDead(subject)
 			}
-			glog.Info("Received CRASH for %d",subject)
+			glog.Infof("Received CRASH for %d",subject)
+			
+			_, ok := children[subject]
+			if ok {
+				delete(children, subject)
+			}
 			updateMonitors()
 
 		case "SUSPECT":
