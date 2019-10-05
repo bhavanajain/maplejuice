@@ -632,6 +632,8 @@ func listenOtherPort() (err error) {
 			var cnode ChildNode
 			cnode.timestamp = time.Now().Unix()
 			children[subject] = &cnode
+
+			glog.Infof("[ADD %d] %v", myVid, children)
 			
 			var newnode MemberNode
 			newnode = createMember(split_message[2], split_message[3])
@@ -642,6 +644,7 @@ func listenOtherPort() (err error) {
 			if ok {
 				delete(children, subject)
 			}
+			glog.Infof("[REMOVE %d] %v", myVid, children)
 
 		case "INTRODUCER":
 			if myVid == 0 {
