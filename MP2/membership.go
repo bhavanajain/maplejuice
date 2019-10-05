@@ -275,8 +275,8 @@ func updateFingerTable() {
 		factor := 1
 		for {
 			val := (myVid + factor) % n
-			entry := getSuccessor(nval)
-			fingerTable = append(fingerTable, newVid)
+			entry := getSuccessor(val)
+			fingerTable = append(fingerTable, entry)
 			factor = factor * 2
 			if factor >= n {
 				break
@@ -335,7 +335,7 @@ func disseminate(message string) {
 		sendMessage(node.vid, message)
 	}
 
-	for _, node := range(fingerNode) {
+	for _, node := range(fingerTable) {
 		// [TODO] if the node is not alive, don't send that message
 		if (node == myVid) {
 			continue
@@ -707,9 +707,9 @@ func listenOtherPort() (err error) {
 			
 
 			// Check the timerMap
-			_, ok := timerMap[subject]
-			if (!ok || timerMap[subject] < origin_time) {
-				timerMap[subject] = origin_time
+			_, ok := eventMap[subject]
+			if (!ok || eventMap[subject] < origin_time) {
+				eventMap[subject] = origin_time
 				disseminate(message)
 			} 
 
@@ -741,9 +741,9 @@ func listenOtherPort() (err error) {
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
 			// Check the timerMap
-			_, ok = timerMap[subject]
-			if (!ok || timerMap[subject] < origin_time){
-				timerMap[subject] = origin_time
+			_, ok = eventMap[subject]
+			if (!ok || eventMap[subject] < origin_time){
+				eventMap[subject] = origin_time
 				disseminate(message)
 			} 
 
