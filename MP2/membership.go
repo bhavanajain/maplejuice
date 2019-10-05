@@ -265,14 +265,28 @@ func checkSuspicion(vid int) {
 		if nvid == myVid {
 			continue
 		}
+		glog.Info("Suspecting the Node : %d",vid)
 		message := fmt.Sprintf("SUSPECT%s%d", delimiter, vid)
 		sendMessage(nvid, message)
 	}
-	time.Sleep(time.Duration(500) * time.Millisecond)
+	time.Sleep(time.Duration(500) * time.Millisecond) // time duration after which we said that this node is crashed
 	for _, suspect := range(suspects) {
 		if suspect == vid {
-			message := fmt.Sprintf("CRASH,%d", vid)
+			// Remove the node from suspect and add it in the dead list
+			suspects[suspect] = suspects[len(suspects)-1]
+			suspects = suspects[:len(suspects)-1]
+
+			// make the member list of it dead
+			memberMap[suspect].alive = false
+
+			message := fmt.Sprintf("CRASH,%d", vid)		
+			
 			massMail(message) 
+
+			// Find new monitors
+			setNewMonitors()
+
+
 			break
 		}
 	}
@@ -325,6 +339,47 @@ func findAndSendMonitors(vid int) {
 	succ2 = getSuccessor2(vid)
 	message = fmt.Sprintf("SUCC2,%d,%s,%d", succ2, memberMap[succ2].ip, memberMap[succ2].timestamp)
 	sendMessage(vid, message)
+}
+
+
+func setNewMonitors() {
+		newpred := getPredecessor(myVid)
+		if newpred != monitors["pred"].vid {
+			oldpred := monitors["pred"].vid
+			monitor_node := createMonitor(newpred)
+			monitors["pred"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newpred, message)
+			message = fmt.Sprintf("REMOVE,%d", myVid)
+			sendMessage(oldpred, message)
+		}
+
+		newsucc1 := getSuccessor(myVid)
+		if newsucc1 != monitors["succ1"].vid {
+			oldsucc1 := monitors["succ1"].vid
+			monitor_node := createMonitor(newsucc1)
+			monitors["succ1"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newsucc1, message)
+			message = fmt.Sprintf("REMOVE,%d", myVid)
+			sendMessage(oldsucc1, message)
+		}
+
+		newsucc2 := getSuccessor2(myVid)
+		if newsucc2 != monitors["succ2"].vid {
+			oldsucc2 := monitors["succ2"].vid
+			monitor_node := createMonitor(newsucc2)
+			monitors["succ2"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newsucc2, message)
+			message = fmt.Sprintf("REMOVE,%d", myVid)
+			sendMessage(oldsucc2, message)
+		}
+
+		return
 }
 
 
@@ -603,92 +658,75 @@ func listenOtherPort() (err error) {
 			message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
 			sendMessage(subject, message)
 
-			newpred := getPredecessor(myVid)
-			if newpred != monitors["pred"].vid {
-				oldpred := monitors["pred"].vid
-				monitor_node := createMonitor(newpred)
-				monitors["pred"] = &monitor_node
+			setNewMonitors()
 
-				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-				sendMessage(newpred, message)
-				message = fmt.Sprintf("REMOVE,%d", myVid)
-				sendMessage(oldpred, message)
-			}
-
-			newsucc1 := getSuccessor(myVid)
-			if newsucc1 != monitors["succ1"].vid {
-				oldsucc1 := monitors["succ1"].vid
-				monitor_node := createMonitor(newsucc1)
-				monitors["succ1"] = &monitor_node
-
-				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-				sendMessage(newsucc1, message)
-				message = fmt.Sprintf("REMOVE,%d", myVid)
-				sendMessage(oldsucc1, message)
-			}
-
-			newsucc2 := getSuccessor(newsucc1)
-			if newsucc2 != monitors["succ2"].vid {
-				oldsucc2 := monitors["succ2"].vid
-				monitor_node := createMonitor(newsucc2)
-				monitors["succ2"] = &monitor_node
-
-				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-				sendMessage(newsucc2, message)
-				message = fmt.Sprintf("REMOVE,%d", myVid)
-				sendMessage(oldsucc2, message)
-			}
+			
 
 		case "LEAVE", "CRASH":
 			memberMap[subject].alive = false
 			if myIP == introducer {
 				go addToDead(subject)
 			}
+			glog.Info("Received CRASH for %d",subject)
+			// Setting the node type to be dead
+			// memberMap[subject].alive = false 
 
-			for type_, node := range(monitors) {
-				if subject == node.vid {
-					// Baby you're in trouble
-					var newMonitorID int
-					switch type_ {
-					case "pred":
-						newMonitorID = getPredecessor(myVid)
-					case "succ1":
-						newMonitorID = getSuccessor(myVid)
-					case "succ2":
-						newMonitorID = getSuccessor(monitors["succ2"].vid)
-					}
-					var node MonitorNode
-					node.vid = newMonitorID
-					node.ip = memberMap[newMonitorID].ip
+			setNewMonitors()
 
-					var node_addr net.UDPAddr
-					node_addr.IP = net.ParseIP(node.ip)
-					node_addr.Port = heartbeatPort
 
-					node.conn, err = net.DialUDP("udp", nil, &node_addr)
 
-					monitors[type_] = &node
+			// for type_, node := range(monitors) {
+			// 	if subject == node.vid {
+			// 		// Baby you're in trouble
+			// 		var newMonitorID int
+			// 		switch type_ {
+			// 		case "pred":
+			// 			newMonitorID = getPredecessor(myVid)
+			// 		case "succ1":
+			// 			newMonitorID = getSuccessor(myVid)
+			// 		case "succ2":
+			// 			newMonitorID = getSuccessor(monitors["succ2"].vid)
+			// 		}
+			// 		var node MonitorNode
+			// 		node.vid = newMonitorID
+			// 		node.ip = memberMap[newMonitorID].ip
 
-					message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-					sendMessageAddr(node.ip, message)
+			// 		var node_addr net.UDPAddr
+			// 		node_addr.IP = net.ParseIP(node.ip)
+			// 		node_addr.Port = heartbeatPort
 
-					break
-				}
-			}
+			// 		node.conn, err = net.DialUDP("udp", nil, &node_addr)
+
+			// 		monitors[type_] = &node
+
+			// 		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			// 		sendMessageAddr(node.ip, message)
+
+			// 		break
+			// 	}
+			// }
+
+			// Handle the crash part
 
 		case "SUSPECT":
 			var alive = false
-
-			var currTime = time.Now().Unix()
-			for child_vid, cnode := range(children) {
-				if subject == child_vid {
-					if currTime - cnode.timestamp < heartbeatPeriod {
-						alive = true
+			// Checked if it is set as dead in my list, if yes send dead message already
+			if memberMap[subject].alive == false{
+				alive = false
+			} else{
+				var currTime = time.Now().Unix()
+				for child_vid, cnode := range(children) {
+					if subject == child_vid {
+						if currTime - cnode.timestamp < heartbeatPeriod {
+							alive = true
+						}
+						break
 					}
-					break
 				}
+
 			}
 
+			
 			var message string
 			if alive {
 				message = fmt.Sprintf("STATUS,%d,1", subject, 1)
@@ -705,8 +743,21 @@ func listenOtherPort() (err error) {
 				if myIP == introducer {
 					go addToDead(subject)
 				}
+				// remove from suspect list and setup New monitors
+
+				// remove from suspects list
+				for i, suspect := range(suspects) {
+					if suspect == subject {
+						suspects[i] = suspects[len(suspects)-1]
+						suspects = suspects[:len(suspects)-1]
+						break
+					}
+				}
 				message = fmt.Sprintf("CRASH,%d", subject)
-				massMail(message) 
+				massMail(message) // massmail the nodes
+				setNewMonitors()
+
+	
 			} else {
 				// remove from suspects list
 				for i, suspect := range(suspects) {
