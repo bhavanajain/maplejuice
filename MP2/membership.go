@@ -754,21 +754,25 @@ func listenOtherPort() (err error) {
 			// mark crashed
 
 			// check if it is currently marked alive or not
-
-			if memberMap[subject].alive == false{
-				break;
-			}
-			memberMap[subject].alive = false
-			if myIP == introducer {
-				go addToDead(subject)
-			}
 			glog.Infof("Received CRASH for %d",subject)
-			
-			_, ok := children[subject]
+			_,ok := memberMap[subject]
 			if ok {
-				delete(children, subject)
+
+				if memberMap[subject].alive == false{
+					break;
+				}
+				memberMap[subject].alive = false
+				if myIP == introducer {
+					go addToDead(subject)
+				}
+				
+				
+				_, ok = children[subject]
+				if ok {
+					delete(children, subject)
+				}
+				updateMonitors()
 			}
-			updateMonitors()
 
 			// Read the sender of the message
 			len_msg := len(split_message)
