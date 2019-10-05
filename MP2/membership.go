@@ -270,26 +270,25 @@ func checkSuspicion(vid int) {
 		sendMessage(nvid, message)
 	}
 	time.Sleep(time.Duration(500) * time.Millisecond) // time duration after which we said that this node is crashed
-	for _, suspect := range(suspects) {
+
+	suspect_idx = -1
+	for i, suspect := range(suspects) {
 		if suspect == vid {
-			// Remove the node from suspect and add it in the dead list
-			suspects[suspect] = suspects[len(suspects)-1]
-			suspects = suspects[:len(suspects)-1]
 
-			// make the member list of it dead
+			suspect_idx = i
 			memberMap[suspect].alive = false
-
 			message := fmt.Sprintf("CRASH,%d", vid)		
-			
-			massMail(message) 
-
-			// Find new monitors
+			massMail(message)
 			setNewMonitors()
-
-
 			break
 		}
 	}
+	// remove dead node from suspects
+	if suspect_idx != -1 {
+		suspects[suspect_idx] = suspects[len(suspects)-1]
+		suspects = suspects[:len(suspects)-1]
+	}
+	
 	return
 }
 
@@ -711,7 +710,7 @@ func listenOtherPort() (err error) {
 		case "SUSPECT":
 			var alive = false
 			// Checked if it is set as dead in my list, if yes send dead message already
-			if memberMap[subject].alive == false{
+			if memberMap[subject].alive == false {
 				alive = false
 			} else{
 				var currTime = time.Now().Unix()
@@ -723,7 +722,6 @@ func listenOtherPort() (err error) {
 						break
 					}
 				}
-
 			}
 
 			
