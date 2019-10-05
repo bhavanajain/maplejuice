@@ -232,7 +232,7 @@ func max( a int, b int) int {
 
 func getPredecessor(vid int) (int) {
 	// n := len(memberMap)
-	n := maxID
+	n := maxID+1
 	// fmt.Printf("Size of pred list is %d\n",n)
 	pred := mod(vid - 1, n)
 	for {
@@ -250,7 +250,7 @@ func getPredecessor(vid int) (int) {
 
 func getSuccessor(vid int) (int) {
 	// n := len(memberMap)
-	n := maxID
+	n := maxID+1
 
 	succ := (vid + 1) % n
 	for {
@@ -268,7 +268,7 @@ func getSuccessor(vid int) (int) {
 func getSuccessor2(vid int) (int) {
 	succ1 := getSuccessor(vid)
 	// n := len(memberMap)
-	n := maxID
+	n := maxID+1
 
 	succ2 := (succ1 + 1) % n
 	for {
@@ -288,7 +288,7 @@ func updateFingerTable() {
 	for{ // Infitnite Loop
 
 		// n := len(memberMap)
-		n := maxID
+		n := maxID+1
 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,n)
 		mult := 1
 		idx := 0
@@ -551,6 +551,7 @@ func completeJoinRequests() (err error) {
 		// }
 
 		updateMonitors()
+		fmt.Println("Finished Monitor")
 	}
 	return nil
 	
@@ -1012,7 +1013,7 @@ func main() {
 		memberMap[0] = &node
 		time.Sleep(5 * time.Second)
 		go completeJoinRequests()
-		// go garbageCollection()
+		go garbageCollection()
 	} else{
 		time.Sleep(5 * time.Second)
 		sendJoinRequest()
