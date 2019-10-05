@@ -406,11 +406,11 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
-		message = fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
+		message := fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		sendMessage(newVid, message)
 		// Message about me should clome first
 
-		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
+		message = fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessage(newVid, message)
 
 
