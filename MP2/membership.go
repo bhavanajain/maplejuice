@@ -669,6 +669,8 @@ func updateMonitors() {
 		}
 	}
 
+	fmt.Println("Found all monitors")
+
 	to_add := Difference(new_monitors, old_monitors)
 	for _, vid := range(to_add) {
 		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
@@ -680,6 +682,8 @@ func updateMonitors() {
 		message := fmt.Sprintf("REMOVE,%d", myVid)
 		sendMessage(vid, message)
 	}
+
+	glog.Infof("[MONITOR %d]  END of code ",myVid)
 }
 
 
