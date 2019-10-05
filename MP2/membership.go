@@ -850,7 +850,7 @@ func listenOtherPort() (err error) {
 			updateMonitors()
 
 			// Read the sender of the message
-			len_msg := len(split_message)
+			// len_msg := len(split_message)
 			origin_time,_ := strconv.ParseInt(string(split_message[3]), 10, 64)
 			
 
@@ -887,7 +887,7 @@ func listenOtherPort() (err error) {
 			}
 
 			// Read the sender of the message
-			len_msg := len(split_message)
+			// len_msg := len(split_message)
 			origin_time,_ := strconv.ParseInt(string(split_message[3]), 10, 64)
 
 			// Check the timerMap
