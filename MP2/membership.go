@@ -219,6 +219,7 @@ func mod(a int, b int) int {
 
 func getPredecessor(vid int) (int) {
 	n := len(memberMap)
+	fmt.Printf("Size of pred list is %d\n",n)
 	pred := mod(vid - 1, n)
 	for {
 		_,ok := memberMap[pred]
