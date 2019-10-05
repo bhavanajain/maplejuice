@@ -710,6 +710,11 @@ func listenOtherPort() (err error) {
 			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
+			if initRun {
+				go updateFingerTable()
+				initRun = false
+			}
+
 		case "MEMBER":
 			if subject == myVid {
 				break
@@ -717,10 +722,7 @@ func listenOtherPort() (err error) {
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
-			if initRun {
-				go updateFingerTable()
-				initRun = false
-			}
+
 
 		case "JOIN":
 			if subject == myVid {
