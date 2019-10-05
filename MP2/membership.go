@@ -67,6 +67,8 @@ var garbage []int
 
 var initMessageCount = 0
 
+var maxID = 0
+
 var delimiter = ","
 
 func sendHeartbeat() {
@@ -151,9 +153,9 @@ func checkSuspicion(vid int) {
 		if suspect == vid {
 			suspect_idx = i
 			memberMap[suspect].alive = false
-			if myIP == introducer {
-				go addToDead(vid)
-			}
+			// if myIP == introducer {
+			// 	//go addToDead(vid)
+			// }
 
 			_, ok := children[vid]
 			if ok {
@@ -219,8 +221,18 @@ func mod(a int, b int) int {
     return m
 }
 
+func max( a int, b int) int {
+
+	if a > b{
+		return a
+	}
+	return b
+	
+}
+
 func getPredecessor(vid int) (int) {
-	n := len(memberMap)
+	// n := len(memberMap)
+	n := maxID
 	// fmt.Printf("Size of pred list is %d\n",n)
 	pred := mod(vid - 1, n)
 	for {
@@ -237,7 +249,8 @@ func getPredecessor(vid int) (int) {
 }
 
 func getSuccessor(vid int) (int) {
-	n := len(memberMap)
+	// n := len(memberMap)
+	n := maxID
 
 	succ := (vid + 1) % n
 	for {
@@ -254,7 +267,8 @@ func getSuccessor(vid int) (int) {
 
 func getSuccessor2(vid int) (int) {
 	succ1 := getSuccessor(vid)
-	n := len(memberMap)
+	// n := len(memberMap)
+	n := maxID
 
 	succ2 := (succ1 + 1) % n
 	for {
@@ -339,7 +353,7 @@ func checkIntroducer(){
 		time.Sleep(time.Duration(fingerPeriod)*time.Second)
 		if memberMap[0].alive == false {
 				// Send a message to particular message to the introducer
-				message:= fmt.Sprintf("INTRODUCER,%d,%s,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp)
+				message:= fmt.Sprintf("INTRODUCER,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID)
 				sendMessage(0,message) // periodically send the message
 				glog.Infof("[INTRODUCER %d] Sent message ",myVid)
 		}
@@ -434,7 +448,9 @@ func completeJoinRequests() (err error) {
 
 		var newVid int
 		if len(garbage) == 0 {
-			newVid = len(memberMap)
+			maxID = maxID +1
+			newVid = maxID
+
 		} else {
 			newVid = garbage[0]
 			garbage = garbage[1:]
@@ -538,10 +554,10 @@ func completeJoinRequests() (err error) {
 	
 }
 
-func addToDead(vid int) {
-	time.Sleep(6 * time.Second)
-	garbage = append(garbage, vid)
-}
+// func addToDead(vid int) {
+// 	time.Sleep(6 * time.Second)
+// 	garbage = append(garbage, vid)
+// }
 
 func createMonitor(vid int) (MonitorNode) {
 	var node MonitorNode
@@ -693,6 +709,24 @@ func updateMonitors() {
 
 
 
+func garbageCollection(){ // Part of the introducer rejoin thing run every 30 seconds
+
+		for{
+			time.Sleep(30*time.Second)
+			for i:= 1; i<= maxID; i++{
+				_,ok := memberMap[i]
+				if ok{
+					if memberMap[i].alive == false{
+						garbage = append(garbage, vid)
+					}
+				}else{
+					garbage = append(garbage, vid)
+				}
+			}
+		}
+
+}
+
 
 func listenOtherPort() (err error) {
 	var myaddr net.UDPAddr
@@ -718,6 +752,7 @@ func listenOtherPort() (err error) {
 		split_message := strings.Split(message, delimiter)
 		message_type := split_message[0]
 		subject, _ := strconv.Atoi(split_message[1])
+		maxID = max(maxID,subject)
 
 		glog.Info(message)
 
@@ -744,6 +779,8 @@ func listenOtherPort() (err error) {
 				if len(memberMap) < 5 { // Handles 3 failure
 					newnode := createMember(split_message[2],split_message[3])
 					memberMap[subject] = &newnode
+					tempmax,_ := strconv.Atoi(split_message[4])
+					maxID = max(maxID,tempmax)
 					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
 					time.Sleep(6*time.Second)
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
@@ -814,7 +851,7 @@ func listenOtherPort() (err error) {
 
 			// Read the sender of the message
 			len_msg := len(split_message)
-			origin_time,_ := strconv.ParseInt(string(split_message[len_msg-1]), 10, 64)
+			origin_time,_ := strconv.ParseInt(string(split_message[3]), 10, 64)
 			
 
 			// Check the timerMap
@@ -837,9 +874,9 @@ func listenOtherPort() (err error) {
 					break;
 				}
 				memberMap[subject].alive = false
-				if myIP == introducer {
-					go addToDead(subject)
-				}
+				// if myIP == introducer {
+				// 	//go addToDead(subject)
+				// }
 				
 				
 				_, ok = children[subject]
@@ -851,7 +888,7 @@ func listenOtherPort() (err error) {
 
 			// Read the sender of the message
 			len_msg := len(split_message)
-			origin_time,_ := strconv.ParseInt(string(split_message[len_msg-1]), 10, 64)
+			origin_time,_ := strconv.ParseInt(string(split_message[3]), 10, 64)
 
 			// Check the timerMap
 			_,ok = timerMap[subject]
@@ -971,6 +1008,7 @@ func main() {
 		memberMap[0] = &node
 		time.Sleep(5 * time.Second)
 		go completeJoinRequests()
+		go garbageCollection()
 	} else{
 		time.Sleep(5 * time.Second)
 		sendJoinRequest()
