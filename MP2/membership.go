@@ -28,6 +28,11 @@ type ChildNode struct {
 	timestamp int64
 }
 
+// For storing the last message we get
+// type TimerNode struct{
+// 	timestamp int64
+// }
+
 // todo
 // type Message struct {
 // 	message_type 
@@ -46,8 +51,16 @@ var memberMap = make(map[int]*MemberNode)
 var monitors = make(map[string]*MonitorNode)
 var children = make(map[int]*ChildNode)
 
+var timerMap = make(map[int] int64) // Map to store the last time a meesage has been received
+
+var fingerNode = make(map[int] int)
+
+var initRun = true // To run updateFinger table
+
+
 var heartbeatPort = 8080
 var heartbeatPeriod int64 = 2
+var fingerPeriod int64 = 10
 var suspects []int 	// remove from suspects when leave or crash 
 var garbage []int
 
@@ -144,8 +157,9 @@ func checkSuspicion(vid int) {
 				delete(children, vid)
 			}
 
-			message := fmt.Sprintf("CRASH,%d", vid)		
-			massMail(message)
+			message := fmt.Sprintf("CRASH,%d,%d", vid,time.Now().Unix())
+			disseminate(message)		
+			// massMail(message)
 			updateMonitors()
 			break
 		}
@@ -249,6 +263,48 @@ func getSuccessor2(vid int) (int) {
 }
 
 
+func updateFingerTable() {
+	for{ // Infitnite Loop
+
+		n := len(memberMap)
+		mult := 1
+		idx := 0
+
+		for{
+
+			newVid := getSuccessor(( (myVid -1)+mult)%n)
+			fingerNode[idx] = newVid
+			idx = idx+1
+			mult = mult*2
+			if (mult >= n){
+				break
+			}
+		}
+
+		eidx := len(fingerNode)
+		for i:= idx ; i < eidx; i++{
+			delete(fingerNode,idx)
+		}
+
+		time.Sleep(time.Duration(fingerPeriod) * time.Second)
+
+	}
+
+	return
+}
+
+func disseminate(message string) {
+
+	// Send to the neighbourhood Nodes, code from heartbeat
+	for _, node := range(monitors) {
+		sendMessage(node.vid,message)
+	}
+
+	for _, node := range(fingerNode) {
+		sendMessage(node,message)
+	}// Not added yet
+	
+}
 
 func massMail(message string) {
 	for vid, node := range(memberMap) {
@@ -349,18 +405,28 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
+		message = fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
+		sendMessage(newVid, message)
+		// Message about me should clome first
+
 		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessage(newVid, message)
 
-		message = fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
-		sendMessage(newVid, message)
+
 
 		findAndSendMonitors(newVid)
 
+		if initRun{ // global variable
+			go updateFingerTable()
+			initRun = false
+		}
+		
+
 		time.Sleep(100 * time.Millisecond)
 
-		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
-		massMail(message)
+		message = fmt.Sprintf("JOIN,%d,%s,%d,%d", newVid, newnode.ip, newnode.timestamp,time.Now().Unix())
+		disseminate(message)
+		// massMail(message)
 
 		// newpred := getPredecessor(myVid)
 		// _, ok := monitors["pred"]
@@ -577,6 +643,9 @@ func updateMonitors() {
 }
 
 
+
+
+
 func listenOtherPort() (err error) {
 	var myaddr net.UDPAddr
 	myaddr.IP = net.ParseIP(myIP)
@@ -647,6 +716,11 @@ func listenOtherPort() (err error) {
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
+			if initRun {
+				go updateFingerTable()
+				initRun = false
+			}
+
 		case "JOIN":
 			if subject == myVid {
 				break
@@ -659,9 +733,27 @@ func listenOtherPort() (err error) {
 			sendMessage(subject, message)
 			updateMonitors()
 
+			// Read the sender of the message
+			len_msg := len(split_message)
+			origin_time,_ := strconv.ParseInt(string(split_message[len_msg-1]), 10, 64)
+			
+
+			// Check the timerMap
+			_,ok := timerMap[subject]
+			if (ok || timerMap[subject] < origin_time){
+				timerMap[subject] = origin_time
+				disseminate(message)
+			} 
+
 
 		case "LEAVE", "CRASH":
 			// mark crashed
+
+			// check if it is currently marked alive or not
+
+			if memberMap[subject].alive == false{
+				break;
+			}
 			memberMap[subject].alive = false
 			if myIP == introducer {
 				go addToDead(subject)
@@ -673,6 +765,17 @@ func listenOtherPort() (err error) {
 				delete(children, subject)
 			}
 			updateMonitors()
+
+			// Read the sender of the message
+			len_msg := len(split_message)
+			origin_time,_ := strconv.ParseInt(string(split_message[len_msg-1]), 10, 64)
+
+			// Check the timerMap
+			_,ok = timerMap[subject]
+			if (ok || timerMap[subject] < origin_time){
+				timerMap[subject] = origin_time
+				disseminate(message)
+			} 
 
 		case "SUSPECT":
 			var alive = false
@@ -786,6 +889,7 @@ func main() {
 		go completeJoinRequests()
 	} else{
 		sendJoinRequest()
+
 	}
 
 	go sendHeartbeat()
