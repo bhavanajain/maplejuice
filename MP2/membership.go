@@ -749,7 +749,7 @@ func listenOtherPort() (err error) {
 					monitors["pred"] = &monitor_node
 					monitors["succ1"] = &monitor_node
 					monitors["succ1"] = &monitor_node
-					message := fmt.Sprintf("ADD,%d,%s,%d", subject, memberMap[subject].ip, memberMap[subject].timestamp)
+					message = fmt.Sprintf("ADD,%d,%s,%d", subject, memberMap[subject].ip, memberMap[subject].timestamp)
 					sendMessage(subject, message)
 					// fmt.Println("End of Monitos")
 					disseminate(message)
