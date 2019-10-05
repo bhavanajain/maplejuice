@@ -39,8 +39,8 @@ type ChildNode struct {
 // }
 
 
-// var introducer = "172.22.152.106"
-var introducer = "172.22.152.109"
+var introducer = "172.22.152.106"
+// var introducer = "172.22.152.109"
 var introducerPort = 8082
 
 var myVid int
