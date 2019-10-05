@@ -274,6 +274,10 @@ func updateFingerTable() {
 
 		for{
 
+			if n < 3 {
+				break
+			}
+
 			newVid := getSuccessor(( (myVid -1)+mult)%n)
 			fingerNode[idx] = newVid
 			idx = idx+1
@@ -285,6 +289,9 @@ func updateFingerTable() {
 
 		eidx := len(fingerNode)
 		for i:= idx ; i < eidx; i++{
+			if n <3 {
+				break
+			}
 			delete(fingerNode,idx)
 		}
 
