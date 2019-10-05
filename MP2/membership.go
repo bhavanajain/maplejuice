@@ -1009,7 +1009,7 @@ func main() {
 		memberMap[0] = &node
 		time.Sleep(5 * time.Second)
 		go completeJoinRequests()
-		go garbageCollection()
+		// go garbageCollection()
 	} else{
 		time.Sleep(5 * time.Second)
 		sendJoinRequest()
