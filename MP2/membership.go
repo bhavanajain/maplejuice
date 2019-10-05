@@ -63,7 +63,7 @@ var heartbeatPort = 8080
 var heartbeatPeriod int64 = 2
 var fingerPeriod int64 = 10
 var suspects []int 	// remove from suspects when leave or crash 
-var garbage []int
+var garbage = []int{}
 
 var initMessageCount = 0
 
@@ -287,7 +287,8 @@ func getSuccessor2(vid int) (int) {
 func updateFingerTable() {
 	for{ // Infitnite Loop
 
-		n := len(memberMap)
+		// n := len(memberMap)
+		n := maxID
 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,n)
 		mult := 1
 		idx := 0
@@ -450,6 +451,7 @@ func completeJoinRequests() (err error) {
 		if len(garbage) == 0 {
 			maxID = maxID +1
 			newVid = maxID
+
 
 		} else {
 			newVid = garbage[0]
@@ -1002,6 +1004,7 @@ func main() {
 	fmt.Println(myIP)
 	if myIP == introducer {
 		myVid = 0
+		// maxID = 1
 		var node MemberNode
 		node.ip = myIP
 		node.timestamp = time.Now().Unix()
