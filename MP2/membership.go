@@ -288,11 +288,13 @@ func updateFingerTable() {
 		}
 
 		eidx := len(fingerNode)
-		for i:= idx ; i < eidx; i++{
-			if n <3 {
-				break
+		if eidx > idx{
+			for i:= idx ; i < eidx; i++{
+				if n <3 {
+					break
+				}
+				delete(fingerNode,i)
 			}
-			delete(fingerNode,idx)
 		}
 
 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
