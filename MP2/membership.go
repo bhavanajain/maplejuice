@@ -28,13 +28,19 @@ type ChildNode struct {
 	timestamp int64
 }
 
+// For storing the last message we get
+// type TimerNode struct{
+// 	timestamp int64
+// }
+
 // todo
 // type Message struct {
 // 	message_type 
 // }
 
 
-var introducer = "172.22.152.106"
+// var introducer = "172.22.152.106"
+var introducer = "172.22.152.109"
 var introducerPort = 8082
 
 var myVid int
@@ -46,10 +52,22 @@ var memberMap = make(map[int]*MemberNode)
 var monitors = make(map[string]*MonitorNode)
 var children = make(map[int]*ChildNode)
 
+var timerMap = make(map[int] int64) // Map to store the last time a meesage has been received
+
+var fingerNode = make(map[int] int)
+
+var initRun = true // To run updateFinger table
+
+
 var heartbeatPort = 8080
 var heartbeatPeriod int64 = 2
+var fingerPeriod int64 = 10
 var suspects []int 	// remove from suspects when leave or crash 
-var garbage []int
+var garbage = []int{}
+
+var initMessageCount = 0
+
+var maxID = 0
 
 var delimiter = ","
 
@@ -124,8 +142,10 @@ func checkSuspicion(vid int) {
 		if nvid == myVid {
 			continue
 		}
-		glog.Info("Suspecting the Node : %d",vid)
-		message := fmt.Sprintf("SUSPECT%s%d", delimiter, vid)
+
+		glog.Infof("[%d]Sending suspicion messages for %s", myVid, vid)
+
+		message := fmt.Sprintf("SUSPECT,%d", vid)
 		sendMessage(nvid, message)
 	}
 	time.Sleep(time.Duration(500) * time.Millisecond) // time duration after which we said that this node is crashed
@@ -135,17 +155,18 @@ func checkSuspicion(vid int) {
 		if suspect == vid {
 			suspect_idx = i
 			memberMap[suspect].alive = false
-			if myIP == introducer {
-				go addToDead(vid)
-			}
+			// if myIP == introducer {
+			// 	//go addToDead(vid)
+			// }
 
 			_, ok := children[vid]
 			if ok {
 				delete(children, vid)
 			}
 
-			message := fmt.Sprintf("CRASH,%d", vid)		
-			massMail(message)
+			message := fmt.Sprintf("CRASH,%d,%d", vid,time.Now().Unix())
+			disseminate(message)		
+			// massMail(message)
 			updateMonitors()
 			break
 		}
@@ -202,11 +223,23 @@ func mod(a int, b int) int {
     return m
 }
 
+func max( a int, b int) int {
+
+	if a > b{
+		return a
+	}
+	return b
+	
+}
+
 func getPredecessor(vid int) (int) {
-	n := len(memberMap)
+	// n := len(memberMap)
+	n := maxID + 1
+	// fmt.Printf("Size of pred list is %d\n",n)
 	pred := mod(vid - 1, n)
 	for {
-		if memberMap[pred].alive == true {
+		_,ok := memberMap[pred]
+		if ok && memberMap[pred].alive == true {
 			if pred != vid {
 				break
 			}
@@ -218,11 +251,13 @@ func getPredecessor(vid int) (int) {
 }
 
 func getSuccessor(vid int) (int) {
-	n := len(memberMap)
+	// n := len(memberMap)
+	n := maxID+1
 
 	succ := (vid + 1) % n
 	for {
-		if memberMap[succ].alive == true {
+		_,ok := memberMap[succ] // checking if succ is in the memberMap
+		if ok && memberMap[succ].alive == true {
 			if succ != vid {
 				break
 			}
@@ -234,11 +269,13 @@ func getSuccessor(vid int) (int) {
 
 func getSuccessor2(vid int) (int) {
 	succ1 := getSuccessor(vid)
-	n := len(memberMap)
+	// n := len(memberMap)
+	n := maxID+1
 
 	succ2 := (succ1 + 1) % n
 	for {
-		if memberMap[succ2].alive == true {
+		_,ok := memberMap[succ2]
+		if ok && memberMap[succ2].alive == true {
 			if succ2 != vid {
 				break
 			}
@@ -249,6 +286,81 @@ func getSuccessor2(vid int) (int) {
 }
 
 
+func updateFingerTable() {
+	for{ // Infitnite Loop
+
+		// n := len(memberMap)
+		n := maxID + 1
+		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,n)
+		mult := 1
+		idx := 0
+
+		for{
+			if n < 2 {
+				break
+			}
+			nval := (myVid+mult) % n
+			newVid := getSuccessor(nval)
+			fingerNode[idx] = newVid
+			idx = idx+1
+			mult = mult*2
+			if (mult >= n){
+				break
+			}
+		}
+
+		eidx := len(fingerNode)
+		if eidx > idx{
+			for i:= idx ; i < eidx; i++{
+				if n <2{
+					break
+				}
+				_,ok := fingerNode[i]
+				if ok{
+					delete(fingerNode,i)
+				}
+			}
+		}
+
+		
+		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
+
+		time.Sleep(time.Duration(fingerPeriod) * time.Second)
+
+	}
+
+	return
+}
+
+func disseminate(message string) {
+
+	// Send to the neighbourhood Nodes, code from heartbeat
+	for _, node := range(monitors) {
+		sendMessage(node.vid, message)
+	}
+
+	for _, node := range(fingerNode) {
+		if node == myVid{
+			continue
+		}
+		sendMessage(node,message)
+	}// Not added yet
+	
+}
+
+
+func checkIntroducer(){
+	for{
+		time.Sleep(time.Duration(10)*time.Second)
+		if memberMap[0].alive == false {
+				// Send a message to particular message to the introducer
+				message:= fmt.Sprintf("INTRODUCER,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID)
+				sendMessage(0,message) // periodically send the message
+				glog.Infof("[INTRODUCER %d] Sent message ",myVid)
+		}
+	
+	}
+}
 
 func massMail(message string) {
 	for vid, node := range(memberMap) {
@@ -316,6 +428,7 @@ func findAndSendMonitors(vid int) {
 // }
 
 func completeJoinRequests() (err error) {
+
 	var myaddr net.UDPAddr
 	myaddr.IP = net.ParseIP(introducer)
 	myaddr.Port = introducerPort
@@ -326,18 +439,21 @@ func completeJoinRequests() (err error) {
 		return err
 	}
 
+	glog.Infof("[INTRODUCER] Started listening on the introducer port %s", introducerPort)
+
 	for {
 		var buf [512]byte
 		_, addr, err := introducerConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warningf("[INTRODUCER] Could not read message on the otherport %s", introducerPort)
+			glog.Warningf("[INTRODUCER] Could not read message on the introducer port %s", introducerPort)
 		}
 
 		glog.Infof("Received a join request from ip=%s", addr.IP.String())
 
 		var newVid int
 		if len(garbage) == 0 {
-			newVid = len(memberMap)
+			maxID = maxID + 1
+			newVid = maxID
 		} else {
 			newVid = garbage[0]
 			garbage = garbage[1:]
@@ -349,18 +465,26 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
-		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
+		message := fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		sendMessage(newVid, message)
+		// Message about me should come first
 
-		message = fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
+		message = fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessage(newVid, message)
 
 		findAndSendMonitors(newVid)
 
+		if initRun { // global variable
+			go updateFingerTable()
+			initRun = false
+		}
+		
+
 		time.Sleep(100 * time.Millisecond)
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
-		massMail(message)
+		disseminate(message)
+		// massMail(message)
 
 		// newpred := getPredecessor(myVid)
 		// _, ok := monitors["pred"]
@@ -431,10 +555,10 @@ func completeJoinRequests() (err error) {
 	
 }
 
-func addToDead(vid int) {
-	time.Sleep(6 * time.Second)
-	garbage = append(garbage, vid)
-}
+// func addToDead(vid int) {
+// 	time.Sleep(6 * time.Second)
+// 	garbage = append(garbage, vid)
+// }
 
 func createMonitor(vid int) (MonitorNode) {
 	var node MonitorNode
@@ -481,8 +605,8 @@ func Difference(a, b []int) (diff []int) {
 
 func updateMonitors() {
 
-	var old_monitors []int
-	var new_monitors []int
+	old_monitors := []int{}
+	new_monitors := []int{}
 
 	newpred := getPredecessor(myVid)
 	new_monitors = append(new_monitors, newpred)
@@ -574,6 +698,36 @@ func updateMonitors() {
 		message := fmt.Sprintf("REMOVE,%d", myVid)
 		sendMessage(vid, message)
 	}
+
+	glog.Infof("[MONITOR] Old monitors of %d: %v", myVid, old_monitors)
+	glog.Infof("[MONITOR] New monitors of %d: %v", myVid, new_monitors)
+
+	glog.Infof("%d updated monitors", myVid)
+}
+
+
+
+
+func garbageCollection(){ // Part of the introducer rejoin thing run every 30 seconds
+
+		for{
+			time.Sleep(30 * time.Second)
+			for i:=1; i<=maxID; i++{
+				mnode, isavailable = memberMap[i]
+				if !isavailable or !mnode.alive {
+					garbage = append(garbage, i)
+				}
+				// _, ok := memberMap[i]
+				// if ok {
+				// 	if memberMap[i].alive == false {
+				// 		garbage = append(garbage, i)
+				// 	}
+				// } else {
+				// 	garbage = append(garbage, i)
+				// }
+			}
+		}
+
 }
 
 
@@ -601,6 +755,7 @@ func listenOtherPort() (err error) {
 		split_message := strings.Split(message, delimiter)
 		message_type := split_message[0]
 		subject, _ := strconv.Atoi(split_message[1])
+		maxID = max(maxID, subject)
 
 		glog.Info(message)
 
@@ -614,11 +769,39 @@ func listenOtherPort() (err error) {
 			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
-
 		case "REMOVE":
 			_, ok := children[subject]
 			if ok {
 				delete(children, subject)
+			}
+
+
+		case "INTRODUCER":
+			if myVid == 0 {
+				if len(memberMap) < 5 { // Handles 3 failure
+					newnode := createMember(split_message[2],split_message[3])
+					memberMap[subject] = &newnode
+					tempmax,_ := strconv.Atoi(split_message[4])
+					maxID = max(maxID,tempmax)
+					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
+					time.Sleep(6 * time.Second)
+					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
+					monitor_node := createMonitor(subject)
+					if initMessageCount == 0{
+						monitors["pred"] = &monitor_node
+						monitors["succ1"] = &monitor_node
+						monitors["succ1"] = &monitor_node
+						message = fmt.Sprintf("ADD,%d,%s,%d", 0, memberMap[0].ip, memberMap[0].timestamp)
+						sendMessage(subject, message)
+						initMessageCount = initMessageCount+1
+					} else{
+						updateMonitors()
+					}
+					// fmt.Println("End of Monitos")
+					disseminate(message)
+					glog.Infof("[DISS INTRODUCER %d] Received an introducer message from %d",0,subject)
+
+				}
 			}
 
 		case "PRED", "SUCC1", "SUCC2":
@@ -640,12 +823,20 @@ func listenOtherPort() (err error) {
 			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
+			if initRun {
+				go updateFingerTable()
+				initRun = false
+			}
+			go checkIntroducer()
+
 		case "MEMBER":
 			if subject == myVid {
 				break
 			}
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
+
+			updateMonitors() // as new entry comes along we need to modify the Monitor list
 
 		case "JOIN":
 			if subject == myVid {
@@ -659,20 +850,53 @@ func listenOtherPort() (err error) {
 			sendMessage(subject, message)
 			updateMonitors()
 
+			// Read the sender of the message
+			// len_msg := len(split_message)
+			origin_time,_ := strconv.ParseInt(string(split_message[3]), 10, 64)
+			
+
+			// Check the timerMap
+			_,ok := timerMap[subject]
+			if (ok || timerMap[subject] < origin_time){
+				timerMap[subject] = origin_time
+				disseminate(message)
+			} 
+
 
 		case "LEAVE", "CRASH":
 			// mark crashed
-			memberMap[subject].alive = false
-			if myIP == introducer {
-				go addToDead(subject)
-			}
+
+			// check if it is currently marked alive or not
 			glog.Infof("Received CRASH for %d",subject)
-			
-			_, ok := children[subject]
+			_,ok := memberMap[subject]
 			if ok {
-				delete(children, subject)
+
+				if memberMap[subject].alive == false{
+					break;
+				}
+				memberMap[subject].alive = false
+				// if myIP == introducer {
+				// 	//go addToDead(subject)
+				// }
+				
+				
+				_, ok = children[subject]
+				if ok {
+					delete(children, subject)
+				}
+				updateMonitors()
 			}
-			updateMonitors()
+
+			// Read the sender of the message
+			// len_msg := len(split_message)
+			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
+
+			// Check the timerMap
+			_, ok = timerMap[subject]
+			if (ok || timerMap[subject] < origin_time){
+				timerMap[subject] = origin_time
+				disseminate(message)
+			} 
 
 		case "SUSPECT":
 			var alive = false
@@ -772,25 +996,36 @@ func main() {
 
 	go listenOtherPort()
 
-	time.Sleep(5 * time.Second)
-
 	myIP = getmyIP()
-	fmt.Println(myIP)
+	glog.Info(myIP)
+
 	if myIP == introducer {
 		myVid = 0
+		// maxID = 1
 		var node MemberNode
 		node.ip = myIP
 		node.timestamp = time.Now().Unix()
 		node.alive = true
 		memberMap[0] = &node
+
+		time.Sleep(5 * time.Second)		// why is this sleep required?
+
 		go completeJoinRequests()
+		go garbageCollection()
+
 	} else{
+		time.Sleep(5 * time.Second)		// why is this sleep required?
+
 		sendJoinRequest()
+
+		// go checkIntroducer()
 	}
 
 	go sendHeartbeat()
 	go receiveHeartbeat()
 	go checkChildren()
+
+	// Introducer and Finger Table and dissemination done
 
 	wg.Wait()
 	return
