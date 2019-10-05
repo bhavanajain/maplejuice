@@ -738,8 +738,8 @@ func listenOtherPort() (err error) {
 					newnode := createMember(split_message[2],split_message[3])
 					memberMap[subject] = &newnode
 					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
+					time.Sleep(6*time.Second)
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
-					time.Sleep(6*time.Second)  // beacuse in listen we wait for 5 seconds
 					updateMonitors()
 					disseminate(message)
 
