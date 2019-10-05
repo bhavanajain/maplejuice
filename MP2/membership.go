@@ -12,7 +12,6 @@ import (
 	"flag"
 )
 
-
 type MemberNode struct {
 	ip string
 	timestamp int64
@@ -34,125 +33,78 @@ type ChildNode struct {
 // 	message_type 
 // }
 
-var monitors = make(map[string]*MonitorNode)
-var memberMap = make(map[int]*MemberNode)
-var heartbeatPort = 8080
-var myVid int	// this will be populated after join by introducer
-var heartbeatPeriod int64 = 2	// in seconds
-var children = make(map[int]*ChildNode)
-var suspects []int 	// remove from suspects when leave or crash 
-var otherPort = 8081
-var delimiter = ","
-var myIP string
 var introducer = "172.22.152.106"
 var introducerPort = 8082
+
+var myVid int
+var otherPort = 8081
+var myIP string
+
+var memberMap = make(map[int]*MemberNode)
+
+var monitors = make(map[string]*MonitorNode)
+var children = make(map[int]*ChildNode)
+
+var heartbeatPort = 8080
+var heartbeatPeriod int64 = 2
+var suspects []int 	// remove from suspects when leave or crash 
 var garbage []int
 
-// func getMonitor(vid int) (MonitorNode, err error) {
-// 	var node MonitorNode
-// 	node.vid = vid
-// 	node.ip = memberMap[vid].ip
-
-// 	var addr net.UDPAddr
-// 	addr.IP = net.ParseIP(node.ip)
-// 	addr.Port = heartbeatPort
-
-// 	node.conn, err = net.DialUDP("udp", nil, &addr)
-// 	if err != nil {
-// 		glog.Warning("Cannot setup a UDP connection with monitor vid=%d ip=%s", node.vid, node.ip)
-// 		return node, err
-// 	}
-// 	return node, nil
-// }
-
-// func setupMonitors() {
-// 	n := len(memberMap)
-// 	pred := (myVid - 1) % n
-// 	succ1 := (myVid + 1) % n
-// 	succ2 := (myVid + 2) % n
-
-// 	for i, vid := range([]int{pred, succ1, succ2}) {
-// 		node, err := getMonitor(vid)
-// 		if err != nil {
-// 			glog.Warning("Cannot setup a UDP connection with monitor vid=%d", vid)
-// 		} else {
-// 			monitors[i] = node
-// 		}
-// 	}
-// 	return
-// }
-
-// func setupListenHeartbeat() (err error) {
-// 	udpAddress, err := net.ResolveUDPAddr("udp", heartbeatPort)
-// 	if err != nil {
-// 		glog.Warning("Unable to resolve my UDP address")
-// 		return err
-// 	}
-// 	heartbeatconn, err = net.ListenUDP("udp", udpAddress)
-// 	if err != nil {
-// 		glog.Error("Unable to listen on the heartbeat port %s", heartbeatPort)
-// 		return err
-// 	}
-// 	return
-// }
+var delimiter = ","
 
 func sendHeartbeat() {
-	glog.Info("Started sending heartbeats", )
 	for {
-		for _, node := range(monitors) {
-			// dummy = strconv.FormatInt(time.Now().Unix(), 10)
+		for type_, node := range(monitors) {
 			_, err := node.conn.Write([]byte(strconv.Itoa(myVid)))
 			if err != nil {
-				glog.Warning("Could not send heartbeat myip=%s myvid=%d", myIP, myVid)
+				glog.Warning("[HEARTBEAT] Could not send heartbeat to ", type_, node.vid)
 			}
-			glog.Info("Sent heartbeat to", node.vid)
+			glog.Info("[HEARTBEAT] Sent heartbeat to ", type_, node.vid)
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
 }
 
 func receiveHeartbeat() {
-
 	var myaddr net.UDPAddr
 	myaddr.IP = net.ParseIP(myIP)
 	myaddr.Port = heartbeatPort
 
-	heartbeatconn, err := net.ListenUDP("udp", &myaddr)
+	heartbeatConn, err := net.ListenUDP("udp", &myaddr)
 	if err != nil {
-		glog.Error("Unable to listen on the heartbeat port %s", heartbeatPort)
+		glog.Errorln("[HEARTBEAT] Unable to setup Listen on heartbeat port ", heartbeatPort)
 	}
-
-	glog.Info("Started listening on the heartbeat port", heartbeatPort)
 
 	for {
 		var buf [512]byte
-		n, addr, err := heartbeatconn.ReadFromUDP(buf[0:])
+		n, addr, err := heartbeatConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warning("Could not read heartbeat message")
+			glog.Warning("[HEARTBEAT] Could not read message on heartbeat port\n")
 		}
+
 		child_vid, err := strconv.Atoi(string(buf[0:n]))
 		if err != nil {
-			glog.Error("Could not convert heartbeart message to a virtual ID\n")
+			glog.Error("[HEARTBEAT] Could not map a heartbeat message to a virtual ID\n")
 		}
+
+		// Check if the sender vid is in your children map
 		_, ok := children[child_vid]
 		if ok {
 			children[child_vid].timestamp = time.Now().Unix()
-			glog.Info("Received heartbeat from vid=%d, ip=%s\n", child_vid, addr.IP.String())
+			glog.Infof("[HEARTBEAT] Received heartbeat from vid=%d, ip=%s\n", child_vid, addr.IP.String())
 		} else{
-			glog.Info("Received a RANDOM heartbeat from vid=%s, ip=%s", child_vid, addr.IP.String())
+			glog.Infof("[HEARTBEAT] Received a non-child heartbeat from vid=%s, ip=%s", child_vid, addr.IP.String())
 
 		}
 	}
 }
 
 func checkChildren() {
-	glog.Info("Started tracker to detect failures\n")
-
 	for {
 		currTime := time.Now().Unix()
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
-				glog.Warning("Haven't received heartbeat from %s since two heartbeat periods", child_vid)
+				glog.Warningf("[HEARTBEAT] Haven't received heartbeat from %s since two heartbeat periods", child_vid)
 				suspects = append(suspects, child_vid)
 				go checkSuspicion(child_vid)
 			}
@@ -162,19 +114,46 @@ func checkChildren() {
 	return
 }
 
-func sendMessage(vid int, message string) {
+func checkSuspicion(vid int) {
+	pred := getPredecessor(vid)
+	succ1 := getSuccessor(vid)
+	succ2 := getSuccessor2(vid)
 
+	for _, nvid := range([]int{pred, succ1, succ2}) {
+		if nvid == myVid {
+			continue
+		}
+		message := fmt.Sprintf("SUSPECT%s%d", delimiter, vid)
+		sendMessage(nvid, message)
+	}
+
+	time.Sleep(time.Duration(500) * time.Millisecond)
+
+	for _, suspect := range(suspects) {
+		if suspect == vid {
+			message := fmt.Sprintf("CRASH,%d", vid)
+			massMail(message) 
+
+			// todo: once you send the CRASH message, remove it from SUSPECTS list
+
+			break
+		}
+	}
+	return
+}
+
+func sendMessage(vid int, message string) {
 	var addr net.UDPAddr
 	addr.IP = net.ParseIP(memberMap[vid].ip)
 	addr.Port = otherPort
 
 	conn, err := net.DialUDP("udp", nil, &addr)
 	if err != nil {
-		glog.Warning("Unable to send message to vid=%d ip=%s", vid, memberMap[vid].ip)
+		glog.Warningf("[SEND MESSAGE] Unable to send message to vid=%d ip=%s", vid, memberMap[vid].ip)
 	}
 	defer conn.Close()
 	conn.Write([]byte(message))
-	glog.Info("Sent message %s to %s", message, vid)
+	// glog.Info("Sent message %s to %s", message, vid)
 	return
 }
 
@@ -195,7 +174,6 @@ func sendMessageAddr(ip string, message string) {
 	glog.Info("Sent message %s to %s", message, ip)
 
 	return
-
 }
 
 func mod(a int, b int) int {
@@ -208,9 +186,7 @@ func mod(a int, b int) int {
 
 func getPredecessor(vid int) (int) {
 	n := len(memberMap)
-	glog.Info("n = ", n)
 	pred := mod(vid - 1, n)
-	glog.Info("pred = ", pred)
 	for {
 		if memberMap[pred].alive == true {
 			if pred != vid {
@@ -219,7 +195,6 @@ func getPredecessor(vid int) (int) {
 		}
 		pred = mod(pred - 1, n)
 	}
-	glog.Info("just beofe returning pred = ", pred)
 
 	return pred
 }
@@ -255,29 +230,6 @@ func getSuccessor2(vid int) (int) {
 	return succ2
 }
 
-func checkSuspicion(vid int) {
-	pred := getPredecessor(vid)
-	succ1 := getSuccessor(vid)
-	succ2 := getSuccessor(succ1)
-
-	for _, nvid := range([]int{pred, succ1, succ2}) {
-		if nvid == myVid {
-			continue
-		}
-		message := fmt.Sprintf("SUSPECT%s%d", delimiter, vid)
-		sendMessage(nvid, message)
-	}
-	time.Sleep(time.Duration(500) * time.Millisecond)
-	for _, suspect := range(suspects) {
-		if suspect == vid {
-			message := fmt.Sprintf("CRASH,%d", vid)
-			massMail(message) 
-			break
-		}
-	}
-	return
-}
-
 func massMail(message string) {
 	for vid, node := range(memberMap) {
 		if (vid == myVid || node.alive == false) {
@@ -286,29 +238,6 @@ func massMail(message string) {
 		sendMessage(vid, message)
 	}
 }
-
-// func sendMemberMap(ip string) {
-// 	// todo: send number of entries and try chunking - rn single entries
-
-// 	var addr net.UDPAddr
-// 	addr.IP = net.ParseIP(ip)
-// 	addr.Port = otherPort
-
-// 	conn, err := net.DialUDP("udp", nil, &addr)
-// 	if err != nil {
-// 		glog.Warning("Unable to send message to ip=%s", ip)
-// 	}
-// 	defer conn.Close()
-// 	for vid, node := range(memberMap) {
-// 		if node.alive == false {
-// 			continue
-// 		}
-// 		message := fmt.Sprintf("MEMBER,%d,%s,%d", vid, node.ip, node.timestamp)
-// 	}
-// 	conn.Write([]byte(message))
-// 	return
-
-// }
 
 func findAndSendMonitors(vid int) {
 	var pred, succ1, succ2 int
@@ -326,29 +255,27 @@ func findAndSendMonitors(vid int) {
 	sendMessage(vid, message)
 }
 
-
 func completeJoinRequests() (err error) {
+	var myaddr net.UDPAddr
+	myaddr.IP = net.ParseIP(introducer)
+	myaddr.Port = introducerPort
 
-	var addr net.UDPAddr
-	addr.IP = net.ParseIP(introducer)
-	addr.Port = introducerPort
-
-	introducerConn, err := net.ListenUDP("udp", &addr)
+	introducerConn, err := net.ListenUDP("udp", &myaddr)
 	if err != nil {
-		glog.Error("Unable to listen on the introducer port %s", introducerPort)
+		glog.Errorf("[INTRODUCER] Unable to setup Listen on the introducer port %s", introducerPort)
 		return err
 	}
+
 	for {
 		var buf [512]byte
 		_, addr, err := introducerConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warning("Could not read  message on otherport %s", introducerPort)
+			glog.Warningf("[INTRODUCER] Could not read message on the otherport %s", introducerPort)
 		}
 
-		fmt.Println("Received a join request from ip=%s", addr.IP.String())
+		glog.Infof("Received a join request from ip=%s", addr.IP.String())
 
 		var newVid int
-
 		if len(garbage) == 0 {
 			newVid = len(memberMap)
 		} else {
@@ -362,8 +289,6 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
-		// time.Sleep(5 * time.Second)
-
 		message := fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
 		sendMessage(newVid, message)
 
@@ -372,7 +297,7 @@ func completeJoinRequests() (err error) {
 
 		findAndSendMonitors(newVid)
 
-		// time.Sleep(5 * time.Second)
+		time.Sleep(100 * time.Millisecond)
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		massMail(message)
@@ -477,13 +402,82 @@ func createMember(ip string, str_timestamp string) (MemberNode){
 	return node
 }
 
+func updateMonitors() {
+
+	newpred := getPredecessor(myVid)
+	_, ok := monitors["pred"]
+	if !ok {
+		monitor_node := createMonitor(newpred)
+		monitors["pred"] = &monitor_node
+
+		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+		sendMessage(newpred, message)
+	} else {
+		oldpred := monitors["pred"].vid
+		if oldpred != newpred {
+			monitor_node := createMonitor(newpred)
+			monitors["pred"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newpred, message)
+
+			message = fmt.Sprintf("REMOVE,%d", myVid)
+			sendMessage(oldpred, message)
+		}
+	}
+
+	newsucc1 := getSuccessor(myVid)
+	_, ok = monitors["succ1"]
+	if !ok {
+		monitor_node := createMonitor(newsucc1)
+		monitors["succ1"] = &monitor_node
+
+		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+		sendMessage(newsucc1, message)
+	} else {
+		oldsucc1 := monitors["succ1"].vid
+		if newsucc1 != oldsucc1 {
+			monitor_node := createMonitor(newsucc1)
+			monitors["succ1"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newsucc1, message)
+
+			message = fmt.Sprintf("REMOVE,%d", myVid)
+			sendMessage(oldsucc1, message)
+		}
+	}
+
+	newsucc2 := getSuccessor2(myVid)
+	_, ok = monitors["succ2"]
+	if !ok {
+		monitor_node := createMonitor(newsucc2)
+		monitors["succ2"] = &monitor_node
+
+		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+		sendMessage(newsucc2, message)
+	} else {
+		oldsucc2 := monitors["succ2"].vid
+		if newsucc2 != oldsucc2 {
+			monitor_node := createMonitor(newsucc2)
+			monitors["succ2"] = &monitor_node
+
+			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
+			sendMessage(newsucc2, message)
+
+			message = fmt.Sprintf("REMOVE,%d", myVid)
+			sendMessage(oldsucc2, message)
+		}
+	}
+}
+
 
 func listenOtherPort() (err error) {
 	var myaddr net.UDPAddr
 	myaddr.IP = net.ParseIP(myIP)
 	myaddr.Port = otherPort
 
-	otherportconn, err := net.ListenUDP("udp", &myaddr)
+	otherportConn, err := net.ListenUDP("udp", &myaddr)
 	glog.Info("Listening on port", otherPort)
 
 	if err != nil {
@@ -493,36 +487,28 @@ func listenOtherPort() (err error) {
 
 	for {
 		var buf [512]byte
-		// glog.Info("before")
-		n, addr, err := otherportconn.ReadFromUDP(buf[0:])
-		// glog.Info("after")
-
+		n, addr, err := otherportConn.ReadFromUDP(buf[0:])
 		if err != nil {
 			glog.Warning("Could not read  message on otherport %s", otherPort)
 		}
 
 		message := string(buf[0:n])
-
-		glog.Info(message)
-
 		split_message := strings.Split(message, delimiter)
 		message_type := split_message[0]
 		subject, _ := strconv.Atoi(split_message[1])
+
+		glog.Info(message)
 
 		switch message_type {
 		case "ADD":
 			var cnode ChildNode
 			cnode.timestamp = time.Now().Unix()
-			children[subject] = &cnode 
-
+			children[subject] = &cnode
+			
 			var newnode MemberNode
-			newnode.ip = split_message[2]
-			newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
-			if err != nil {
-				glog.Error("Cannot convert string timestamp to int64")
-			}
-			newnode.alive = true
+			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
+
 
 		case "REMOVE":
 			_, ok := children[subject]
@@ -530,113 +516,44 @@ func listenOtherPort() (err error) {
 				delete(children, subject)
 			}
 
-		//todo condense handling of PRED, SUCC1, SUCC2
-		case "PRED":
-			newnode := createMember(split_message[2], split_message[3])
+		case "PRED", "SUCC1", "SUCC2":
+			var newnode MemberNode
+			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
-			node := createMonitor(subject)			
-			monitors["pred"] = &node
+			var node MonitorNode
+			node = createMonitor(subject)
+			monitors[strings.ToLower(message_type)] = &node
 
-			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessageAddr(newnode.ip, message)
-
-		case "SUCC1":
-			newnode := createMember(split_message[2], split_message[3])
-			memberMap[subject] = &newnode
-
-			node := createMonitor(subject)			
-			monitors["succ1"] = &node
-
-			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessageAddr(newnode.ip, message)
-
-
-		case "SUCC2":
-			newnode := createMember(split_message[2], split_message[3])
-			memberMap[subject] = &newnode
-
-			node := createMonitor(subject)			
-			monitors["succ2"] = &node
-
+			// Send an ADD message to monitor
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
 			sendMessageAddr(newnode.ip, message)
 
 		case "YOU":
 			myVid = subject
-			newnode := createMember(split_message[2], split_message[3])
+			var newnode MemberNode
+			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
-			glog.Info("Got my VID", myVid)
 
 		case "MEMBER":
-			// fmt.Println("[MEMBER] %d %s", subject, split_message[2])
-			// var newnode MemberNode
-			// newnode.ip = split_message[2]
-			// newnode.timestamp, err = strconv.ParseInt(string(split_message[3]), 10, 64)
-			// if err != nil {
-			// 	glog.Error("Cannot convert string timestamp to int64")
-			// }
-			// newnode.alive = true
-			// memberMap[subject] = &newnode
 			if subject == myVid {
 				break
 			}
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
-
-			glog.Info("Added a new entry to the member map - vid=%d, ip=%s, timestamp=%d", subject, newnode.ip, newnode.timestamp)
-
 
 		case "JOIN":
 			if subject == myVid {
 				break
 			}
-			glog.Info("[JOIN] %d %s", subject, split_message[2])
 
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
-			glog.Info(myVid, myIP)
-			glog.Info(memberMap[myVid].timestamp)
-
 			message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
 			sendMessage(subject, message)
 
-			newpred := getPredecessor(myVid)
-			if newpred != monitors["pred"].vid {
-				oldpred := monitors["pred"].vid
-				monitor_node := createMonitor(newpred)
-				monitors["pred"] = &monitor_node
-
-				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-				sendMessage(newpred, message)
-				message = fmt.Sprintf("REMOVE,%d", myVid)
-				sendMessage(oldpred, message)
-			}
-
-			newsucc1 := getSuccessor(myVid)
-			if newsucc1 != monitors["succ1"].vid {
-				oldsucc1 := monitors["succ1"].vid
-				monitor_node := createMonitor(newsucc1)
-				monitors["succ1"] = &monitor_node
-
-				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-				sendMessage(newsucc1, message)
-				message = fmt.Sprintf("REMOVE,%d", myVid)
-				sendMessage(oldsucc1, message)
-			}
-
-			newsucc2 := getSuccessor(newsucc1)
-			if newsucc2 != monitors["succ2"].vid {
-				oldsucc2 := monitors["succ2"].vid
-				monitor_node := createMonitor(newsucc2)
-				monitors["succ2"] = &monitor_node
-
-				message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-				sendMessage(newsucc2, message)
-				message = fmt.Sprintf("REMOVE,%d", myVid)
-				sendMessage(oldsucc2, message)
-			}
+			updateMonitors()
 
 		case "LEAVE", "CRASH":
 			memberMap[subject].alive = false
@@ -646,7 +563,6 @@ func listenOtherPort() (err error) {
 
 			for type_, node := range(monitors) {
 				if subject == node.vid {
-					// Baby you're in trouble
 					var newMonitorID int
 					switch type_ {
 					case "pred":
@@ -654,7 +570,7 @@ func listenOtherPort() (err error) {
 					case "succ1":
 						newMonitorID = getSuccessor(myVid)
 					case "succ2":
-						newMonitorID = getSuccessor(monitors["succ2"].vid)
+						newMonitorID = getSuccessor2(myVid)
 					}
 					var node MonitorNode
 					node.vid = newMonitorID
@@ -669,7 +585,7 @@ func listenOtherPort() (err error) {
 					monitors[type_] = &node
 
 					message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-					sendMessageAddr(node.ip, message)
+					sendMessage(node.vid, message)
 
 					break
 				}
@@ -727,13 +643,13 @@ func sendJoinRequest() {
 
 	conn, err := net.DialUDP("udp", nil, &addr)
 	if err != nil {
-		glog.Warning("Unable to send message to the introducer ip=%s", introducer)
+		glog.Warningf("Unable to send message to the introducer ip=%s", introducer)
 	}
 	message := "1"
 	defer conn.Close()
 	conn.Write([]byte(message))
 
-	glog.Info("Sent a join request to the introducer %s", introducer)
+	glog.Infof("Sent a join request to the introducer %s", introducer)
 	return
 }
 
@@ -763,8 +679,6 @@ func usage() {
 
 func init() {
 	flag.Usage = usage
-	// NOTE: This next line is key you have to call flag.Parse() for the command line 
-	// options or "flags" that are defined in the glog module to be picked up.
 	flag.Parse()
 }
 
