@@ -221,7 +221,8 @@ func getPredecessor(vid int) (int) {
 	n := len(memberMap)
 	pred := mod(vid - 1, n)
 	for {
-		if memberMap[pred].alive == true {
+		_,ok := memberMap[pred]
+		if ok && memberMap[pred].alive == true {
 			if pred != vid {
 				break
 			}
