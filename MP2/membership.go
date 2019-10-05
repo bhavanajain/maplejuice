@@ -65,6 +65,8 @@ var fingerPeriod int64 = 10
 var suspects []int 	// remove from suspects when leave or crash 
 var garbage []int
 
+var initMessageCount = 0
+
 var delimiter = ","
 
 func sendHeartbeat() {
@@ -746,11 +748,16 @@ func listenOtherPort() (err error) {
 					time.Sleep(6*time.Second)
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
 					monitor_node := createMonitor(subject)
-					monitors["pred"] = &monitor_node
-					monitors["succ1"] = &monitor_node
-					monitors["succ1"] = &monitor_node
-					message = fmt.Sprintf("ADD,%d,%s,%d", subject, memberMap[subject].ip, memberMap[subject].timestamp)
-					sendMessage(subject, message)
+					if initMessageCount == 0{
+						monitors["pred"] = &monitor_node
+						monitors["succ1"] = &monitor_node
+						monitors["succ1"] = &monitor_node
+						message = fmt.Sprintf("ADD,%d,%s,%d", 0, memberMap[0].ip, memberMap[0].timestamp)
+						sendMessage(subject, message)
+						initMessageCount = initMessageCount+1
+					} else{
+						updateMonitors()
+					}
 					// fmt.Println("End of Monitos")
 					disseminate(message)
 					glog.Infof("[DISS INTRODUCER %d] Received an introducer message from %d",0,subject)
