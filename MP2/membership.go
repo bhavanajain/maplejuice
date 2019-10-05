@@ -266,8 +266,9 @@ func getSuccessor2(vid int) (int) {
 
 func updateFingerTable() {
 	for{ // Infitnite Loop
-		glog.Infof("[FINGER %d] Updating the finger table",myVid)
+
 		n := len(memberMap)
+		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,n)
 		mult := 1
 		idx := 0
 
