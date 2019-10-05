@@ -28,17 +28,6 @@ type ChildNode struct {
 	timestamp int64
 }
 
-// For storing the last message we get
-// type TimerNode struct{
-// 	timestamp int64
-// }
-
-// todo
-// type Message struct {
-// 	message_type 
-// }
-
-
 var introducer = "172.22.152.106"
 // var introducer = "172.22.152.109"
 var introducerPort = 8082
@@ -53,11 +42,9 @@ var monitors = make(map[string]*MonitorNode)
 var children = make(map[int]*ChildNode)
 
 var timerMap = make(map[int] int64) // Map to store the last time a meesage has been received
-
 var fingerNode = make(map[int] int)
 
 var initRun = true // To run updateFinger table
-
 
 var heartbeatPort = 8080
 var heartbeatPeriod int64 = 2
@@ -66,9 +53,7 @@ var suspects []int 	// remove from suspects when leave or crash
 var garbage = []int{}
 
 var initMessageCount = 0
-
 var maxID = 0
-
 var delimiter = ","
 
 func sendHeartbeat() {
@@ -76,7 +61,7 @@ func sendHeartbeat() {
 		for type_, node := range(monitors) {
 			_, err := node.conn.Write([]byte(strconv.Itoa(myVid)))
 			if err != nil {
-				glog.Warning("[HEARTBEAT] Could not send heartbeat to ", type_, node.vid)
+				glog.Warningf("[HEARTBEAT %d] Could not send heartbeat to %s %d", myVid, type_, node.vid)
 			}
 			// glog.Infof("[HEARTBEAT %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
 		}
@@ -91,19 +76,19 @@ func receiveHeartbeat() {
 
 	heartbeatConn, err := net.ListenUDP("udp", &myaddr)
 	if err != nil {
-		glog.Errorf("[HEARTBEAT %d] Unable to setup Listen on heartbeat port %d\n", myVid, heartbeatPort)
+		glog.Errorf("[HEARTBEAT %d] Unable to setup Listen on heartbeat port %d", myVid, heartbeatPort)
 	}
 
 	for {
 		var buf [512]byte
 		n, addr, err := heartbeatConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warningf("[HEARTBEAT %d] Could not read message on heartbeat port\n", myVid, heartbeatPort)
+			glog.Warningf("[HEARTBEAT %d] Could not read message on heartbeat port %d", myVid, heartbeatPort)
 		}
-
-		child_vid, err := strconv.Atoi(string(buf[0:n]))
+		message := string(buf[0:n])
+		child_vid, err := strconv.Atoi(message)
 		if err != nil {
-			glog.Errorf("[HEARTBEAT %d] Could not map a heartbeat message to a virtual ID\n", myVid)
+			glog.Errorf("[HEARTBEAT %d] Could not map a heartbeat message %s to a virtual ID\n", myVid, message)
 		}
 
 		// Check if the sender vid is in your children map
@@ -123,7 +108,7 @@ func checkChildren() {
 		currTime := time.Now().Unix()
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
-				glog.Warningf("[**SUSPICION %d **] Haven't received heartbeat from %s since two heartbeat periods\n", myVid, child_vid)
+				glog.Warningf("[HEARTBEAT %d] No heartbeat from %d since two heartbeat periods", myVid, child_vid)
 				suspects = append(suspects, child_vid)
 				go checkSuspicion(child_vid)
 			}
@@ -134,16 +119,17 @@ func checkChildren() {
 }
 
 func checkSuspicion(vid int) {
+	// To check suspicion, query its neighbors
 	pred := getPredecessor(vid)
 	succ1 := getSuccessor(vid)
-	succ2 := getSuccessor(succ1)
+	succ2 := getSuccessor2(vid)
 
 	for _, nvid := range([]int{pred, succ1, succ2}) {
 		if nvid == myVid {
 			continue
 		}
 
-		glog.Infof("[%d]Sending suspicion messages for %s", myVid, vid)
+		glog.Infof("[HEARTBEAT %d] Sending suspicion messages for %d", myVid, vid)
 
 		message := fmt.Sprintf("SUSPECT,%d", vid)
 		sendMessage(nvid, message)
@@ -164,7 +150,7 @@ func checkSuspicion(vid int) {
 				delete(children, vid)
 			}
 
-			message := fmt.Sprintf("CRASH,%d,%d", vid,time.Now().Unix())
+			message := fmt.Sprintf("CRASH,%d,%d", vid, time.Now().Unix())
 			disseminate(message)		
 			// massMail(message)
 			updateMonitors()
@@ -233,11 +219,10 @@ func max( a int, b int) int {
 }
 
 func getPredecessor(vid int) (int) {
-	// n := len(memberMap)
 	n := maxID + 1
 	pred := mod(vid - 1, n)
 	for {
-		_,ok := memberMap[pred]
+		_, ok := memberMap[pred]
 		if ok && memberMap[pred].alive == true {
 			if pred != vid {
 				break
@@ -245,17 +230,14 @@ func getPredecessor(vid int) (int) {
 		}
 		pred = mod(pred - 1, n)
 	}
-
 	return pred
 }
 
 func getSuccessor(vid int) (int) {
-	// n := len(memberMap)
-	n := maxID+1
-
+	n := maxID + 1
 	succ := (vid + 1) % n
 	for {
-		_,ok := memberMap[succ] // checking if succ is in the memberMap
+		_, ok := memberMap[succ] // checking if succ is in the memberMap
 		if ok && memberMap[succ].alive == true {
 			if succ != vid {
 				break
@@ -268,12 +250,11 @@ func getSuccessor(vid int) (int) {
 
 func getSuccessor2(vid int) (int) {
 	succ1 := getSuccessor(vid)
-	// n := len(memberMap)
-	n := maxID+1
 
+	n := maxID + 1
 	succ2 := (succ1 + 1) % n
 	for {
-		_,ok := memberMap[succ2]
+		_, ok := memberMap[succ2]
 		if ok && memberMap[succ2].alive == true {
 			if succ2 != vid {
 				break
@@ -286,11 +267,9 @@ func getSuccessor2(vid int) (int) {
 
 
 func updateFingerTable() {
-	for{ // Infitnite Loop
-
-		// n := len(memberMap)
+	for {
 		n := maxID + 1
-		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,n)
+		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d", myVid, n)
 		mult := 1
 		idx := 0
 
@@ -311,7 +290,7 @@ func updateFingerTable() {
 		eidx := len(fingerNode)
 		if eidx > idx{
 			for i:= idx ; i < eidx; i++{
-				if n <2{
+				if n <2 {
 					break
 				}
 				_,ok := fingerNode[i]
@@ -325,9 +304,7 @@ func updateFingerTable() {
 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
 
 		time.Sleep(time.Duration(fingerPeriod) * time.Second)
-
 	}
-
 	return
 }
 
@@ -344,13 +321,12 @@ func disseminate(message string) {
 		}
 		sendMessage(node,message)
 	}// Not added yet
-	
 }
 
 
 func checkIntroducer(){
-	for{
-		time.Sleep(time.Duration(10)*time.Second)
+	for {
+		time.Sleep(time.Duration(10) * time.Second)
 		if memberMap[0].alive == false {
 				// Send a message to particular message to the introducer
 				message:= fmt.Sprintf("INTRODUCER,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID)
@@ -385,46 +361,6 @@ func findAndSendMonitors(vid int) {
 	message = fmt.Sprintf("SUCC2,%d,%s,%d", succ2, memberMap[succ2].ip, memberMap[succ2].timestamp)
 	sendMessage(vid, message)
 }
-
-// func setNewMonitors() {
-// 		newpred := getPredecessor(myVid)
-// 		if newpred != monitors["pred"].vid {
-// 			oldpred := monitors["pred"].vid
-// 			monitor_node := createMonitor(newpred)
-// 			monitors["pred"] = &monitor_node
-
-// 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-// 			sendMessage(newpred, message)
-// 			message = fmt.Sprintf("REMOVE,%d", myVid)
-// 			sendMessage(oldpred, message)
-// 		}
-
-// 		newsucc1 := getSuccessor(myVid)
-// 		if newsucc1 != monitors["succ1"].vid {
-// 			oldsucc1 := monitors["succ1"].vid
-// 			monitor_node := createMonitor(newsucc1)
-// 			monitors["succ1"] = &monitor_node
-
-// 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-// 			sendMessage(newsucc1, message)
-// 			message = fmt.Sprintf("REMOVE,%d", myVid)
-// 			sendMessage(oldsucc1, message)
-// 		}
-
-// 		newsucc2 := getSuccessor2(myVid)
-// 		if newsucc2 != monitors["succ2"].vid {
-// 			oldsucc2 := monitors["succ2"].vid
-// 			monitor_node := createMonitor(newsucc2)
-// 			monitors["succ2"] = &monitor_node
-
-// 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-// 			sendMessage(newsucc2, message)
-// 			message = fmt.Sprintf("REMOVE,%d", myVid)
-// 			sendMessage(oldsucc2, message)
-// 		}
-
-// 		return
-// }
 
 func completeJoinRequests() (err error) {
 
@@ -483,70 +419,6 @@ func completeJoinRequests() (err error) {
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		disseminate(message)
-		// massMail(message)
-
-		// newpred := getPredecessor(myVid)
-		// _, ok := monitors["pred"]
-		// if ok {
-		// 	if newpred != monitors["pred"].vid {
-		// 		oldpred := monitors["pred"].vid
-		// 		monitor_node := createMonitor(newpred)
-		// 		monitors["pred"] = &monitor_node
-
-		// 		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// 		sendMessage(newpred, message)
-		// 		message = fmt.Sprintf("REMOVE,%d", myVid)
-		// 		sendMessage(oldpred, message)
-		// 	}
-		// } else {
-		// 	monitor_node := createMonitor(newpred)
-		// 	monitors["pred"] = &monitor_node
-
-		// 	message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// 	sendMessage(newpred, message)
-		// } 
-
-		// newsucc1 := getSuccessor(myVid)
-		// _, ok = monitors["succ1"]
-		// if ok {
-		// 	if newsucc1 != monitors["succ1"].vid {
-		// 		oldsucc1 := monitors["succ1"].vid
-		// 		monitor_node := createMonitor(newsucc1)
-		// 		monitors["succ1"] = &monitor_node
-
-		// 		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// 		sendMessage(newsucc1, message)
-		// 		message = fmt.Sprintf("REMOVE,%d", myVid)
-		// 		sendMessage(oldsucc1, message)
-		// 	}
-		// } else{
-		// 	monitor_node := createMonitor(newsucc1)
-		// 	monitors["succ1"] = &monitor_node
-
-		// 	message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// 	sendMessage(newsucc1, message)
-		// }
-
-		// newsucc2 := getSuccessor2(myVid)
-		// _, ok = monitors["succ2"]
-		// if ok {
-		// 	if newsucc2 != monitors["succ2"].vid {
-		// 		oldsucc2 := monitors["succ2"].vid
-		// 		monitor_node := createMonitor(newsucc2)
-		// 		monitors["succ2"] = &monitor_node
-
-		// 		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// 		sendMessage(newsucc2, message)
-		// 		message = fmt.Sprintf("REMOVE,%d", myVid)
-		// 		sendMessage(oldsucc2, message)
-		// 	}
-		// } else{
-		// 	monitor_node := createMonitor(newsucc2)
-		// 	monitors["succ2"] = &monitor_node
-
-		// 	message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// 	sendMessage(newsucc2, message)
-		// }
 
 		updateMonitors()
 	}
@@ -615,9 +487,6 @@ func updateMonitors() {
 	if !ok {
 		monitor_node := createMonitor(newpred)
 		monitors["pred"] = &monitor_node
-
-		// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// sendMessage(newpred, message)
 	} else {
 		oldpred := monitors["pred"].vid
 		old_monitors = append(old_monitors, oldpred)
@@ -625,12 +494,6 @@ func updateMonitors() {
 		if oldpred != newpred {
 			monitor_node := createMonitor(newpred)
 			monitors["pred"] = &monitor_node
-
-			// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			// sendMessage(newpred, message)
-
-			// message = fmt.Sprintf("REMOVE,%d", myVid)
-			// sendMessage(oldpred, message)
 		}
 	}
 
@@ -642,8 +505,6 @@ func updateMonitors() {
 		monitor_node := createMonitor(newsucc1)
 		monitors["succ1"] = &monitor_node
 
-		// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// sendMessage(newsucc1, message)
 	} else {
 		oldsucc1 := monitors["succ1"].vid
 		old_monitors = append(old_monitors, oldsucc1)
@@ -651,12 +512,6 @@ func updateMonitors() {
 		if newsucc1 != oldsucc1 {
 			monitor_node := createMonitor(newsucc1)
 			monitors["succ1"] = &monitor_node
-
-			// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			// sendMessage(newsucc1, message)
-
-			// message = fmt.Sprintf("REMOVE,%d", myVid)
-			// sendMessage(oldsucc1, message)
 		}
 	}
 
@@ -667,9 +522,6 @@ func updateMonitors() {
 	if !ok {
 		monitor_node := createMonitor(newsucc2)
 		monitors["succ2"] = &monitor_node
-
-		// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		// sendMessage(newsucc2, message)
 	} else {
 		oldsucc2 := monitors["succ2"].vid
 		old_monitors = append(old_monitors, oldsucc2)
@@ -677,12 +529,6 @@ func updateMonitors() {
 		if newsucc2 != oldsucc2 {
 			monitor_node := createMonitor(newsucc2)
 			monitors["succ2"] = &monitor_node
-
-			// message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			// sendMessage(newsucc2, message)
-
-			// message = fmt.Sprintf("REMOVE,%d", myVid)
-			// sendMessage(oldsucc2, message)
 		}
 	}
 
@@ -700,33 +546,20 @@ func updateMonitors() {
 
 	glog.Infof("[MONITOR] Old monitors of %d: %v", myVid, old_monitors)
 	glog.Infof("[MONITOR] New monitors of %d: %v", myVid, new_monitors)
-
-	glog.Infof("%d updated monitors", myVid)
 }
 
 
-
-
-func garbageCollection(){ // Part of the introducer rejoin thing run every 30 seconds
-
+func garbageCollection() { // Part of the introducer rejoin thing run every 30 seconds
 		for{
 			time.Sleep(30 * time.Second)
-			for i:=1; i<=maxID; i++{
+
+			for i:=1; i<=maxID; i++ {
 				mnode, isavailable := memberMap[i]
 				if (!isavailable || !mnode.alive) {
 					garbage = append(garbage, i)
 				}
-				// _, ok := memberMap[i]
-				// if ok {
-				// 	if memberMap[i].alive == false {
-				// 		garbage = append(garbage, i)
-				// 	}
-				// } else {
-				// 	garbage = append(garbage, i)
-				// }
 			}
 		}
-
 }
 
 
@@ -774,7 +607,6 @@ func listenOtherPort() (err error) {
 				delete(children, subject)
 			}
 
-
 		case "INTRODUCER":
 			if myVid == 0 {
 				if len(memberMap) < 5 { // Handles 3 failure
@@ -798,7 +630,6 @@ func listenOtherPort() (err error) {
 					}
 					disseminate(message)
 					glog.Infof("[DISS INTRODUCER %d] Received an introducer message from %d",0,subject)
-
 				}
 			}
 
