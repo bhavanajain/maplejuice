@@ -563,6 +563,9 @@ func updateMonitors() {
 		sendMessage(vid, message)
 	}
 
+	glog.Infof("old: %v", old_monitors)
+	glog.Infof("new: %v", new_monitors)
+
 	if !reflect.DeepEqual(old_monitors, new_monitors) {
 		glog.Infof("[HEARTBEAT %d]Updated monitors from %v to %v", myVid, old_monitors, new_monitors)
 		// glog.Infof("[MONITOR] Old monitors of %d: %v", myVid, old_monitors)
