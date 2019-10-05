@@ -337,6 +337,7 @@ func checkIntroducer(){
 				// Send a message to particular message to the introducer
 				message:= fmt.Sprintf("INTRODUCER,%d,%s,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp)
 				sendMessage(0,message) // periodically send the message
+				glog.Infof("[INTRODUCER %d] Sent message ",myVid)
 		}
 
 
@@ -735,7 +736,7 @@ func listenOtherPort() (err error) {
 				if len(memberMap) < 5 { // Handles 3 failure
 					newnode := createMember(split_message[2],split_message[3])
 					memberMap[subject] = &newnode
-
+					glog.Infof("[INTRODUCER %d] Received an introducer message from %d",0,subject)
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
 					disseminate(message)
 
