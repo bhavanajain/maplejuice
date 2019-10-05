@@ -585,12 +585,13 @@ func Difference(a, b []int) (diff []int) {
 
 func updateMonitors() {
 
-	glog.Infof("[MONITOR %d]  This code runs ",myVid)
+	
 
 	old_monitors := []int{}
 	new_monitors := []int{}
 
 	newpred := getPredecessor(myVid)
+	glog.Infof("[MONITOR %d]  This code runs ",myVid)
 	new_monitors = append(new_monitors, newpred)
 
 	_, ok := monitors["pred"]
