@@ -160,6 +160,7 @@ func checkSuspicion(vid int) {
 				delete(children, vid)
 			}
 			crash_time := time.Now().Unix()
+			glog.Infof("%d Starting CRASH message for %d", myVid, vid)
 			message := fmt.Sprintf("CRASH,%d,%d", vid, crash_time)
 			eventTimeMap[vid] = crash_time
 			disseminate(message)
@@ -786,9 +787,9 @@ func listenOtherPort() (err error) {
 
 			var message string
 			if alive {
-				message = fmt.Sprintf("STATUS,%d,1", subject, 1)
+				message = fmt.Sprintf("STATUS,%d,1", subject)
 			} else {
-				message = fmt.Sprintf("STATUS,%d,0", subject, 0)
+				message = fmt.Sprintf("STATUS,%d,0", subject)
 			}
 			sendMessageAddr(addr.IP.String(), message)
 		
