@@ -156,8 +156,9 @@ func checkSuspicion(vid int) {
 			if ok {
 				delete(children, vid)
 			}
-
-			message := fmt.Sprintf("CRASH,%d,%d", vid, time.Now().Unix())
+			crash_time := time.Now().Unix()
+			message := fmt.Sprintf("CRASH,%d,%d", vid, crash_time)
+			eventTimeMap[vid] = crash_time
 			disseminate(message)
 			updateMonitors()
 			break
@@ -453,6 +454,7 @@ func completeJoinRequests() (err error) {
 		time.Sleep(100 * time.Millisecond)
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
+		eventTimeMap[newVid] = newnode.timestamp
 		disseminate(message)
 
 		updateMonitors()
@@ -675,6 +677,7 @@ func listenOtherPort() (err error) {
 					// }
 
 					updateMonitors()
+					eventTimeMap[0] = memberMap[0].timestamp
 					disseminate(message)
 				}
 			}
@@ -714,62 +717,52 @@ func listenOtherPort() (err error) {
 			updateMonitors() // as new entry comes along we need to modify the Monitor list
 
 		case "JOIN":
-			if subject == myVid {
-				break
-			}
-
-			newnode := createMember(split_message[2], split_message[3])
-			memberMap[subject] = &newnode
-
-			message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
-			sendMessage(subject, message)
-			updateMonitors()
-
-			// Read the sender of the message
-			// len_msg := len(split_message)
 			origin_time, _ := strconv.ParseInt(string(split_message[3]), 10, 64)
-			
 
-			// Check the timerMap
 			_, ok := eventTimeMap[subject]
 			if (!ok || eventTimeMap[subject] < origin_time) {
 				eventTimeMap[subject] = origin_time
 				disseminate(message)
-			} 
 
+				if subject != myVid {
+					newnode := createMember(split_message[2], split_message[3])
+					memberMap[subject] = &newnode
+				}
+
+				message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
+				sendMessage(subject, message)
+
+				updateMonitors()
+			} 
 
 		case "LEAVE", "CRASH":
 			// mark crashed
 
 			// check if it is currently marked alive or not
 			glog.Infof("Received CRASH for %d",subject)
-			_, ok := memberMap[subject]
-			if ok {
 
-				if memberMap[subject].alive == false {
-					break;
-				}
-
-				memberMap[subject].alive = false
-				
-				_, ok = children[subject]
-				if ok {
-					delete(children, subject)
-				}
-
-				updateMonitors()
-			}
-
-			// Read the sender of the message
-			// len_msg := len(split_message)
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
-			// Check the timerMap
 			_, ok = eventTimeMap[subject]
 			if (!ok || eventTimeMap[subject] < origin_time){
 				eventTimeMap[subject] = origin_time
 				disseminate(message)
-			} 
+
+				_, ok := memberMap[subject]
+				if ok {
+					memberMap[subject].alive = false
+					
+					_, ok = children[subject]
+					if ok {
+						delete(children, subject)
+					}
+					updateMonitors()
+				}
+			}
+
+			// Read the sender of the message
+			// len_msg := len(split_message)
+			
 
 		case "SUSPECT":
 			var alive = false
