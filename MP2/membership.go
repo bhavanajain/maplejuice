@@ -85,6 +85,8 @@ func receiveHeartbeat() {
 		glog.Errorf("[HEARTBEAT %d] Unable to setup Listen on heartbeat port %d", myVid, heartbeatPort)
 	}
 
+	glog.Infof("Listening on heartbeat port %d", heartbeatPort)
+
 	for {
 		var buf [512]byte
 		n, addr, err := heartbeatConn.ReadFromUDP(buf[0:])
@@ -637,15 +639,15 @@ func listenOtherPort() (err error) {
 
 		switch message_type {
 		case "ADD":
+			var newnode MemberNode
+			newnode = createMember(split_message[2], split_message[3])
+			memberMap[subject] = &newnode
+
 			var cnode ChildNode
 			cnode.timestamp = time.Now().Unix()
 			children[subject] = &cnode
 
 			glog.Infof("[ADD %d] %d %d", myVid, subject, children[subject].timestamp)
-			
-			var newnode MemberNode
-			newnode = createMember(split_message[2], split_message[3])
-			memberMap[subject] = &newnode
 
 		case "REMOVE":
 			_, ok := children[subject]
