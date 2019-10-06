@@ -114,11 +114,11 @@ func receiveHeartbeat() {
 func checkChildren() {
 	for {
 		currTime := time.Now().Unix()
-		fmt.Printf("Children: ")
-		for child_vid := range children {
-			fmt.Printf("%d ", child_vid)
-		}
-		fmt.Printf("\n")
+		// fmt.Printf("Children: ")
+		// for child_vid := range children {
+		// 	fmt.Printf("%d ", child_vid)
+		// }
+		// fmt.Printf("\n")
 
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
@@ -876,11 +876,12 @@ func main() {
 		memberMap[0] = &node
 	}
 
-	go listenOtherPort()
-
 	go sendHeartbeat()
 	go receiveHeartbeat()
+	go checkChildren()
 
+	go listenOtherPort()
+	
 	if myIP == introducer {
 		// there should be a delay here - depending on how frequently the introducer is being pinged
 		// if the system already exists in some form, the introducer shouldn't accept join requests until it knows what the maxID is 
@@ -895,7 +896,6 @@ func main() {
 		sendJoinRequest()
 	}
 
-	go checkChildren()
 	go updateFingerTable()
 
 
