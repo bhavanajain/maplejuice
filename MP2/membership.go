@@ -739,6 +739,14 @@ func listenOtherPort() (err error) {
 			node = createMonitor(subject)
 			monitors[strings.ToLower(message_type)] = &node
 
+			old_mon, ok := monitors[strings.ToLower(message_type)]
+			if ok {
+				if old_mon != subject {
+					message := fmt.Sprintf("REMOVE,%d", myVid)
+					sendMessage(old_mon, message, num_tries)
+				}
+			}
+
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
 			sendMessageAddr(newnode.ip, message, num_tries)
 
@@ -761,8 +769,11 @@ func listenOtherPort() (err error) {
 			newnode := createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
 
-			updateMonitors()
-
+			if subject != 0 {
+				updateMonitors()
+				// introducer is anyway going to send it monitors.
+			}
+			
 			glog.Infof("[ME %d] Processed a new memberMap entry vid=%d", myVid, subject)
 
 		case "JOIN":
