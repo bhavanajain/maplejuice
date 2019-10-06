@@ -11,6 +11,9 @@ import (
 	"strings"
 	"flag"
 	"reflect"
+	"math/rand"
+    "os/signal"
+    "syscall"
 )
 
 type MemberNode struct {
@@ -61,6 +64,9 @@ var initMessageCount = 0
 // [TODO] update whenever somebody with maxID leaves or crashes
 var maxID = 0
 var delimiter = ","
+
+var packetDropProb float64 = 0.0
+var num_tries int = 3
 
 func sendHeartbeat() {
 	for {
@@ -146,7 +152,7 @@ func checkSuspicion(vid int) {
 		glog.Infof("[HEARTBEAT %d] Sending suspicion messages for %d", myVid, vid)
 
 		message := fmt.Sprintf("SUSPECT,%d", vid)
-		sendMessage(nvid, message)
+		sendMessage(nvid, message, num_tries)
 	}
 
 	// after 500 milliseconds, if the vid is still in suspects, declare it CRASHed
@@ -178,7 +184,7 @@ func checkSuspicion(vid int) {
 	return
 }
 
-func sendMessage(vid int, message string) {
+func sendMessage(vid int, message string, num_tries int) {
 	var addr net.UDPAddr
 	addr.IP = net.ParseIP(memberMap[vid].ip)
 	addr.Port = otherPort
@@ -188,11 +194,18 @@ func sendMessage(vid int, message string) {
 		glog.Warningf("Unable to send message to vid=%d ip=%s", vid, memberMap[vid].ip)
 	}
 	defer conn.Close()
-	conn.Write([]byte(message))
+	for i:=0; i<num_tries; i++ {
+		if rand.Float64() > packetDropProb {
+			_, err = conn.Write([]byte(message))
+			if err != nil {
+				glog.Warningf("Unable to write message %s to %d", message, vid)
+			}
+		}	
+	}
 	return
 }
 
-func sendMessageAddr(ip string, message string) {
+func sendMessageAddr(ip string, message string, num_tries int) {
 	var addr net.UDPAddr
 	addr.IP = net.ParseIP(ip)
 	addr.Port = otherPort
@@ -202,11 +215,14 @@ func sendMessageAddr(ip string, message string) {
 		glog.Warning("Unable to send message to ip=%s", ip)
 	}
 	defer conn.Close()
-	_, err = conn.Write([]byte(message))
-	if err != nil {
-		glog.Warningf("[vid %d] Unable to write message to %s", myVid, ip)
+	for i:=0; i<num_tries; i++ {
+		if rand.Float64() > packetDropProb {
+			_, err = conn.Write([]byte(message))
+			if err != nil {
+				glog.Warningf("Unable to write message %s to %s", message, ip)
+			}
+		}
 	}
-
 	return
 }
 
@@ -306,58 +322,15 @@ func updateFingerTable() {
 	}
 }
 
-// func updateFingerTable() {
-// 	for {
-// 		n := maxID + 1
-// 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d", myVid, n)
-// 		mult := 1
-// 		idx := 0
-
-// 		for{
-// 			if n < 2 {
-// 				break
-// 			}
-// 			nval := (myVid+mult) % n
-// 			newVid := getSuccessor(nval)
-// 			fingerNode[idx] = newVid
-// 			idx = idx+1
-// 			mult = mult*2
-// 			if (mult >= n){
-// 				break
-// 			}
-// 		}
-
-// 		eidx := len(fingerNode)
-// 		if eidx > idx{
-// 			for i:= idx ; i < eidx; i++{
-// 				if n <2 {
-// 					break
-// 				}
-// 				_,ok := fingerNode[i]
-// 				if ok{
-// 					delete(fingerNode,i)
-// 				}
-// 			}
-// 		}
-
-		
-// 		glog.Infof("[FINGER %d] Updating the finger table, memberMap Len %d",myVid,len(fingerNode))
-
-// 		time.Sleep(time.Duration(fingerPeriod) * time.Second)
-// 	}
-// 	return
-// }
-
 func disseminate(message string) {
-
 	for _, node := range(monitors) {
-		sendMessage(node.vid, message)
+		sendMessage(node.vid, message, 1)
 	}
 	for _, finger := range(fingerTable) {
 		if (finger == myVid || memberMap[finger].alive == false) {
 			continue
 		}
-		sendMessage(finger,message)
+		sendMessage(finger, message, 1)
 	}
 }
 
@@ -368,36 +341,26 @@ func checkIntroducer() {
 		if memberMap[0].alive == false {
 			// If introducer is dead, periodically send your record to the introducer
 			message:= fmt.Sprintf("INTRODUCER,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID)
-			sendMessage(0,message)
-			// glog.Infof("[INTRODUCER %d] Sent message ",myVid)
+			sendMessage(0, message, num_tries)
 		}
 	
 	}
 }
-
-// func massMail(message string) {
-// 	for vid, node := range(memberMap) {
-// 		if (vid == myVid || node.alive == false) {
-// 			continue
-// 		}
-// 		sendMessage(vid, message)
-// 	}
-// }
 
 func findAndSendMonitors(vid int) {
 	var pred, succ1, succ2 int
 
 	pred = getPredecessor(vid)
 	message := fmt.Sprintf("PRED,%d,%s,%d", pred, memberMap[pred].ip, memberMap[pred].timestamp)
-	sendMessage(vid, message)
+	sendMessage(vid, message, num_tries)
 
 	succ1 = getSuccessor(vid)
 	message = fmt.Sprintf("SUCC1,%d,%s,%d", succ1, memberMap[succ1].ip, memberMap[succ1].timestamp)
-	sendMessage(vid, message)
+	sendMessage(vid, message, num_tries)
 
 	succ2 = getSuccessor2(vid)
 	message = fmt.Sprintf("SUCC2,%d,%s,%d", succ2, memberMap[succ2].ip, memberMap[succ2].timestamp)
-	sendMessage(vid, message)
+	sendMessage(vid, message, num_tries)
 }
 
 func completeJoinRequests() (err error) {
@@ -444,10 +407,10 @@ func completeJoinRequests() (err error) {
 
 		// Send the node's record
 		message := fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
-		sendMessage(newVid, message)
+		sendMessage(newVid, message, num_tries)
 
 		message = fmt.Sprintf("MEMBER,0,%s,%d", introducer, memberMap[0].timestamp)
-		sendMessage(newVid, message)
+		sendMessage(newVid, message, num_tries)
 
 		findAndSendMonitors(newVid)
 
@@ -576,13 +539,13 @@ func updateMonitors() {
 	to_add := Difference(new_monitors, old_monitors)
 	for _, vid := range(to_add) {
 		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-		sendMessage(vid, message)
+		sendMessage(vid, message, num_tries)
 	}
 
 	to_remove := Difference(old_monitors, new_monitors)
 	for _, vid := range(to_remove) {
 		message := fmt.Sprintf("REMOVE,%d", myVid)
-		sendMessage(vid, message)
+		sendMessage(vid, message, num_tries)
 	}
 
 	glog.Infof("old: %v", old_monitors)
@@ -669,18 +632,6 @@ func listenOtherPort() (err error) {
 					
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
 
-					// monitor_node := createMonitor(subject)
-					// if initMessageCount == 0 {
-					// 	monitors["pred"] = &monitor_node
-					// 	monitors["succ1"] = &monitor_node
-					// 	monitors["succ2"] = &monitor_node
-					// 	message = fmt.Sprintf("ADD,%d,%s,%d", 0, memberMap[0].ip, memberMap[0].timestamp)
-					// 	sendMessage(subject, message)
-					// 	initMessageCount = initMessageCount + 1
-					// } else{
-					// 	updateMonitors()
-					// }
-
 					updateMonitors()
 					eventTimeMap[0] = memberMap[0].timestamp
 					disseminate(message)
@@ -698,7 +649,7 @@ func listenOtherPort() (err error) {
 
 			// Send an ADD message to monitor
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
-			sendMessageAddr(newnode.ip, message)
+			sendMessageAddr(newnode.ip, message, num_tries)
 
 		case "YOU":
 			myVid = subject
@@ -735,7 +686,7 @@ func listenOtherPort() (err error) {
 				}
 
 				message := fmt.Sprintf("MEMBER,%d,%s,%d", myVid, myIP, memberMap[myVid].timestamp)
-				sendMessage(subject, message)
+				sendMessage(subject, message, num_tries)
 
 				updateMonitors()
 			} 
@@ -792,7 +743,7 @@ func listenOtherPort() (err error) {
 			} else {
 				message = fmt.Sprintf("STATUS,%d,0", subject, 0)
 			}
-			sendMessageAddr(addr.IP.String(), message)
+			sendMessageAddr(addr.IP.String(), message, num_tries)
 		
 		case "STATUS":
 			status, _ := strconv.Atoi(split_message[2])
@@ -881,23 +832,39 @@ func main() {
 	go checkChildren()
 
 	go listenOtherPort()
+
+	time.Sleep(time.Duration(introPingPeriod) * time.Second)
 	
 	if myIP == introducer {
 		// there should be a delay here - depending on how frequently the introducer is being pinged
 		// if the system already exists in some form, the introducer shouldn't accept join requests until it knows what the maxID is 
-		time.Sleep(time.Duration(introPingPeriod) * time.Second)
-
 		go completeJoinRequests()
 		go garbageCollection()
 		// this garbage collection can occur concurrent to the addToDead list
 
 	} else{
-		time.Sleep(time.Duration(introPingPeriod) * time.Second)
 		sendJoinRequest()
 	}
-
 	go updateFingerTable()
 
+	sigs := make(chan os.Signal, 1)
+	// done := make(chan bool, 1)
+
+	signal.Notify(sigs, syscall.SIGQUIT)
+
+	go func() {
+		sig := <-sigs
+		switch sig {
+		case syscall.SIGQUIT:
+			leave_time := time.Now().Unix()
+			message := fmt.Sprintf("LEAVE,%d,%d", myVid, leave_time)
+
+			disseminate(message)
+
+			wg.Done()
+			
+		}
+	}()
 
 	wg.Wait()
 	return
