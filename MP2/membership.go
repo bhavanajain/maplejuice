@@ -112,6 +112,7 @@ func receiveHeartbeat() {
 func checkChildren() {
 	for {
 		currTime := time.Now().Unix()
+		glog.Infof("%v", children)
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
 				glog.Warningf("[HEARTBEAT %d] No heartbeat from %d since two heartbeat periods", myVid, child_vid)
@@ -149,9 +150,6 @@ func checkSuspicion(vid int) {
 		if suspect == vid {
 			suspect_idx = i
 			memberMap[suspect].alive = false
-			// if myIP == introducer {
-			// 	//go addToDead(vid)
-			// }
 			_, ok := children[vid]
 			if ok {
 				delete(children, vid)
