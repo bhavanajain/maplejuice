@@ -785,7 +785,13 @@ func listenOtherPort() (err error) {
 					}
 
 					if subject == maxID {
-						maxID = maxID - 1
+						var i int
+						for i=maxID; i>=0; i-- {
+							if memberMap[i].alive {
+								break
+							}
+						}
+						maxID = i						
 					}
 
 					updateMonitors()
