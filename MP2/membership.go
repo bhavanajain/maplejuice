@@ -249,7 +249,9 @@ func getPredecessor(vid int) (int) {
 	if n < 2 {
 		return -1
 	}
+
 	pred := mod(vid - 1, n)
+	attempts := 0
 	for {
 		_, ok := memberMap[pred]
 		if ok && memberMap[pred].alive == true {
@@ -258,6 +260,10 @@ func getPredecessor(vid int) (int) {
 			}
 		}
 		pred = mod(pred - 1, n)
+		attempts += 1
+		if attempts > n {
+			return -1
+		}
 	}
 	return pred
 }
@@ -268,6 +274,7 @@ func getSuccessor(vid int) (int) {
 		return -1
 	}
 	succ := (vid + 1) % n
+	attempts := 0
 	for {
 		_, ok := memberMap[succ] // checking if succ is in the memberMap
 		if ok && memberMap[succ].alive == true {
@@ -276,6 +283,10 @@ func getSuccessor(vid int) (int) {
 			}
 		}
 		succ = (succ + 1) % n
+		attempts += 1
+		if attempts > n {
+			return -1
+		}
 	}
 	return succ
 }
@@ -287,8 +298,12 @@ func getSuccessor2(vid int) (int) {
 	}
 
 	succ1 := getSuccessor(vid)
+	if succ1 == -1 {
+		return -1
+	}
 
 	succ2 := (succ1 + 1) % n
+	attempts := 0
 	for {
 		_, ok := memberMap[succ2]
 		if ok && memberMap[succ2].alive == true {
@@ -297,6 +312,10 @@ func getSuccessor2(vid int) (int) {
 			}
 		}
 		succ2 = (succ2 + 1) % n
+		attempts += 1
+		if attempts > n {
+			return -1
+		}
 	}
 	return succ2
 }
