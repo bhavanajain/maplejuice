@@ -53,7 +53,7 @@ var heartbeatPort = 8080
 var heartbeatPeriod int64 = 2
 var suspects []int 	// remove from suspects when leave or crash 
 
-var garbage = []int{}		// maintained by introducer to fill gaps
+var garbage = make(map[int]bool)		// maintained by introducer to fill gaps
 
 // [TODO] NOT required
 var initMessageCount = 0
@@ -418,12 +418,16 @@ func completeJoinRequests() (err error) {
 		glog.Infof("Received a join request from ip=%s", addr.IP.String())
 
 		var newVid int
+
 		if len(garbage) == 0 {
 			maxID = maxID + 1
 			newVid = maxID
 		} else {
-			newVid = garbage[0]
-			garbage = garbage[1:]
+			for key := range(garbage) {
+				newVid = key
+				break
+			}
+			delete(garbage, newVid)
 		}
 
 		var newnode MemberNode
@@ -590,7 +594,7 @@ func garbageCollection() {
 		for i:=1; i<=maxID; i++ {
 			mnode, isavailable := memberMap[i]
 			if (!isavailable || !mnode.alive) {
-				garbage = append(garbage, i)
+				garbage[i] = true
 			}
 		}
 		glog.Infof("[Introducer] Garbage set: %v", garbage)
@@ -887,7 +891,6 @@ func main() {
 
 	} else{
 		time.Sleep(time.Duration(introPingPeriod) * time.Second)
-		
 		sendJoinRequest()
 	}
 
