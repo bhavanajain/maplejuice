@@ -49,7 +49,7 @@ var fingerTable = make(map[int]int)
 var fingerTablePeriod int64 = 10
 
 var heartbeatPort = 8080
-var heartbeatPeriod int64 = 2
+var heartbeatPeriod int64 = 1
 var suspects []int 
 
 var garbage = make(map[int]bool)
@@ -129,7 +129,7 @@ func checkChildren() {
 				go checkSuspicion(child_vid)
 			}
 		}
-		time.Sleep(time.Duration(heartbeatPeriod/2) * time.Second)
+		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
 	return
 }
@@ -151,8 +151,8 @@ func checkSuspicion(vid int) {
 		sendMessage(nvid, message, num_tries)
 	}
 
-	// after 500 milliseconds, if the vid is still in suspects, declare it CRASHed
-	time.Sleep(time.Duration(500) * time.Millisecond) 
+	// after 1 second, if the vid is still in suspects, declare it CRASHed
+	time.Sleep(time.Duration(1) * time.Second) 
 
 	suspect_idx := -1
 	for i, suspect := range(suspects) {
