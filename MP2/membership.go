@@ -743,7 +743,7 @@ func listenOtherPort() (err error) {
 
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
-			_, ok = eventTimeMap[subject]
+			_, ok := eventTimeMap[subject]
 			if (!ok || eventTimeMap[subject] < origin_time){
 				eventTimeMap[subject] = origin_time
 				disseminate(message)
