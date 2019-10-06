@@ -54,7 +54,6 @@ var suspects []int
 
 var garbage = make(map[int]bool)
 
-// [TODO] update whenever somebody with maxID leaves or crashes
 var maxID = 0
 var delimiter = ","
 
@@ -520,9 +519,6 @@ func Difference(a, b []int) (diff []int) {
 
     return
 }
-
-// Handle this function nicely if n < 2
-// todo: reduce maxID whenever maxID leaves the system
 
 func updateMonitors() {
 
