@@ -568,59 +568,6 @@ func updateMonitors() {
 		new_monitors = append(new_monitors, newsucc2)
 	}
 
-	// newpred := getPredecessor(myVid)
-	// new_monitors = append(new_monitors, newpred)
-
-	// _, ok := monitors["pred"]
-
-	// if (!ok) {
-	// 	monitor_node := createMonitor(newpred)
-	// 	monitors["pred"] = &monitor_node
-	// } else {
-	// 	oldpred := monitors["pred"].vid
-	// 	old_monitors = append(old_monitors, oldpred)
-
-	// 	if oldpred != newpred {
-	// 		monitor_node := createMonitor(newpred)
-	// 		monitors["pred"] = &monitor_node
-	// 	}
-	// }
-
-	// newsucc1 := getSuccessor(myVid)
-	// new_monitors = append(new_monitors, newsucc1)
-
-	// _, ok = monitors["succ1"]
-	// if !ok {
-	// 	monitor_node := createMonitor(newsucc1)
-	// 	monitors["succ1"] = &monitor_node
-
-	// } else {
-	// 	oldsucc1 := monitors["succ1"].vid
-	// 	old_monitors = append(old_monitors, oldsucc1)
-
-	// 	if newsucc1 != oldsucc1 {
-	// 		monitor_node := createMonitor(newsucc1)
-	// 		monitors["succ1"] = &monitor_node
-	// 	}
-	// }
-
-	// newsucc2 := getSuccessor2(myVid)
-	// new_monitors = append(new_monitors, newsucc2)
-
-	// _, ok = monitors["succ2"]
-	// if !ok {
-	// 	monitor_node := createMonitor(newsucc2)
-	// 	monitors["succ2"] = &monitor_node
-	// } else {
-	// 	oldsucc2 := monitors["succ2"].vid
-	// 	old_monitors = append(old_monitors, oldsucc2)
-
-	// 	if newsucc2 != oldsucc2 {
-	// 		monitor_node := createMonitor(newsucc2)
-	// 		monitors["succ2"] = &monitor_node
-	// 	}
-	// }
-
 	to_add := Difference(new_monitors, old_monitors)
 	for _, vid := range(to_add) {
 		message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
@@ -741,9 +688,10 @@ func listenOtherPort() (err error) {
 
 			old_mon, ok := monitors[strings.ToLower(message_type)]
 			if ok {
-				if old_mon != subject {
+				old_mon_vid := old_mon.vid
+				if old_mon_vid != subject {
 					message := fmt.Sprintf("REMOVE,%d", myVid)
-					sendMessage(old_mon, message, num_tries)
+					sendMessage(old_mon_vid, message, num_tries)
 				}
 			}
 
