@@ -595,7 +595,7 @@ func garbageCollection() {
 
 		for i:=1; i<=maxID; i++ {
 			mnode, isavailable := memberMap[i]
-			if (!isavailable || !mnode.alive) {
+			if ((!isavailable || !mnode.alive) && (time.Now().Unix() - eventTimeMap[i] > 6)) {
 				garbage[i] = true
 			}
 		}
