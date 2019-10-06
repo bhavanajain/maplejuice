@@ -12,6 +12,8 @@ import (
 	"flag"
 	"reflect"
 	"math/rand"
+    "os/signal"
+    "syscall"
 )
 
 type MemberNode struct {
@@ -192,7 +194,7 @@ func sendMessage(vid int, message string, num_tries int) {
 		glog.Warningf("Unable to send message to vid=%d ip=%s", vid, memberMap[vid].ip)
 	}
 	defer conn.Close()
-	for i := range(num_tries) {
+	for i:=0; i<num_tries; i++ {
 		if rand.Float64() > packetDropProb {
 			_, err = conn.Write([]byte(message))
 			if err != nil {
@@ -213,7 +215,7 @@ func sendMessageAddr(ip string, message string, num_tries int) {
 		glog.Warning("Unable to send message to ip=%s", ip)
 	}
 	defer conn.Close()
-	for i := range(num_tries) {
+	for i:=0; i<num_tries; i++ {
 		if rand.Float64() > packetDropProb {
 			_, err = conn.Write([]byte(message))
 			if err != nil {
@@ -844,6 +846,25 @@ func main() {
 		sendJoinRequest()
 	}
 	go updateFingerTable()
+
+	sigs := make(chan os.Signal, 1)
+	// done := make(chan bool, 1)
+
+	signal.Notify(sigs, syscall.SIGQUIT)
+
+	go func() {
+		sig := <-sigs
+		switch sig {
+		case syscall.SIGQUIT:
+			leave_time := time.Now().Unix()
+			message := fmt.Sprintf("LEAVE,%d,%d", myVid, leave_time)
+
+			disseminate(message)
+
+			wg.Done()
+			
+		}
+	}()
 
 	wg.Wait()
 	return
