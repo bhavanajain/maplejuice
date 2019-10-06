@@ -692,11 +692,6 @@ func listenOtherPort() (err error) {
 			} 
 
 		case "LEAVE", "CRASH":
-			// mark crashed
-
-			// check if it is currently marked alive or not
-			glog.Infof("Received CRASH for %d",subject)
-
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
 			_, ok := eventTimeMap[subject]
@@ -848,7 +843,6 @@ func main() {
 	go updateFingerTable()
 
 	sigs := make(chan os.Signal, 1)
-	// done := make(chan bool, 1)
 
 	signal.Notify(sigs, syscall.SIGQUIT)
 
@@ -858,8 +852,8 @@ func main() {
 		case syscall.SIGQUIT:
 			leave_time := time.Now().Unix()
 			message := fmt.Sprintf("LEAVE,%d,%d", myVid, leave_time)
-
 			disseminate(message)
+			glog.Infof("Disseminated LEAVE message")
 
 			wg.Done()
 			
