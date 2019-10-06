@@ -446,7 +446,7 @@ func completeJoinRequests() (err error) {
 		// 	initRun = false
 		// }
 		
-		// time.Sleep(100 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 
 		message = fmt.Sprintf("JOIN,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
 		disseminate(message)
@@ -885,6 +885,8 @@ func main() {
 		// this garbage collection can occur concurrent to the addToDead list
 
 	} else{
+		time.Sleep(time.Duration(introPingPeriod) * time.Second)
+		
 		sendJoinRequest()
 	}
 
