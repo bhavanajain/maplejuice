@@ -160,7 +160,6 @@ func checkSuspicion(vid int) {
 				delete(children, vid)
 			}
 			crash_time := time.Now().Unix()
-			glog.Infof("%d Starting CRASH message for %d", myVid, vid)
 			message := fmt.Sprintf("CRASH,%d,%d", vid, crash_time)
 			eventTimeMap[vid] = crash_time
 			disseminate(message)
@@ -787,9 +786,9 @@ func listenOtherPort() (err error) {
 
 			var message string
 			if alive {
-				message = fmt.Sprintf("STATUS,%d,1", subject)
+				message = fmt.Sprintf("STATUS,%d,1", subject, 1)
 			} else {
-				message = fmt.Sprintf("STATUS,%d,0", subject)
+				message = fmt.Sprintf("STATUS,%d,0", subject, 0)
 			}
 			sendMessageAddr(addr.IP.String(), message)
 		
@@ -875,7 +874,10 @@ func main() {
 		memberMap[0] = &node
 	}
 
-	go listenOtherPort()	
+	go listenOtherPort()
+
+	go sendHeartbeat()
+	go receiveHeartbeat()
 
 	if myIP == introducer {
 		// there should be a delay here - depending on how frequently the introducer is being pinged
@@ -891,10 +893,9 @@ func main() {
 		sendJoinRequest()
 	}
 
-	go sendHeartbeat()
-	go receiveHeartbeat()
 	go checkChildren()
 	go updateFingerTable()
+
 
 	wg.Wait()
 	return
