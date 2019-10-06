@@ -624,7 +624,7 @@ func printGarbage() {
 	for k := range(garbage) {
 		garbage_list = append(garbage_list, k)
 	}
-	glog.Infof("[ME %d] Garbage set = %v", garbage_list)
+	glog.Infof("[ME %d] Garbage set = %v", myVid, garbage_list)
 }
 
 
