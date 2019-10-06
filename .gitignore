@@ -2,7 +2,6 @@
 scratch/
 *.log
 testing_lang/
-*.sh
 lectures/
 HW*/
 *FA19.pdf
