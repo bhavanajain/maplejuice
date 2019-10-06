@@ -112,7 +112,12 @@ func receiveHeartbeat() {
 func checkChildren() {
 	for {
 		currTime := time.Now().Unix()
-		glog.Infof("%v", children)
+		fmt.Printf("Children: ")
+		for child_vid := range children {
+			fmt.Printf("%d ", child_vid)
+		}
+		fmt.Printf("\n")
+
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
 				glog.Warningf("[HEARTBEAT %d] No heartbeat from %d since two heartbeat periods", myVid, child_vid)
