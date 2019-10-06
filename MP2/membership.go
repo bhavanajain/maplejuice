@@ -593,6 +593,7 @@ func garbageCollection() {
 				garbage = append(garbage, i)
 			}
 		}
+		glog.Infof("[Introducer] Garbage set: %v", garbage)
 	}
 }
 
