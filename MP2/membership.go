@@ -820,9 +820,9 @@ func listenOtherPort() (err error) {
 
 			var message string
 			if alive {
-				message = fmt.Sprintf("STATUS,%d,1", subject, 1)
+				message = fmt.Sprintf("STATUS,%d,1", subject)
 			} else {
-				message = fmt.Sprintf("STATUS,%d,0", subject, 0)
+				message = fmt.Sprintf("STATUS,%d,0", subject)
 			}
 			sendMessageAddr(addr.IP.String(), message, num_tries)
 			if alive {
