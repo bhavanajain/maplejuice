@@ -1,5 +1,0 @@
-ssh $vm01 "cd cs425 && git pull"
-ssh $vm02 "cd cs425 && git pull"
-ssh $vm03 "cd cs425 && git pull"
-ssh $vm04 "cd cs425 && git pull"
-ssh $vm05 "cd cs425 && git pull"
