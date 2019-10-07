@@ -58,7 +58,7 @@ var garbage = make(map[int]bool)
 var maxID = 0
 var delimiter = ","
 
-var packetDropProb float64 = 0.3
+var packetDropProb float64 = 0.0
 var num_tries int = 3
 
 func sendHeartbeat() {
