@@ -33,7 +33,7 @@ type ChildNode struct {
 	timestamp int64
 }
 
-var introducer = "172.22.152.106"
+var introducer = "172.22.156.103"
 var introducerPort = 8082
 var introPingPeriod = 5
 
@@ -58,7 +58,7 @@ var garbage = make(map[int]bool)
 var maxID = 0
 var delimiter = ","
 
-var packetDropProb float64 = 0.0
+var packetDropProb float64 = 0.03
 var num_tries int = 3
 
 func sendHeartbeat() {
