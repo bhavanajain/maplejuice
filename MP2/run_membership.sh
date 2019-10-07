@@ -1,1 +1,1 @@
-go run membership.go -stderrthreshold=INFO
+go run membership.go -stderrthreshold=INFO -alsologtostderr=true -log_dir=logs
