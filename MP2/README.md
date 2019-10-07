@@ -1,6 +1,6 @@
 1. Clone the repository \
 	(SSH) `git clone git@gitlab.engr.illinois.edu:dipayan2/cs425.git` \
-	(HTTPS) `git clone https://gitlab.engr.illinois.edu/dipayan2/cs425.git` \
+	(HTTPS) `git clone https://gitlab.engr.illinois.edu/dipayan2/cs425.git` 
 
 2. change directory to MP2 \
 	`cd MP2`
