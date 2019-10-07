@@ -109,7 +109,7 @@ func receiveHeartbeat() {
 			children[child_vid].timestamp = time.Now().Unix()
 			// log.Printf("[HEARTBEAT %d] Received heartbeat from child vid=%d, ip=%s\n", myVid, child_vid, addr.IP.String())
 		} else{
-			log.Printf("Received a non-child heartbeat from vid=%s, ip=%s", child_vid, addr.IP.String())
+			log.Printf("Received a non-child heartbeat from vid=%d, ip=%s", child_vid, addr.IP.String())
 
 		}
 	}
@@ -203,7 +203,7 @@ func sendMessage(vid int, message string, num_tries int) {
 				log.Printf("[ME %d] Unable to write message %s on the connection to vid=%d", myVid, message, vid)
 			}
 		} else {
-			log.Printf("[ME %d] Dropped the message %s to vid=%s", myVid, message, vid)
+			log.Printf("[ME %d] Dropped the message %s to vid=%d", myVid, message, vid)
 		}	
 	}
 	return
