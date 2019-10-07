@@ -63,10 +63,15 @@ var num_tries int = 3
 func sendHeartbeat() {
 	for {
 		for type_, node := range(monitors) {
-			_, err := node.conn.Write([]byte(strconv.Itoa(myVid)))
-			if err != nil {
-				glog.Warningf("[ME %d] Could not send heartbeat to %s %d", myVid, type_, node.vid)
+			if rand.Float64() > packetDropProb {
+				_, err := node.conn.Write([]byte(strconv.Itoa(myVid)))
+				if err != nil {
+					glog.Warningf("[ME %d] Could not send heartbeat to %s %d", myVid, type_, node.vid)
+				}
+			} else {
+				glog.Warningf("[ME %d] Dropped the heartbeat to monitor=%s", myVid, node.vid)
 			}
+			
 			// glog.Infof("[ME %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
