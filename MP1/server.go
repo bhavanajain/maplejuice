@@ -11,7 +11,7 @@ import (
 )
 
 func Server() {
-	ln, _ := net.Listen("tcp", ":8080")
+	ln, _ := net.Listen("tcp", ":9090")
 	for {
 		conn, _ := ln.Accept()
 		fmt.Println("[Info] Accepted a new connection")		
