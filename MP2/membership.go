@@ -69,7 +69,7 @@ func sendHeartbeat() {
 					glog.Warningf("[ME %d] Could not send heartbeat to %s %d", myVid, type_, node.vid)
 				}
 			} else {
-				glog.Warningf("[ME %d] Dropped the heartbeat to monitor=%s", myVid, node.vid)
+				glog.Warningf("[ME %d] Dropped the heartbeat to monitor=%d", myVid, node.vid)
 			}
 			
 			// glog.Infof("[ME %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
