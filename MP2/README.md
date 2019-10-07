@@ -11,7 +11,8 @@
     Note - Specify a logfile path inside MP1 to use distributed grep for debugging. 
 
 4. To debug a certain event, say crash of a node \
-    Run the MP1/server.go file at every node in the system \
+    change directory to MP1 and run the `server.go` file at every node in the system \
+    `cd MP1`
     `go run server.go` 
     
     Now run the client at one node and query for the desired pattern \
