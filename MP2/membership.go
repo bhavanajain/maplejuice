@@ -7,13 +7,14 @@ import (
 	"net"
 	"os"
 	"sync"
-	"github.com/golang/glog"
 	"strings"
 	"flag"
 	"reflect"
 	"math/rand"
     "os/signal"
     "syscall"
+    "log"
+    "io"
 )
 
 type MemberNode struct {
@@ -66,13 +67,13 @@ func sendHeartbeat() {
 			if rand.Float64() > packetDropProb {
 				_, err := node.conn.Write([]byte(strconv.Itoa(myVid)))
 				if err != nil {
-					glog.Warningf("[ME %d] Could not send heartbeat to %s %d", myVid, type_, node.vid)
+					log.Printf("[ME %d] Could not send heartbeat to %s %d", myVid, type_, node.vid)
 				}
 			} else {
-				glog.Warningf("[ME %d] Dropped the heartbeat to monitor=%d", myVid, node.vid)
+				log.Printf("[ME %d] Dropped the heartbeat to monitor=%d", myVid, node.vid)
 			}
 			
-			// glog.Infof("[ME %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
+			// log.Printf("[ME %d] Sent heartbeat to %s %d", myVid, type_, node.vid)
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
@@ -85,30 +86,30 @@ func receiveHeartbeat() {
 
 	heartbeatConn, err := net.ListenUDP("udp", &myaddr)
 	if err != nil {
-		glog.Errorf("[ME %d] Unable to setup listen on the heartbeat port %d", myVid, heartbeatPort)
+		log.Printf("Unable to setup listen on the heartbeat port %d", heartbeatPort)
 	}
 
-	glog.Infof("[ME %d] Listening on heartbeat port %d", myVid, heartbeatPort)
+	log.Printf("Listening on heartbeat port %d", heartbeatPort)
 
 	for {
 		var buf [512]byte
 		n, addr, err := heartbeatConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warningf("[ME %d] Could not read message on heartbeat port %d", myVid, heartbeatPort)
+			log.Printf("Could not read message on heartbeat port %d", heartbeatPort)
 		}
 		message := string(buf[0:n])
 		child_vid, err := strconv.Atoi(message)
 		if err != nil {
-			glog.Errorf("[ME %d] Could not map a heartbeat message %s to a virtual ID\n", myVid, message)
+			log.Printf("Could not map a heartbeat message %s to a virtual ID\n", message)
 		}
 
 		// Check if the sender vid is in your children map
 		_, ok := children[child_vid]
 		if ok {
 			children[child_vid].timestamp = time.Now().Unix()
-			// glog.Infof("[HEARTBEAT %d] Received heartbeat from child vid=%d, ip=%s\n", myVid, child_vid, addr.IP.String())
+			// log.Printf("[HEARTBEAT %d] Received heartbeat from child vid=%d, ip=%s\n", myVid, child_vid, addr.IP.String())
 		} else{
-			glog.Infof("[ME %d] Received a non-child heartbeat from vid=%s, ip=%s", myVid, child_vid, addr.IP.String())
+			log.Printf("Received a non-child heartbeat from vid=%s, ip=%s", child_vid, addr.IP.String())
 
 		}
 	}
@@ -119,7 +120,7 @@ func printChildren() {
 	for child_vid := range children {
 		child_list = append(child_list, child_vid)
 	}
-	glog.Infof("[ME %d] Children = %v", myVid, child_list)
+	log.Printf("[ME %d] Children = %v", myVid, child_list)
 }
 
 func checkChildren() {
@@ -128,7 +129,7 @@ func checkChildren() {
 
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
-				glog.Warningf("[ME %d] No heartbeat from %d since two heartbeat periods", myVid, child_vid)
+				log.Printf("[ME %d] No heartbeat from %d since two heartbeat periods", myVid, child_vid)
 				suspects = append(suspects, child_vid)
 				go checkSuspicion(child_vid)
 			}
@@ -149,7 +150,7 @@ func checkSuspicion(vid int) {
 			continue
 		}
 
-		glog.Infof("[ME %d] Raising suspicion for %d", myVid, vid)
+		log.Printf("[ME %d] Raising suspicion for %d", myVid, vid)
 
 		message := fmt.Sprintf("SUSPECT,%d", vid)
 		sendMessage(nvid, message, num_tries)
@@ -167,7 +168,7 @@ func checkSuspicion(vid int) {
 			if ok {
 				delete(children, vid)
 			}
-			glog.Infof("[ME %d] Marked %d as crashed", myVid, suspect)
+			log.Printf("[ME %d] Marked %d as crashed", myVid, suspect)
 			crash_time := time.Now().Unix()
 			message := fmt.Sprintf("CRASH,%d,%d", vid, crash_time)
 			eventTimeMap[vid] = crash_time
@@ -192,17 +193,17 @@ func sendMessage(vid int, message string, num_tries int) {
 
 	conn, err := net.DialUDP("udp", nil, &addr)
 	if err != nil {
-		glog.Warningf("[ME %d] Unable to dial UDP to vid=%d ip=%s", myVid, vid, memberMap[vid].ip)
+		log.Printf("[ME %d] Unable to dial UDP to vid=%d ip=%s", myVid, vid, memberMap[vid].ip)
 	}
 	defer conn.Close()
 	for i:=0; i<num_tries; i++ {
 		if rand.Float64() > packetDropProb {
 			_, err = conn.Write([]byte(message))
 			if err != nil {
-				glog.Warningf("[ME %d] Unable to write message %s on the connection to vid=%d", myVid, message, vid)
+				log.Printf("[ME %d] Unable to write message %s on the connection to vid=%d", myVid, message, vid)
 			}
 		} else {
-			glog.Warningf("[ME %d] Dropped the message %s to vid=%s", myVid, message, vid)
+			log.Printf("[ME %d] Dropped the message %s to vid=%s", myVid, message, vid)
 		}	
 	}
 	return
@@ -215,17 +216,17 @@ func sendMessageAddr(ip string, message string, num_tries int) {
 
 	conn, err := net.DialUDP("udp", nil, &addr)
 	if err != nil {
-		glog.Warningf("[ME %d] Unable to dial UDP to ip=%s", myVid, ip)
+		log.Printf("[ME %d] Unable to dial UDP to ip=%s", myVid, ip)
 	}
 	defer conn.Close()
 	for i:=0; i<num_tries; i++ {
 		if rand.Float64() > packetDropProb {
 			_, err = conn.Write([]byte(message))
 			if err != nil {
-				glog.Warningf("[ME %d] Unable to write message %s on the connection to ip=%s", myVid, message, ip)
+				log.Printf("[ME %d] Unable to write message %s on the connection to ip=%s", myVid, message, ip)
 			}
 		} else {
-			glog.Warningf("[ME %d] Dropped the message %s to ip=%s", myVid, message, ip)
+			log.Printf("[ME %d] Dropped the message %s to ip=%s", myVid, message, ip)
 		}
 	}
 	return
@@ -329,7 +330,7 @@ func printFingerTable() {
 	for _, finger := range(fingerTable) {
 		finger_list = append(finger_list, finger)
 	}
-	glog.Infof("[ME %d] Finger Table entries = %v", myVid, finger_list)
+	log.Printf("[ME %d] Finger Table entries = %v", myVid, finger_list)
 }
 
 func updateFingerTable() {
@@ -421,20 +422,20 @@ func completeJoinRequests() (err error) {
 
 	introducerConn, err := net.ListenUDP("udp", &myaddr)
 	if err != nil {
-		glog.Errorf("[ME %d] Unable to setup listen on the introducer port %d", myVid, introducerPort)
+		log.Printf("[ME %d] Unable to setup listen on the introducer port %d", myVid, introducerPort)
 		return err
 	}
 
-	glog.Infof("[ME %d] Started listening on the introducer port %d", myVid, introducerPort)
+	log.Printf("[ME %d] Started listening on the introducer port %d", myVid, introducerPort)
 
 	for {
 		var buf [512]byte
 		_, addr, err := introducerConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warningf("[ME %d] Could not read message from the introducer port %d", myVid, introducerPort)
+			log.Printf("[ME %d] Could not read message from the introducer port %d", myVid, introducerPort)
 		}
 
-		glog.Infof("[ME %d] Received a JOIN request from ip=%s", myVid, addr.IP.String())
+		log.Printf("[ME %d] Received a JOIN request from ip=%s", myVid, addr.IP.String())
 
 		var newVid int
 
@@ -455,7 +456,7 @@ func completeJoinRequests() (err error) {
 		newnode.alive = true
 		memberMap[newVid] = &newnode
 
-		glog.Infof("[ME %d] Added entry ip=%s timestamp=%d at vid=%d", myVid, newnode.ip, newnode.timestamp, newVid)
+		log.Printf("[ME %d] Added entry ip=%s timestamp=%d at vid=%d", myVid, newnode.ip, newnode.timestamp, newVid)
 
 		// Send the node's record
 		message := fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
@@ -490,7 +491,7 @@ func createMonitor(vid int) (MonitorNode) {
 	var err error
 	node.conn, err = net.DialUDP("udp", nil, &addr)
 	if err != nil {
-		glog.Errorf("[ME %d] Unable to setup a connection with monitor %d", myVid, vid)
+		log.Printf("[ME %d] Unable to setup a connection with monitor %d", myVid, vid)
 	}
 	return node
 }
@@ -501,7 +502,7 @@ func createMember(ip string, str_timestamp string) (MemberNode){
 	var err error
 	node.timestamp, err = strconv.ParseInt(string(str_timestamp), 10, 64)
 	if err != nil {
-		glog.Errorf("[ME %d] Cannot convert string timestamp to int64", myVid)
+		log.Printf("[ME %d] Cannot convert string timestamp to int64", myVid)
 	}
 	node.alive = true
 	return node
@@ -582,7 +583,7 @@ func updateMonitors() {
 	}
 
 	if !reflect.DeepEqual(old_monitors, new_monitors) {
-		glog.Infof("[ME %d] Updated monitors from %v to %v", myVid, old_monitors, new_monitors)
+		log.Printf("[ME %d] Updated monitors from %v to %v", myVid, old_monitors, new_monitors)
 	}
 }
 
@@ -591,7 +592,7 @@ func printGarbage() {
 	for k := range(garbage) {
 		garbage_list = append(garbage_list, k)
 	}
-	glog.Infof("[ME %d] Garbage set = %v", myVid, garbage_list)
+	log.Printf("[ME %d] Garbage set = %v", myVid, garbage_list)
 }
 
 
@@ -616,10 +617,10 @@ func listenOtherPort() (err error) {
 	myaddr.Port = otherPort
 
 	otherportConn, err := net.ListenUDP("udp", &myaddr)
-	glog.Infof("[ME %d] Started listening on the otherport %d", myVid, otherPort)
+	log.Printf("[ME %d] Started listening on the otherport %d", myVid, otherPort)
 
 	if err != nil {
-		glog.Errorf("[ME %d] Unable to listen on the otherport port %d", myVid, otherPort)
+		log.Printf("[ME %d] Unable to listen on the otherport port %d", myVid, otherPort)
 		return err
 	}
 
@@ -627,7 +628,7 @@ func listenOtherPort() (err error) {
 		var buf [512]byte
 		n, addr, err := otherportConn.ReadFromUDP(buf[0:])
 		if err != nil {
-			glog.Warningf("[ME %d] Could not read message on otherport %s", myVid, otherPort)
+			log.Printf("[ME %d] Could not read message on otherport %s", myVid, otherPort)
 		}
 
 		message := string(buf[0:n])
@@ -636,7 +637,7 @@ func listenOtherPort() (err error) {
 		subject, _ := strconv.Atoi(split_message[1])
 		maxID = max(maxID, subject)
 
-		glog.Infof("[ME %d] Message = %s", myVid, message)
+		log.Printf("[ME %d] Message = %s", myVid, message)
 
 		switch message_type {
 		case "ADD":
@@ -674,7 +675,7 @@ func listenOtherPort() (err error) {
 					eventTimeMap[0] = memberMap[0].timestamp
 					disseminate(message)
 
-					glog.Infof("[ME %d] Processed introducer ping entry from vid=%d", myVid, subject)
+					log.Printf("[ME %d] Processed introducer ping entry from vid=%d", myVid, subject)
 				}
 			}
 
@@ -699,7 +700,7 @@ func listenOtherPort() (err error) {
 			message := fmt.Sprintf("ADD,%d,%s,%d", myVid, memberMap[myVid].ip, memberMap[myVid].timestamp)
 			sendMessageAddr(newnode.ip, message, num_tries)
 
-			glog.Infof("[ME %d] Set my %s to %d", myVid, strings.ToLower(message_type), subject)
+			log.Printf("[ME %d] Set my %s to %d", myVid, strings.ToLower(message_type), subject)
 
 		case "YOU":
 			myVid = subject
@@ -709,7 +710,7 @@ func listenOtherPort() (err error) {
 
 			go checkIntroducer()
 
-			glog.Infof("[ME %d] Processed my memberMap entry", myVid)
+			log.Printf("[ME %d] Processed my memberMap entry", myVid)
 
 		case "MEMBER":
 			if subject == myVid {
@@ -723,7 +724,7 @@ func listenOtherPort() (err error) {
 				// introducer is anyway going to send it monitors.
 			}
 			
-			glog.Infof("[ME %d] Processed a new memberMap entry vid=%d", myVid, subject)
+			log.Printf("[ME %d] Processed a new memberMap entry vid=%d", myVid, subject)
 
 		case "JOIN":
 			origin_time, _ := strconv.ParseInt(string(split_message[3]), 10, 64)
@@ -743,7 +744,7 @@ func listenOtherPort() (err error) {
 
 				updateMonitors()
 
-				glog.Infof("[ME %d] Processed JOIN memberMap entry for vid=%d", myVid, subject)
+				log.Printf("[ME %d] Processed JOIN memberMap entry for vid=%d", myVid, subject)
 			} 
 
 		case "LEAVE", "CRASH":
@@ -775,7 +776,7 @@ func listenOtherPort() (err error) {
 
 					updateMonitors()
 
-					glog.Infof("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
+					log.Printf("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
 				}
 			}			
 
@@ -805,9 +806,9 @@ func listenOtherPort() (err error) {
 			}
 			sendMessageAddr(addr.IP.String(), message, num_tries)
 			if alive {
-				glog.Infof("[ME %d] Processed suspect message for %d, sent ALIVE", myVid, subject)
+				log.Printf("[ME %d] Processed suspect message for %d, sent ALIVE", myVid, subject)
 			} else {
-				glog.Infof("[ME %d] Processed a suspect message for %d, sent NOT ALIVE", myVid, subject)
+				log.Printf("[ME %d] Processed a suspect message for %d, sent NOT ALIVE", myVid, subject)
 			}
 		
 		case "STATUS":
@@ -826,9 +827,9 @@ func listenOtherPort() (err error) {
 				}
 			}
 			if status == 1 {
-				glog.Infof("[ME %d] Received ALIVE status for %d", myVid, subject)
+				log.Printf("[ME %d] Received ALIVE status for %d", myVid, subject)
 			} else {
-				glog.Infof("[ME %d] Received NOT ALIVE status for %d", myVid, subject)
+				log.Printf("[ME %d] Received NOT ALIVE status for %d", myVid, subject)
 			}
 			
 		}
@@ -842,13 +843,13 @@ func sendJoinRequest() {
 
 	conn, err := net.DialUDP("udp", nil, &addr)
 	if err != nil {
-		glog.Warningf("[ME %d] Unable to dial UDP to introducer ip=%s, port=%d", myVid, introducer, introducerPort)
+		log.Printf("[ME %d] Unable to dial UDP to introducer ip=%s, port=%d", myVid, introducer, introducerPort)
 	}
 	message := "1"
 	defer conn.Close()
 	conn.Write([]byte(message))
 
-	glog.Infof("[ME %d] Sent a JOIN request to introducer ip=%s", myVid, introducer)
+	log.Printf("[ME %d] Sent a JOIN request to introducer ip=%s", myVid, introducer)
 	return
 }
 
@@ -856,7 +857,7 @@ func getmyIP() (string) {
 	var myip string
 	addrs, err := net.InterfaceAddrs()
 	if err != nil {
-		glog.Fatal("Cannot get my IP :(")
+		log.Fatalf("Cannot get my IP")
 		os.Exit(1)
 	}
 	for _, a := range addrs {
@@ -869,18 +870,23 @@ func getmyIP() (string) {
 	return myip
 }
 
-
-func init() {
-	flag.Parse()
-}
-
 func main() {
+	logFile := flag.String("logfile", "", "path to the log file")
+	flag.Parse()
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
+	f, err := os.Create(*logFile)
+	if err != nil {
+		log.Fatalf("Error opening the log file: %v", err)
+	}
+	defer f.Close()
+	mw := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(mw)
+
 	myIP = getmyIP()
-	glog.Info(myIP)
+	log.Printf("%s", myIP)
 
 	if myIP == introducer {
 		myVid = 0
@@ -927,8 +933,6 @@ func main() {
 		}
 	}()
 
-
-	glog.Flush()
 
 	wg.Wait()
 	return
