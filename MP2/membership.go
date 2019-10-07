@@ -115,6 +115,14 @@ func receiveHeartbeat() {
 	}
 }
 
+func printMembershipList() {
+	log.Printf("My members: [")
+	for id := range(memberMap) {
+		log.Printf("%d ", id)
+	}
+	log.Printf("]\n")
+}
+
 func printChildren() {
 	child_list := []int{}
 	for child_vid := range children {
@@ -745,6 +753,8 @@ func listenOtherPort() (err error) {
 				updateMonitors()
 
 				log.Printf("[ME %d] Processed JOIN memberMap entry for vid=%d", myVid, subject)
+
+				printMembershipList()
 			} 
 
 		case "LEAVE", "CRASH":
