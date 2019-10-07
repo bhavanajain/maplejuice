@@ -864,17 +864,10 @@ func getmyIP() (string) {
 	return myip
 }
 
-func usage() {
-	fmt.Fprintf(os.Stderr, "usage: example -stderrthreshold=[INFO|WARN|FATAL] -log_dir=[string]\n", )
-	flag.PrintDefaults()
-	os.Exit(2)
-}
 
 func init() {
-	flag.Usage = usage
 	flag.Parse()
 }
-
 
 func main() {
 
@@ -928,6 +921,9 @@ func main() {
 			wg.Done()
 		}
 	}()
+
+
+	glog.Flush()
 
 	wg.Wait()
 	return
