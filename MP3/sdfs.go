@@ -133,10 +133,15 @@ func listenFileTransferPort() {
             case "putfile":
                 sdfsFilename := split_message[1]
 
+                fmt.Printf("%s %s\n", message_type, sdfsFilename)
+
                 bufferFileSize := make([]byte, 10)
                 conn.Read(bufferFileSize)
 
+                fmt.Printf("%s\n", string(bufferFileSize))
                 fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+                fmt.Printf("%d\n", fileSize)
+
                 log.Println("[ME %d] Incoming filesize %d\n", myVid, fileSize)
 
                 f, err := os.Create(temp_dir + sdfsFilename)
