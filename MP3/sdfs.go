@@ -67,11 +67,12 @@ func listenFileTransferPort() {
     for {
         conn, _ := ln.Accept()
         log.Println("[ME %d] Accepted a new connection", myVid)     
-
-        conn_reader := bufio.NewReader(conn)
-
-        message, _ := conn_reader.ReadString('\n')
-        message = message[:len(message)-1]
+        bufferMessage := make([]byte, 64)
+        // conn_reader := bufio.NewReader(conn)
+        conn.Read(bufferMessage)
+        message := strings.Trim(string(bufferMessage), ":")
+        // message, _ := conn_reader.ReadString('\n')
+        // message = message[:len(message)-1]
         fmt.Printf("[ME %d] Received a new message %s\n", myVid, message)
 
         split_message := strings.Split(message, " ")
@@ -477,9 +478,13 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     }
     defer conn.Close()
 
-    message := fmt.Sprintf("putfile %s\n", sdfsFilename)
+    message := fmt.Sprintf("putfile %s", sdfsFilename)
+    padded_message = fillString(message, 64)
+    fmt.Printf("%s\n", padded_message)
 
-    fmt.Fprintf(conn, message)
+    conn.Write([]byte(padded_message))
+
+    // fmt.Fprintf(conn, message)
     fmt.Printf("Sent a putfile request to %d\n", nodeId)
 
     f, err := os.Open(local_dir + localFilename)
