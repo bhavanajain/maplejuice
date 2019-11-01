@@ -38,8 +38,8 @@ func main() {
 		log.Fatalf("Error opening the log file: %v", err)
 	}
 	defer f.Close()
-	mw := io.MultiWriter(os.Stdout, f)
-	log.SetOutput(mw)
+	// mw := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(f)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
