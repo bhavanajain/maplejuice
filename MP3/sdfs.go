@@ -58,7 +58,12 @@ func listenFileTransferPort() {
     // This port serves file transfers
     // message type: getfile, putfile, deletefile
 
-    ln, _ := net.Listen("tcp", ":" + strconv.Itoa(fileTransferPort))
+    ln, err := net.Listen("tcp", ":" + strconv.Itoa(fileTransferPort))
+    if err != nil {
+        log.Printf("[ME %d] Cannot listen on file transfer port %d\n", myVid, fileTransferPort)
+    }
+    log.Printf("[ME %d] Started listening on file transfer port %d\n", myVid, fileTransferPort)
+
     for {
         conn, _ := ln.Accept()
         log.Println("[ME %d] Accepted a new connection", myVid)     
@@ -67,11 +72,12 @@ func listenFileTransferPort() {
 
         message, _ := conn_reader.ReadString('\n')
         message = message[:len(message)-1]
+        log.Printf("[ME %d] Received a new message %s\n", myVid, message)
+
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
 
         switch message_type {
-
             case "getfile":
                 sdfsFilename := split_message[1]
                 f, err := os.Open(shared_dir + "/" + sdfsFilename)
@@ -449,9 +455,10 @@ func copyFile(srcFile string, destFile string) (bool){
 }
 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup) {
-
+    fmt.Printf("Inside send file")
     if nodeId == myVid {
         success := copyFile(local_dir + localFilename, shared_dir + sdfsFilename)
+
         if success {
             wg.Done()
         }
@@ -473,6 +480,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     message := fmt.Sprintf("putfile %s", sdfsFilename)
 
     fmt.Fprintf(conn, message)
+    fmt.Printf("Sent a putfile request to %d\n", nodeId)
 
     f, err := os.Open(local_dir + localFilename)
     if err != nil {
@@ -619,12 +627,15 @@ func executeCommand(command string) {
             nodeIds = append(nodeIds, node)
         }
 
+        fmt.Printf("Got nodeIds %v, prepare to send file\n", nodeIds)
+
         var wg sync.WaitGroup
         wg.Add(4)
 
         for _, node := range nodeIds {
             go sendFile(node, localFilename, sdfsFilename, &wg)
         }
+        fmt.Printf("Waiting for quorum\n")
         wg.Wait()
         fmt.Fprintf(conn, "quorum")
     }
