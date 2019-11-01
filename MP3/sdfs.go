@@ -238,6 +238,7 @@ func listenMasterRequests() {
         conn_reader := bufio.NewReader(conn)
 
         message, _ := conn_reader.ReadString('\n')
+        fmt.Printf(message)
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
 
@@ -284,6 +285,7 @@ func listenMasterRequests() {
                 fmt.Printf("master nodes str: %s\n", nodes_str)
                 // nodes_str := strings.Join(nodes, ",")
                 reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
+                fmt.Printf("%s\n", reply)
                 fmt.Fprintf(conn, reply)
 
                 reader := bufio.NewReader(conn)
