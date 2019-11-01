@@ -534,12 +534,16 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     reader := bufio.NewReader(conn)
     ack, err := reader.ReadString('\n')
+    fmt.Printf("unproc ack: %s", ack)
     if err != nil {
         log.Println("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
     }
     ack = ack[:len(ack)-1]
+    fmt.Printf("proc ack: %s", ack)
+
 
     if ack == "DONE" {
+        fmt.Printf("Received an ack from node %d\n", nodeId)
         wg.Done()
     }  
 }
