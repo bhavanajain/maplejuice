@@ -477,7 +477,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     }
     defer conn.Close()
 
-    message := fmt.Sprintf("putfile %s", sdfsFilename)
+    message := fmt.Sprintf("putfile %s\n", sdfsFilename)
 
     fmt.Fprintf(conn, message)
     fmt.Printf("Sent a putfile request to %d\n", nodeId)
