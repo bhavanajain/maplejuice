@@ -66,6 +66,7 @@ func listenFileTransferPort() {
         conn_reader := bufio.NewReader(conn)
 
         message, _ := conn_reader.ReadString('\n')
+        message = message[:len(message)-1]
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
 
@@ -238,6 +239,7 @@ func listenMasterRequests() {
         conn_reader := bufio.NewReader(conn)
 
         message, _ := conn_reader.ReadString('\n')
+        message = message[:len(message)-1]
         fmt.Printf(message)
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
@@ -269,6 +271,7 @@ func listenMasterRequests() {
                 if err != nil {
                     log.Println("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
                 }
+                ack = ack[:len(ack)-1]
 
                 if ack == "quorum" {
                     fileMap[sdfsFilename].timestamp = time.Now().Unix()
@@ -293,6 +296,7 @@ func listenMasterRequests() {
                 if err != nil {
                     log.Println("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
                 }
+                ack = ack[:len(ack)-1]
 
                 if ack == "quorum" {
                     var newfiledata fileData
@@ -514,6 +518,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     if err != nil {
         log.Println("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
     }
+    ack = ack[:len(ack)-1]
 
     if ack == "DONE" {
         wg.Done()
@@ -548,6 +553,7 @@ func executeCommand(command string) {
         if err != nil {
             log.Printf("[ME %d] Could not read reply from master (for ls %s)\n", myVid, sdfsFilename)
         }
+        reply = reply[:len(reply)-1]
         split_reply := strings.Split(reply, " ")
 
         log.Printf("%s: ", split_reply[1])
@@ -569,6 +575,7 @@ func executeCommand(command string) {
         if err != nil {
             log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
         }
+        reply = reply[:len(reply)-1]
         split_reply := strings.Split(reply, " ")
         nodeIds_str := strings.Split(split_reply[2], ",")
 
@@ -599,6 +606,7 @@ func executeCommand(command string) {
         if err != nil{
             log.Printf("")
         }
+        reply = reply[:len(reply)-1]
         fmt.Printf("%s\n", reply)
         split_reply := strings.Split(reply, " ")
         nodeIds_str := strings.Split(split_reply[2], ",")
@@ -626,6 +634,7 @@ func scanCommands() {
     for {
         reader := bufio.NewReader(os.Stdin)
         command, _ := reader.ReadString('\n')
+        command = command[:len(command)-1]
         split_command := strings.Split(command, " ")
         command_type := split_command[0]
         switch command_type {
