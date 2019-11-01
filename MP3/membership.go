@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"time"
 	"net"
-	"os"
-	"sync"
+	// "os"
+	// "sync"
 	"strings"
-	"flag"
+	// "flag"
 	"reflect"
 	"math/rand"
-    "os/signal"
-    "syscall"
+    // "os/signal"
+    // "syscall"
     "log"
-    "io"
+    // "io"
 )
 
 type MemberNode struct {

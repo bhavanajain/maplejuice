@@ -34,7 +34,7 @@ var masterIP = "172.22.152.106"
 var masterPort = 8084
 var fileTransferPort = 8085
 
-var myVid int
+// var myVid int
 
 func fillString(retunString string, toLength int) string {
     for {
@@ -106,7 +106,7 @@ func listenFileTransferPort() {
                         }
                     }
                     
-                    bytesW, err := conn.Write(sendBuffer)
+                    _, err := conn.Write(sendBuffer)
                     if err != nil {
                         success = false
                         log.Printf("[ME %d] Error while sending file %s\n", myVid, sdfsFilename)
@@ -168,7 +168,7 @@ func listenFileTransferPort() {
                 }
             case "deletefile":
                 sdfsFilename := split_message[1]
-                path := shared_dir + sdfsFilename
+                // path := shared_dir + sdfsFilename
 
                 _, err := os.Stat(shared_dir + sdfsFilename)
                 if os.IsNotExist(err) {
@@ -316,10 +316,7 @@ func listenMasterRequests() {
 
         case "get":
             sdfsFilename := split_message[1]
-            nodes, ok := fileMap[sdfsFilename]
-
-
-
+            _, ok := fileMap[sdfsFilename]
 
             if ok {
                 // send back the list of nodes
@@ -339,7 +336,7 @@ func listenMasterRequests() {
 
         case "delete":
             sdfsFilename := split_message[1]
-            nodes, ok := fileMap[sdfsFilename]
+            _, ok := fileMap[sdfsFilename]
             if ok {
                 // [TODO] Delete that file from the fileMap
                 for _, nodeId := range(fileMap[sdfsFilename].nodeIds) {
@@ -358,10 +355,10 @@ func listenMasterRequests() {
 func deleteFile(nodeId int, sdfsFilename string) {
     timeout := time.Duration(20) * time.Second
 
-    ip := members[nodeId].ip
+    ip := memberMap[nodeId].ip
     port := fileTransferPort
 
-    conn, err := net.DialTimeout("tcp", ip + ":" + port, timeout)
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to delete file %s)\n", myVid, nodeId, sdfsFilename)
         return
@@ -377,10 +374,10 @@ func deleteFile(nodeId int, sdfsFilename string) {
 func getFile(nodeId int, sdfsFilename string, localFilename string) {
     timeout := time.Duration(20) * time.Second
 
-    ip := members[nodeId].ip
+    ip := memberMap[nodeId].ip
     port := fileTransferPort
 
-    conn, err := net.DialTimeout("tcp", ip + ":" + port, timeout) 
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, nodeId, sdfsFilename)
         return
@@ -457,10 +454,10 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     timeout := time.Duration(20) * time.Second
 
-    ip := members[nodeId].ip
+    ip := memberMap[nodeId].ip
     port := fileTransferPort
 
-    conn, err := net.DialTimeout("tcp", ip + ":" + port, timeout) 
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send file %s)\n", myVid, nodeId, sdfsFilename)
         return
