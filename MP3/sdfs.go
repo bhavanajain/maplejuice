@@ -9,17 +9,6 @@ import (
 
 var head = 0
 const BUFFERSIZE = 1024
-var fileRecvPort int = 8080
-
-func selectNodes() {
-    var nodeIds [7]int
-    var num_members int = len(members)
-    for i := range(7) {
-        nodeIds[i] = (head + i) % num_members
-    }
-    head = head + 1 // nead to use modulus here
-    return nodeIds
-}
 
 type fileData struct {
     timestamp int64
@@ -37,218 +26,122 @@ masterIP = "172.22.152.106"
 masterPort = 8080
 fileTransferPort = 8081
 
+var myVid int
+
 func listenFileTransferPort() {
+    // This port serves file transfers
+    // message type: getfile, putfile, deletefile
+
     ln, _ = net.Listen("tcp", ":" + strconv.Itoa(fileTransferPort))
     for {
         conn, _ := ln.Accept()
-        fmt.Println("[Info] Accepted a new connection")     
+        log.Println("[ME %d] Accepted a new connection", myVid)     
 
         conn_reader := bufio.NewReader(conn)
 
         message, _ := conn_reader.ReadString('\n')
         split_message := strings.Split(message, " ")
         message_type = split_message[0]
+
         switch message_type {
+
             case "getfile":
                 sdfsFilename = split_message[1]
                 f, err := os.Open(shared_dir + "/" + sdfsFilename)
                 if err != nil {
-                    log.Printf("Can't open file %s\n", sdfsFilename)
-                    return
+                    log.Printf("[ME %d] Can't open file %s\n", myVid, sdfsFilename)
+                    break
                 }
 
                 fileInfo, err := f.Stat()
                 if err != nil {
-                    log.Printf("[File Sender] Can't access file stats %s %s\n", nodeid, filename)
+                    log.Printf("[ME %D] Can't access file stats %s\n", myVid, sdfsFilename)
                     return
                 }
 
                 fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
                 // fileName := fillString(fileInfo.Name(), 64)
-
-                log.Printf("[File Sender] filesize %s", fileSize)
-
+                log.Printf("[ME %d] filesize %s", myVid, fileSize)
                 conn.Write([]byte(fileSize))
                 // conn.Write([]byte(fileName))
 
                 sendBuffer := make([]byte, BUFFERSIZE)
 
+                success = true
                 for {
                     _, err = f.Read(sendBuffer)
-                    if err == io.EOF {
-                        break
+                    if err != nil {
+                        if err == io.EOF {
+                            break
+                        } else {
+                            success = false
+                            log.Printf("[ME %d] Error while reading file %s\n", myVid, sdfsFilename)
+                            break
+                        }
                     }
-                    conn.Write(sendBuffer) // Handle error
+                    
+                    bytesW, err = conn.Write(sendBuffer)
+                    if err != nil {
+                        success = false
+                        log.Printf("[ME %d] Error while sending file %s\n", myVid, sdfsFilename)
+                    }
                 }
+                if success {
+                    log.Printf("[ME %d] Successfully sent the complete file %s\n", myVid, sdfsFilename)
+                } else {
+                    log.Printf("[ME %d] Could not send the complete file %s\n", myVid, sdfsFilename)
+                    break
+                }
+
+                f.Close()
+
 
             case "putfile":
                 sdfsFilename = split_message[1]
+
                 bufferFileSize := make([]byte, 10)
-
                 conn.Read(bufferFileSize)
-                fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
-                log.Println("[File Server] Read filesize" ,fileSize)
 
-                file, err := os.Create(localFilename)
+                fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+                log.Println("[ME %d] Incoming filesize %d\n", myVid, fileSize)
+
+                f, err := os.Create(temp_dir + sdfsFilename)
                 if err != nil {
-                    log.Println("[File Server Error] Couldn't create the file") 
+                    log.Println("[ME %d] Cannot create file %s\n", myVid, sdfsFilename) 
                 }
-                defer file.Close()
 
                 var receivedBytes int64
+                success = true
                 for {
                     if (fileSize - receivedBytes) < BUFFERSIZE {
-                        _,err = io.CopyN(file, conn, (fileSize - receivedBytes)) // Need to handle the err in the code in case of network failure
-                        if err != nil{
-                            // <ToDo>Connection error exit and find the next node 
+                        _, err = io.CopyN(f, conn, (fileSize - receivedBytes))
+                            // Get the nodeId/IP of the file sender
+                            log.Printf("[ME %d] Cannot read file bytes from connection\n", myVid)
+                            success = false
                         }
                         break
                     }
-                    _,err = io.CopyN(file, conn, BUFFERSIZE) // Need to handle the err in the code in case of network failure
-                    if err != nil{
-                        //<ToDo> Connection error handle it
+
+                    _, err = io.CopyN(f, conn, BUFFERSIZE)
+                    if err != nil {
+                        log.Printf("[ME %d] Cannot read file bytes from connection\n", myVid)
+                        success = false
                     }
                     receivedBytes += BUFFERSIZE
                 }
-
-
-          
-                //Send ACK
-
-
-
-
-        
-
+                if success {
+                    f.Close()
+                    err := os.Rename(temp_dir + sdfsFilename, shared_dir + sdfsFilename)
+                    if err != nil {
+                        log.Printf("[ME %d] Could not move file %s from tmp to shared dir", myVid, sdfsFilename)
+                    }
+                    // Send an ACK to Master
+                    fmt.Printf(conn, "DONE\n")
+                }
         }
         conn.Close()
     }
-
 }
-
-
-
-
-func sendFile(nodeid int, filename str) {
-
-    // [TODO] Add checksum: https://gobyexample.com/sha1-hashes
-
-    timeout := time.Duration(20) * time.Second
-
-    ip = members[nodeid].ip
-    port = fileRecvPort
-
-    conn, err := net.DialTimeout("tcp", ip + ":" + port, timeout) // This should be listen
-    if err != nil {
-        log.Printf("[File Sender] Unable to connect with %s %s\n", nodeid, filename)
-        return
-    }
-    defer conn.Close()
-
-    f, err := os.Open(filename)
-    if err != nil {
-        log.Printf("[File Sender]: Can't open file\n")
-        return
-    }
-
-    fileInfo, err := f.Stat()
-    if err != nil {
-        log.Printf("[File Sender] Can't access file stats %s %s\n", nodeid, filename)
-        return
-    }
-
-    fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
-    fileName := fillString(fileInfo.Name(), 64)
-
-    log.Printf("[File Sender] filesize %s filename %s", fileSize, fileName)
-
-    conn.Write([]byte(fileSize))
-    conn.Write([]byte(fileName))
-
-    sendBuffer := make([]byte, BUFFERSIZE)
-
-    for {
-        _, err = f.Read(sendBuffer)
-        if err == io.EOF {
-            break
-        }
-        conn.Write(sendBuffer)
-    }
-    log.Printf("[File Sender] Completed sending the file %s %s\n", nodeid, filename)
-
-    // Wait for an ack
-
-    return
-}
-
-// func recvFile() {
-
-//  // [TODO] Handle checksum
-
-//  ln, _ := net.Listen("tcp", ":" + fileRecvPort)
-//  for {
-//      conn, _ := ln.Accept()
-//      log.Println("[File Server] Accepted a new connection")  
-
-//      // bufferFileName := make([]byte, 64)
-//      bufferFileSize := make([]byte, 10)
-
-//      conn.Read(bufferFileSize)
-//      fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
-    
-//      // conn.Read(bufferFileName)
-//      // fileName := strings.Trim(string(bufferFileName), ":")
-
-//      log.Println("[File Server] Read filesize" ,fileSize)
-
-//      file, err := os.Create(fileName)
-//      if err != nil {
-//          log.Println("[File Server Error] Couldn't create the file") 
-//      }
-//      defer file.Close()
-
-//      var receivedBytes int64
-//      for {
-//          if (fileSize - receivedBytes) < BUFFERSIZE {
-//              io.CopyN(file, conn, (fileSize - receivedBytes))
-//              break
-//          }
-//          io.CopyN(file, conn, BUFFERSIZE)
-//          receivedBytes += BUFFERSIZE
-//      }
-
-//      log.Println("[File Server] Completed reading file bytes")
-
-//      // TODO: Send an acknowledgement that I have received the file
-
-//      conn.Close()
-//  }
-// }
-
-func readFile() {
-    // get metadata for the required file -- nodes on which the file exists
-    // query those 4 nodes and wait for 4 ACKs and read from the one with the latest timestamp
-}
-
-func writeFile() {
-    // Think something RPC
-
-    // send the file to master
-}
-
-func writeFileWithQuorum() {
-
-    // master listens for write requests on one particular port
-    // Once it receives a request, it gets the nodeids to store this file on
-    // Starts sending the file and waits for ack from 4
-    // once ack from 4 is received, update the lastest write timestamp for that file
-
-}
-
-// Other notes:
-// Incorporate MP2 into this: 
-// Send heartbeats via UDP and send the membership changes via TCP connection
-
 
 func getmyIP() (string) {
     var myip string
@@ -384,7 +277,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) {
     return
 }
 
-func SendFile(nodeId int, sdfsFilename string) {
+func sendFile(nodeId int, sdfsFilename string) {
 
     timeout := time.Duration(20) * time.Second
 
@@ -441,7 +334,15 @@ func SendFile(nodeId int, sdfsFilename string) {
     }
     log.Printf("[File Sender] Completed sending the file %s %s\n", nodeId, sdfsFilename)
 
-    // Send the ACK to different nodes
+    reader := bufio.NewReader(conn)
+    ack, err := reader.ReadString("\n")
+    if err != nil {
+        fmt.Println("Did not receive an ACK")
+    }
+    if ack == "DONE" {
+        // TODO: 
+    }
+
 
     
 }
@@ -527,9 +428,10 @@ func executeCommand(command string) {
             }
             nodeIds = append(nodeIds, node)
         }
-        for _,node := range nodeIds{
+
+        for _, node := range nodeIds{
             // Send a wait command so that it will wait til this is finished
-            go SendFile(node,sdfsFilename)
+            go sendFile(node,sdfsFilename)
         }
 
         
