@@ -287,6 +287,7 @@ func listenMasterRequests() {
 
                 if ack == "quorum" {
                     fileMap[sdfsFilename].timestamp = time.Now().Unix()
+                    fmt.Printf("Received quorum for %s\n", sdfsFilename)
                     // [TODO] after quorum, send message to nodes; move file from temp to shared
                 }  
 
@@ -648,7 +649,7 @@ func executeCommand(command string) {
         }
         fmt.Printf("Waiting for quorum\n")
         wg.Wait()
-        fmt.Fprintf(conn, "quorum")
+        fmt.Fprintf(conn, "quorum\n")
     }
 }
 
