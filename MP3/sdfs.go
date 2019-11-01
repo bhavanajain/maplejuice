@@ -72,7 +72,7 @@ func listenFileTransferPort() {
 
         message, _ := conn_reader.ReadString('\n')
         message = message[:len(message)-1]
-        log.Printf("[ME %d] Received a new message %s\n", myVid, message)
+        fmt.Printf("[ME %d] Received a new message %s\n", myVid, message)
 
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
@@ -455,7 +455,7 @@ func copyFile(srcFile string, destFile string) (bool){
 }
 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup) {
-    fmt.Printf("Inside send file")
+    fmt.Printf("Inside send file\n")
     if nodeId == myVid {
         success := copyFile(local_dir + localFilename, shared_dir + sdfsFilename)
 
