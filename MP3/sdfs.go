@@ -599,14 +599,14 @@ func executeCommand(command string) {
         getFile(nodeIds[0], sdfsFilename, localFilename)
 
     case "delete":
-        fmt.Fprintf(conn, command)
+        fmt.Fprintf(conn, command + "\n")
         log.Printf("[ME %d] Forwarded the %s command to the master\n", myVid, command)
 
     case "put":
         localFilename := split_command[1] 
         sdfsFilename := split_command[2]
 
-        master_command := fmt.Sprintf("put %s", sdfsFilename)
+        master_command := fmt.Sprintf("put %s\n", sdfsFilename)
         fmt.Printf("%s\n", master_command)
         fmt.Fprintf(conn, master_command)
 
