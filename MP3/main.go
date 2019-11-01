@@ -16,6 +16,8 @@ import (
 func distributedFileSystem() {
     os.RemoveAll(shared_dir)
     os.MkdirAll(shared_dir, 0777)
+    os.RemoveAll(temp_dir)
+    os.MkdirAll(temp_dir, 0777)
 
     myIP := getmyIP()
     if myIP == masterIP {
@@ -36,8 +38,8 @@ func main() {
 		log.Fatalf("Error opening the log file: %v", err)
 	}
 	defer f.Close()
-	mw := io.MultiWriter(os.Stdout, f)
-	log.SetOutput(mw)
+	// mw := io.MultiWriter(os.Stdout, f)
+	log.SetOutput(f)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
