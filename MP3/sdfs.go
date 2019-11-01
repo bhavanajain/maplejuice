@@ -597,6 +597,7 @@ func executeCommand(command string) {
         if err != nil{
             log.Printf("")
         }
+        fmt.Printf("%s\n", reply)
         split_reply := strings.Split(reply, " ")
         nodeIds_str := strings.Split(split_reply[2], ",")
         nodeIds := []int{}
