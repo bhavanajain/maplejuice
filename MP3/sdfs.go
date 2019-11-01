@@ -607,6 +607,7 @@ func executeCommand(command string) {
         sdfsFilename := split_command[2]
 
         master_command := fmt.Sprintf("put %s", sdfsFilename)
+        fmt.Printf("%s\n", master_command)
         fmt.Fprintf(conn, master_command)
 
         reader := bufio.NewReader(conn)
