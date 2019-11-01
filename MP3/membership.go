@@ -863,19 +863,19 @@ func sendJoinRequest() {
 	return
 }
 
-func getmyIP() (string) {
-	var myip string
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		log.Fatalf("Cannot get my IP")
-		os.Exit(1)
-	}
-	for _, a := range addrs {
-		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				myip = ipnet.IP.String()
-			}
-		}
-	}
-	return myip
-}
+// func getmyIP() (string) {
+// 	var myip string
+// 	addrs, err := net.InterfaceAddrs()
+// 	if err != nil {
+// 		log.Fatalf("Cannot get my IP")
+// 		os.Exit(1)
+// 	}
+// 	for _, a := range addrs {
+// 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+// 			if ipnet.IP.To4() != nil {
+// 				myip = ipnet.IP.String()
+// 			}
+// 		}
+// 	}
+// 	return myip
+// }
