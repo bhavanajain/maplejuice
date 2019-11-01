@@ -281,7 +281,7 @@ func listenMasterRequests() {
                     nodes_str = nodes_str + strconv.Itoa(node) + ","
                 }
                 nodes_str = nodes_str[:len(nodes_str)-1]
-
+                fmt.Printf("master nodes str: %s\n", nodes_str)
                 // nodes_str := strings.Join(nodes, ",")
                 reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
                 fmt.Fprintf(conn, reply)
