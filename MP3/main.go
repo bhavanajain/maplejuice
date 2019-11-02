@@ -10,6 +10,7 @@ import (
 	"log"
 	"fmt"
 	"syscall"
+	"math/rand"
 )
 
 
@@ -42,6 +43,8 @@ func main() {
 	defer f.Close()
 	// mw := io.MultiWriter(os.Stdout, f)
 	log.SetOutput(f)
+
+	rand.Seed(time.Now().UnixNano())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
