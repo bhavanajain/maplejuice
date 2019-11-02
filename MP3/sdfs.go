@@ -1004,7 +1004,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         var wg sync.WaitGroup
         wg.Add(4)
 
-        doneList := make([]int, 0, 4)
+        doneList = make([]int, 0, 4)
 
         for _, node := range nodeIds {
             go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
