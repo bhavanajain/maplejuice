@@ -616,6 +616,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) {
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
+    fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
 
     file, err := os.Create(local_dir + localFilename)
     if err != nil {
@@ -645,6 +646,8 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) {
     }
     if success {
         log.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
+        fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
+
     }
     return
 }
