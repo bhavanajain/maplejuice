@@ -273,7 +273,9 @@ func list2String(list []int) (string) {
     for _, element := range(list) {
         list_str = list_str + strconv.Itoa(element) + ","
     }
-    list_str = list_str[:len(list_str)-1]
+    if len(list_str) > 0 {
+        list_str = list_str[:len(list_str)-1]
+    }
     return list_str
 }
 
@@ -1008,6 +1010,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("Waiting for quorum\n")
         wg.Wait()
 
+        fmt.Printf("done list: %v\n", doneList)
         doneList_str := list2String(doneList)
 
         sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
