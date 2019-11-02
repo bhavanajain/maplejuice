@@ -657,6 +657,7 @@ func executeCommand(command string) {
         fmt.Printf("Waiting for quorum\n")
         wg.Wait()
         fmt.Fprintf(conn, "quorum\n")
+        fmt.Printf("sent quorum to master\n")
     }
 }
 
