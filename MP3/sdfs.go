@@ -782,7 +782,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     }
     defer conn.Close()
 
-    message := fmt.Sprintf("putfile %s %s", sdfsFilename, myVid)
+    message := fmt.Sprintf("putfile %s %d", sdfsFilename, myVid)
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
 
