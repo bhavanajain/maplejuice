@@ -26,6 +26,10 @@ type fileData struct {
 type nodeData struct {
     fileNames []string
 }
+type conflictData struct{
+    id int
+    timestamp int64
+}
 
 var local_dir = "local/"
 var shared_dir = "shared/"
@@ -244,6 +248,7 @@ func getmyIP() (string) {
 
 var fileMap = make(map[string]*fileData)
 var nodeMap = make(map[int]*nodeData)
+var conflictMap = make(map[string]*conflictData)
 
 // var filePutTimeMap = make(map[string]int64)
 
@@ -279,15 +284,57 @@ func listenMasterRequests() {
         fmt.Printf(message)
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
+        // Need to know the sender id
 
         switch message_type {
         case "put":
             // master should give a list of three other nodes
 
             sdfsFilename := split_message[1]
+            sender,_ := strconv.Atoi(split_message[2])
             // lastputtime, ok := filePutTimeMap[sdfsFilename]
 
-            _, ok := fileMap[sdfsFilename]
+            // Check in the conflict map for an entry
+            _,ok = conflictMap[sdfsFilename]
+            if ok {
+                // Handle the conflict
+                if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
+                    // There is a conflict, ask the sender
+                    reply := fmt.Sprintf("conflict %s\n", sdfsFilename)
+                    fmt.Fprintf(conn, reply)
+                    // Wait for their reply for a timeout
+                    conn.SetReadDeadline(time.Now().Add(30*time.Second))
+                    confResp,err := conn_reader.ReadString('\n')
+                    if err != nil{
+                        // Close the connection and don't procees
+                        break
+                    }
+                    confResp := confResp[:len(confResp)-1]
+                    if confResp == "yes"{
+                        
+                    }
+
+
+
+                } else{
+                    // Update the conflict map
+                    var newConflict conflictData
+                    newConflict.id = sender
+                    newConflict.timestamp = time.Now().Unix()
+                    conflictMap[sdsFileName] = &newConflict
+                }
+
+            } else{
+
+                // do nothing
+                var newConflict conflictData
+                newConflict.id = sender
+                newConflict.timestamp = time.Now().Unix()
+                conflictMap[sdsFileName] = &newConflict
+            }
+
+
+            _, ok = fileMap[sdfsFilename]
             if ok {
 
                 var nodes_str = ""
@@ -300,6 +347,7 @@ func listenMasterRequests() {
                 reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
                 fmt.Fprintf(conn, reply)
 
+                // Should end the connection here
                 // [TODO] Add a goroutime to handle ACK from the requester
 
                 // reader := bufio.NewReader(conn)
@@ -330,6 +378,8 @@ func listenMasterRequests() {
                 reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
                 fmt.Printf("%s\n", reply)
                 fmt.Fprintf(conn, reply)
+
+                // Should end the connection here
 
                 // reader := bufio.NewReader(conn)
                 ack, err := conn_reader.ReadString('\n')
@@ -594,7 +644,7 @@ func sendAcktoMaster(action string, srcNode int, destNode int, fileName string) 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup) {
 
     if nodeId == myVid {
-        success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename)
+        success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename) //
 
         if success {
             wg.Done()
@@ -623,7 +673,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     // fmt.Fprintf(conn, message)
     fmt.Printf("Sent a putfile request to %d\n", nodeId)
 
-    f, err := os.Open(local_dir + localFilename)
+    f, err := os.Open(local_dir + localFilename) 
     if err != nil {
         log.Printf("[ME %d] Cannot open local file %s\n", localFilename)
         return
@@ -694,6 +744,7 @@ func executeCommand(command string) {
     split_command := strings.Split(command, " ")
     command_type := split_command[0]
 
+
     switch command_type {
     case "ls":
         sdfsFilename := split_command[1]
@@ -756,10 +807,11 @@ func executeCommand(command string) {
         log.Printf("[ME %d] Forwarded the %s command to the master\n", myVid, command)
 
     case "put":
+        // please send your ID with the message, so put will be "put sdsFileName myVID"
         localFilename := split_command[1] 
         sdfsFilename := split_command[2]
 
-        master_command := fmt.Sprintf("put %s\n", sdfsFilename)
+        master_command := fmt.Sprintf("put %s %d\n", sdfsFilename,myVid)
         fmt.Printf("%s\n", master_command)
         fmt.Fprintf(conn, master_command)
 
