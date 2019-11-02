@@ -340,22 +340,18 @@ func listenMasterRequests() {
         case "get":
             sdfsFilename := split_message[1]
             _, ok := fileMap[sdfsFilename]
+            var nodes_str = ""
 
             if ok {
                 // send back the list of nodes
                 // nodes_str := strings.Join(nodes, ",")
-                var nodes_str = ""
                 for _, node := range(fileMap[sdfsFilename].nodeIds) {
                     nodes_str = nodes_str + strconv.Itoa(node) + ","
                 }
-                nodes_str = nodes_str[:len(nodes_str)-1]
-
-                reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
-                fmt.Fprintf(conn, reply)
-            } else {
-                reply := fmt.Sprintf("invalid %s\n", sdfsFilename)
-                fmt.Fprintf(conn, reply)
+                nodes_str = nodes_str[:len(nodes_str)-1]                
             }
+            reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
+            fmt.Fprintf(conn, reply)
 
         case "delete":
             sdfsFilename := split_message[1]
@@ -391,7 +387,7 @@ func deleteFile(nodeId int, sdfsFilename string) {
     message := fmt.Sprintf("deletefile %s", sdfsFilename)
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
-    
+
     // fmt.Fprintf(conn, message)
 
     log.Printf("[ME %d] Sent deletefile %s to %d\n", myVid, sdfsFilename, nodeId)
@@ -608,6 +604,11 @@ func executeCommand(command string) {
         reply = reply[:len(reply)-1]
         split_reply := strings.Split(reply, " ")
         nodeIds_str := strings.Split(split_reply[2], ",")
+
+        if len(nodes_str) == 0 {
+            fmt.Printf("invalid file name\n")
+            break
+        }
 
         nodeIds := []int{}
         for _, node_str := range nodeIds_str {
