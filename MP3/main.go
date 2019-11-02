@@ -25,9 +25,11 @@ func distributedFileSystem() {
         go listenMasterRequests()
         go HandleFileReplication()
     } else {
-        go listenFileTransferPort()
-        go scanCommands()
+        // go listenFileTransferPort()
+        // go scanCommands()
     }
+    go listenFileTransferPort()
+    go scanCommands()
     
     // go listenMasterRequests()
 
