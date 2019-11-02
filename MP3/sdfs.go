@@ -382,8 +382,8 @@ func listenMasterRequests() {
                     // }  
 
                 } else {
-                    var emptylist = []int{}
-                    nodes := getRandomNodes(emptylist, 3)
+                    var excludelist = []int{sender}
+                    nodes := getRandomNodes(excludelist, 3)
                     nodes = append(nodes, sender)
 
                     var nodes_str = ""
