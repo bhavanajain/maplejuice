@@ -289,7 +289,7 @@ func listenMasterRequests() {
 
         message, _ := conn_reader.ReadString('\n')
         message = message[:len(message)-1]
-        fmt.Printf(message)
+        fmt.Printf("Message received %s", message)
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
         // Need to know the sender id
@@ -303,6 +303,9 @@ func listenMasterRequests() {
                 // lastputtime, ok := filePutTimeMap[sdfsFilename]
 
                 // Check in the conflict map for an entry
+
+                fmt.Printf("Check conflictMap for %d\n", sender)
+
                 _, ok := conflictMap[sdfsFilename]
                 if ok {
                     // Handle the conflict
@@ -346,6 +349,8 @@ func listenMasterRequests() {
                     newConflict.id = sender
                     newConflict.timestamp = time.Now().Unix()
                     conflictMap[sdfsFilename] = &newConflict
+
+                    fmt.Printf("Added to conflictMap\n")
                 }
 
 
@@ -382,9 +387,12 @@ func listenMasterRequests() {
                     // }  
 
                 } else {
+                    fmt.Printf("Not found in filemap\n")
                     var excludelist = []int{sender}
                     nodes := getRandomNodes(excludelist, 3)
                     nodes = append(nodes, sender)
+
+                    fmt.Printf("random nodes: %v\n", nodes)
 
                     var nodes_str = ""
                     for _, node := range(nodes) {
@@ -394,7 +402,7 @@ func listenMasterRequests() {
                     fmt.Printf("master nodes str: %s\n", nodes_str)
                     // nodes_str := strings.Join(nodes, ",")
                     reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
-                    fmt.Printf("%s\n", reply)
+                    fmt.Printf("Sent reply: %s\n", reply)
                     fmt.Fprintf(conn, reply)
 
                     // Should end the connection here********************************************
