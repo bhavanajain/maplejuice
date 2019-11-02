@@ -323,6 +323,7 @@ func listenMasterRequests() {
                             break
                         }
                         confResp = confResp[:len(confResp)-1]
+                        fmt.Printf("Master recv: %s blah", confResp)
                         if confResp == "yes"{
                             // Update the conflictMap
                             var newConflict conflictData
@@ -365,8 +366,11 @@ func listenMasterRequests() {
                     }
                     nodes_str = nodes_str[:len(nodes_str)-1]
 
+
                     // nodes_str := strings.Join(fileMap[sdfsFilename].nodeIds, ",")
                     reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
+                    fmt.Printf("Sending putreply: %s", reply)
+                    
                     fmt.Fprintf(conn, reply)
 
                     // // Should end the connection here
@@ -968,7 +972,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
             // Wait for user input
             // user_reader := bufio.NewReader(os.Stdin)
             confResp, _ := userReader.ReadString('\n')
-            _,err = fmt.Fprintf(conn,confResp)
+            fmt.Printf("This is the confResp: %s", confResp)
+
+            _, err = fmt.Fprintf(conn, confResp)
             if err != nil{
                 // Issue with the master
             }
