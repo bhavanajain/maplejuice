@@ -278,8 +278,8 @@ func listenMasterRequests() {
 
                 // [TODO] Add a goroutime to handle ACK from the requester
 
-                reader := bufio.NewReader(conn)
-                ack, err := reader.ReadString('\n')
+                // reader := bufio.NewReader(conn)
+                ack, err := conn_reader.ReadString('\n')
 
                 fmt.Printf("MASTER ACK: %s\n", ack)
 
