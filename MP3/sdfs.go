@@ -751,7 +751,9 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
     return
 }
 
-func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int, doneList []int) {
+var doneList = make([]int, 0, 4)
+
+func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int) {
 
     if nodeId == myVid {
         success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename + "." + strconv.Itoa(nodeId))
@@ -814,7 +816,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, localFilename, nodeId)
             // request another node to write this file from master
             newnode := replaceNode(nodeId, sdfsFilename, allNodes)
-            go sendFile(newnode, localFilename, sdfsFilename, wg,allNodes,doneList)
+            go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
             return
         }
 
@@ -829,7 +831,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         log.Printf("[ME %d] Error while reading ACK from %d for %s file\n", myVid, nodeId, sdfsFilename)
         newnode := replaceNode(nodeId, sdfsFilename, allNodes)
         allNodes = append(allNodes, newnode)
-        go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes, doneList)
+        go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
         return
     }
     ack = ack[:len(ack)-1]
@@ -1005,7 +1007,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         doneList := make([]int, 0, 4)
 
         for _, node := range nodeIds {
-            go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds, doneList)
+            go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
         }
         fmt.Printf("Waiting for quorum\n")
         wg.Wait()
