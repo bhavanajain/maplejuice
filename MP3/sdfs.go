@@ -280,6 +280,9 @@ func listenMasterRequests() {
 
                 reader := bufio.NewReader(conn)
                 ack, err := reader.ReadString('\n')
+
+                fmt.Printf("MASTER ACK: %s\n", ack)
+
                 if err != nil {
                     log.Println("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
                 }
