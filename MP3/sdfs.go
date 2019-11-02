@@ -681,6 +681,11 @@ func scanCommands() {
                 fmt.Printf("%s ", fileName)
             }
         case "ls", "get", "delete", "put":
+            if command_type == "get" {
+                if len(split_command) < 3 {
+                    break
+                }
+            }
             executeCommand(command)
         }
     }
