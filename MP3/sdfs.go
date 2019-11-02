@@ -603,14 +603,15 @@ func executeCommand(command string) {
         }
         reply = reply[:len(reply)-1]
         split_reply := strings.Split(reply, " ")
-        nodeIds_str := strings.Split(split_reply[2], ",")
 
-        fmt.Printf("nodestr: %s %d\n", nodeIds_str, len(nodeIds_str))
-
-        if len(nodeIds_str) == 0 {
+        if len(split_reply[2]) == 0 {
             fmt.Printf("invalid file name\n")
             break
         }
+
+        nodeIds_str := strings.Split(split_reply[2], ",")
+
+        fmt.Printf("nodestr: %v %d\n", nodeIds_str, len(nodeIds_str))
 
         nodeIds := []int{}
         for _, node_str := range nodeIds_str {
