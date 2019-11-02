@@ -1114,7 +1114,11 @@ func getRandomNodes(excludeList []int, count int) ([]int) {
             result = append(result, randomnode)
             fmt.Printf("result: %v\n", result)
             if len(result) == count {
-                return result
+                keys := make([]int, 0, len(result))
+                for k := range mymap {
+                    keys = append(keys, k)
+                }
+                return keys
             }
         }
     }
