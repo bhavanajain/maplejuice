@@ -1082,29 +1082,34 @@ func scanCommands() {
 // }
 
 func getRandomNodes(excludeList []int, count int) ([]int) {
-    // success := true
+    fmt.Printf("Exclude list: %v\n", excludeList)
+    success := true
 
-    // result := []int{}
+    result := []int{}
 
-    // for {
-    //     randomnode := rand.Intn(len(memberMap))
-    //     if !memberMap[randomnode].alive {
-    //         continue
-    //     }
-    //     for _, excludenode := range(excludeList) {
-    //         if randomnode == excludenode {
-    //             success = false
-    //             break
-    //         }
-    //     }
-    //     if success {
-    //         result = append(result, randomnode)
-    //         if len(result) == count {
-    //             return result
-    //         }
-    //     }
-    // }
-    return []int{2, 3, 4}
+    for {
+        randomnode := rand.Intn(len(memberMap))
+        fmt.Printf("%d\n", randomnode)
+
+        if !memberMap[randomnode].alive {
+            fmt.Printf("%d not alive\n", randomnode)
+            continue
+        }
+        for _, excludenode := range(excludeList) {
+            if randomnode == excludenode {
+                success = false
+                fmt.Printf("Failed for %d\n", randomnode)
+                break
+            }
+        }
+        if success {
+            result = append(result, randomnode)
+            fmt.Printf("result: %v\n", result)
+            if len(result) == count {
+                return result
+            }
+        }
+    }
 }
 
 func initiateReplica(fileName string, srcNode int, destNode int) {
