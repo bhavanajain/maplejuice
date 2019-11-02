@@ -29,11 +29,11 @@ func distributedFileSystem() {
     // }
     
     go listenMasterRequests()
-    
+
     go listenFileTransferPort()
     go scanCommands()
 
-    go HandleFileReplication()
+    // go HandleFileReplication()
 
 }
 
@@ -84,6 +84,8 @@ func membership(wg *sync.WaitGroup) {
 
 	time.Sleep(time.Duration(introPingPeriod) * time.Second)
 	
+	fmt.Printf("I am here, trying to join\n")
+
 	if myIP == introducer {
 		// there should be a delay here - depending on how frequently the introducer is being pinged
 		// if the system already exists in some form, the introducer shouldn't accept join requests until it knows what the maxID is 
@@ -94,6 +96,7 @@ func membership(wg *sync.WaitGroup) {
 	} else{
 		fmt.Printf("Send join request to introducer\n")
 		sendJoinRequest()
+		fmt.Printf("completed join request\n")
 	}
 	go updateFingerTable()
 
