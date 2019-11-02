@@ -10,6 +10,7 @@ import (
 	"log"
 	"fmt"
 	"syscall"
+	"math/rand"
 )
 
 
@@ -19,13 +20,19 @@ func distributedFileSystem() {
     os.RemoveAll(temp_dir)
     os.MkdirAll(temp_dir, 0777)
 
-    myIP := getmyIP()
-    if myIP == masterIP {
-        go listenMasterRequests()
-    } else {
-        go listenFileTransferPort()
-        go scanCommands()
-    }
+    // myIP := getmyIP()
+    // if myIP == masterIP {
+    //     go listenMasterRequests()
+    // } else {
+    //     go listenFileTransferPort()
+    //     go scanCommands()
+    // }
+    
+    go listenMasterRequests()
+    go listenFileTransferPort()
+    go scanCommands()
+
+    go HandleFileReplication()
 
 }
 
@@ -40,6 +47,8 @@ func main() {
 	defer f.Close()
 	// mw := io.MultiWriter(os.Stdout, f)
 	log.SetOutput(f)
+
+	rand.Seed(time.Now().UnixNano())
 
 	var wg sync.WaitGroup
 	wg.Add(1)

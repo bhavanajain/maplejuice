@@ -787,6 +787,10 @@ func listenOtherPort() (err error) {
 					updateMonitors()
 
 					log.Printf("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
+					// Check the files beloging to the dead node and redistribute the files
+					if myIP == masterIP {
+						go replicateFiles (subject) // Redistribute it's file
+					}
 				}
 			}			
 
