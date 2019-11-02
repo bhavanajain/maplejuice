@@ -24,8 +24,9 @@ type fileData struct {
 }
 
 type nodeData struct {
-    fileNames []string
+    fileList map[string]int64
 }
+
 type conflictData struct{
     id int
     timestamp int64
@@ -41,7 +42,6 @@ var masterIP = "172.22.152.106"
 var masterPort = 8084
 var fileTransferPort = 8085
 
-// var myVid int
 
 func fillString(returnString string, toLength int) string {
     for {
@@ -54,16 +54,6 @@ func fillString(returnString string, toLength int) string {
     }
     return returnString
 }
-
-// func getRandomNodes() []int {
-//     nodes := []int{1, 2, 3, 4}
-//     return nodes
-// }
-
-// func findRandomNode() int{ // temporary function
-//     node := 5
-//     return node
-// }
 
 func listenFileTransferPort() {
     // This port serves file transfers
@@ -89,6 +79,23 @@ func listenFileTransferPort() {
         message_type := split_message[0]
 
         switch message_type {
+            case "movefile":
+                sdfsFilename := split_message[1]
+                sender := split_message[2]
+
+                tempFilePath := temp_dir + sdfsFilename + "." + sender
+                sharedFilePath := shared_dir + sdfsFilename
+
+                err := os.Rename(tempFilePath, sharedFilePath)
+                if err != nil {
+                    log.Printf("[ME %d] Could not move file %s to %s\n", myVid, tempFilePath, sharedFilePath)
+                    break
+                }
+
+                fileTimeMap[sdfsFilename] = time.Now().Unix()
+
+                log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
+
             case "getfile":
                 sdfsFilename := split_message[1]
                 f, err := os.Open(shared_dir + sdfsFilename)
@@ -151,7 +158,7 @@ func listenFileTransferPort() {
 
                 log.Printf("[ME %d] Incoming filesize %d\n", myVid, fileSize)
 
-                tempFilePath = temp_dir + sdfsFilename + "." + sender
+                tempFilePath := temp_dir + sdfsFilename + "." + sender
                 f, err := os.Create(tempFilePath)
                 if err != nil {
                     log.Printf("[ME %d] Cannot create file %s\n", myVid, sdfsFilename) 
@@ -187,21 +194,6 @@ func listenFileTransferPort() {
                 } else {
                     log.Printf("Couldn't successfully receive the file %s from %d\n", sdfsFilename, sender)
                 }
-
-            case "ack":
-                sdfsFilename := split_message[1]
-                sender := split_message[2]
-
-                tempFilePath = temp_dir + sdfsFilename + "." + sender
-                sharedFilePath = shared_dir + sdfsFilename
-
-                err := os.Rename(tempFilePath, sharedFilePath)
-                if err != nil {
-                    log.Printf("[ME %d] Could not move file %s to %s\n", myVid, tempFilePath, sharedFilePath)
-                    break
-                }
-
-                log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
             
             case "deletefile":
                 sdfsFilename := split_message[1]
@@ -251,7 +243,7 @@ func getmyIP() (string) {
 }
 
 var fileMap = make(map[string]*fileData)
-var nodeMap = make(map[int]*nodeData)
+var nodeMap = map[int]map[string]int64
 var conflictMap = make(map[string]*conflictData)
 
 // var filePutTimeMap = make(map[string]int64)
@@ -259,25 +251,37 @@ var conflictMap = make(map[string]*conflictData)
 // func putFileMaster()
 
 // [TODO] change nodeMap to contain a map rather than a list
-func deleteFromList(nodeId int, sdfsFilename string) {
-    idx := -1
-    for i, filename := range(nodeMap[nodeId].fileNames) {
-        if filename == sdfsFilename {
-            idx = i
-            break
-        }
+
+// func deleteFromList(nodeId int, sdfsFilename string) {
+//     idx := -1
+//     for i, filename := range(nodeMap[nodeId].fileNames) {
+//         if filename == sdfsFilename {
+//             idx = i
+//             break
+//         }
+//     }
+//     if idx != -1 {
+//         nodeMap[nodeId].fileNames[idx] = nodeMap[nodeId].fileNames[len(nodeMap[nodeId].fileNames)-1]
+//         nodeMap[nodeId].fileNames = nodeMap[nodeId].fileNames[:len(nodeMap[nodeId].fileNames)-1]
+//     } else {
+//         log.Printf("[ME %d] Could not find filename %s in the nodeMap of %d\n", myVid, sdfsFilename, nodeId)
+//     }
+// }
+
+func list2String(list []int) (string) {
+    var list_str = ""
+    for _, element := range(list) {
+        list_str = list_str + strconv.Itoa(element) + ","
     }
-    if idx != -1 {
-        nodeMap[nodeId].fileNames[idx] = nodeMap[nodeId].fileNames[len(nodeMap[nodeId].fileNames)-1]
-        nodeMap[nodeId].fileNames = nodeMap[nodeId].fileNames[:len(nodeMap[nodeId].fileNames)-1]
-    } else {
-        log.Printf("[ME %d] Could not find filename %s in the nodeMap of %d\n", myVid, sdfsFilename, nodeId)
-    }
+    list_str = list_str[:len(list_str)-1]
+    return list_str
 }
 
 func listenMasterRequests() {
     ln, _ := net.Listen("tcp", ":" + strconv.Itoa(masterPort))
     for {
+    if myIP == masterIP {
+
         conn, _ := ln.Accept()
         log.Printf("[Master] Accepted a new connection\n")     
 
@@ -291,200 +295,253 @@ func listenMasterRequests() {
         // Need to know the sender id
 
         switch message_type {
-        case "put":
-            // master should give a list of three other nodes
+            case "put":
+                // master should give a list of three other nodes
 
-            sdfsFilename := split_message[1]
-            sender, _ := strconv.Atoi(split_message[2])
-            // lastputtime, ok := filePutTimeMap[sdfsFilename]
+                sdfsFilename := split_message[1]
+                sender, _ := strconv.Atoi(split_message[2])
+                // lastputtime, ok := filePutTimeMap[sdfsFilename]
 
-            // Check in the conflict map for an entry
-            _,ok = conflictMap[sdfsFilename]
-            if ok {
-                // Handle the conflict
-                if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
-                    // There is a conflict, ask the sender
-                    reply := fmt.Sprintf("conflict %s\n", sdfsFilename)
-                    fmt.Fprintf(conn, reply)
-                    // Wait for their reply for a timeout
-                    conn.SetReadDeadline(time.Now().Add(30*time.Second))
-                    confResp,err := conn_reader.ReadString('\n')
-                    if err != nil{
-                        // Close the connection and don't procees
-                        break
-                    }
-                    confResp := confResp[:len(confResp)-1]
-                    if confResp == "yes"{
-                        // Update the conflictMap
+                // Check in the conflict map for an entry
+                _, ok := conflictMap[sdfsFilename]
+                if ok {
+                    // Handle the conflict
+                    if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
+                        // There is a conflict, ask the sender
+                        reply := fmt.Sprintf("conflict %s\n", sdfsFilename)
+                        fmt.Fprintf(conn, reply)
+                        // Wait for their reply for a timeout
+                        conn.SetReadDeadline(time.Now().Add(30*time.Second))
+                        confResp,err := conn_reader.ReadString('\n')
+                        if err != nil{
+                            // Close the connection and don't procees
+                            break
+                        }
+                        confResp = confResp[:len(confResp)-1]
+                        if confResp == "yes"{
+                            // Update the conflictMap
+                            var newConflict conflictData
+                            newConflict.id = sender
+                            newConflict.timestamp = time.Now().Unix()
+                            conflictMap[sdfsFilename] = &newConflict
+                        }else{
+                            // don't want to proceed ignore this request
+                            break
+                        }
+
+
+
+                    } else{
+                        // Update the conflict map
                         var newConflict conflictData
                         newConflict.id = sender
                         newConflict.timestamp = time.Now().Unix()
-                        conflictMap[sdsFileName] = &newConflict
-                    }else{
-                        // don't want to proceed ignore this request
-                        break
+                        conflictMap[sdfsFilename] = &newConflict
                     }
 
-
-
                 } else{
-                    // Update the conflict map
+
+                    // do nothing
                     var newConflict conflictData
                     newConflict.id = sender
                     newConflict.timestamp = time.Now().Unix()
-                    conflictMap[sdsFileName] = &newConflict
+                    conflictMap[sdfsFilename] = &newConflict
                 }
 
-            } else{
 
-                // do nothing
-                var newConflict conflictData
-                newConflict.id = sender
-                newConflict.timestamp = time.Now().Unix()
-                conflictMap[sdsFileName] = &newConflict
-            }
+                _, ok = fileMap[sdfsFilename]
+                if ok {
 
-
-            _, ok = fileMap[sdfsFilename]
-            if ok {
-
-                var nodes_str = ""
-                for _, node := range(fileMap[sdfsFilename].nodeIds) {
-                    nodes_str = nodes_str + strconv.Itoa(node) + ","
-                }
-                nodes_str = nodes_str[:len(nodes_str)-1]
-
-                // nodes_str := strings.Join(fileMap[sdfsFilename].nodeIds, ",")
-                reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
-                fmt.Fprintf(conn, reply)
-
-                // Should end the connection here
-                // [TODO] Add a goroutime to handle ACK from the requester
-
-                // reader := bufio.NewReader(conn)
-                ack, err := conn_reader.ReadString('\n')
-
-                fmt.Printf("MASTER ACK: %s\n", ack)
-
-                if err != nil {
-                    log.Printf("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
-                }
-                ack = ack[:len(ack)-1]
-
-                if ack == "quorum" {
-                    fileMap[sdfsFilename].timestamp = time.Now().Unix()
-                    fmt.Printf("Received quorum for %s\n", sdfsFilename)
-                    // [TODO] after quorum, send message to nodes; move file from temp to shared
-                }  
-
-            } else {
-                nodes := getRandomNodes(3)
-                nodes = append(nodes, sender)
-
-                var nodes_str = ""
-                for _, node := range(nodes) {
-                    nodes_str = nodes_str + strconv.Itoa(node) + ","
-                }
-                nodes_str = nodes_str[:len(nodes_str)-1]
-                fmt.Printf("master nodes str: %s\n", nodes_str)
-                // nodes_str := strings.Join(nodes, ",")
-                reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
-                fmt.Printf("%s\n", reply)
-                fmt.Fprintf(conn, reply)
-
-                // Should end the connection here********************************************
-
-                // reader := bufio.NewReader(conn)
-                ack, err := conn_reader.ReadString('\n')
-                if err != nil {
-                    log.Printf("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
-                }
-                ack = ack[:len(ack)-1]
-
-                if ack == "quorum" {
-                    var newfiledata fileData
-                    newfiledata.timestamp = time.Now().Unix()
-                    newfiledata.nodeIds = nodes
-                    fileMap[sdfsFilename] = &newfiledata
-
-                    for _, node := range(nodes) {
-                        nodedata, ok := nodeMap[node]
-                        if ok {
-                            nodedata.fileNames = append(nodedata.fileNames, sdfsFilename)
-                        } else {
-                            var newnodedata nodeData
-                            newnodedata.fileNames = []string {sdfsFilename}
-                            nodeMap[node] = &newnodedata
-                        }
+                    var nodes_str = ""
+                    for _, node := range(fileMap[sdfsFilename].nodeIds) {
+                        nodes_str = nodes_str + strconv.Itoa(node) + ","
                     }
-                    fmt.Printf("Received quorum for %s\n", sdfsFilename)
-                    // [TODO] after quorum, send message to nodes; move file from temp to shared
-                } 
-            }
+                    nodes_str = nodes_str[:len(nodes_str)-1]
 
-            // Have to check for cases when one of the nodes fail midway
+                    // nodes_str := strings.Join(fileMap[sdfsFilename].nodeIds, ",")
+                    reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
+                    fmt.Fprintf(conn, reply)
 
-        case "get":
-            sdfsFilename := split_message[1]
-            _, ok := fileMap[sdfsFilename]
-            var nodes_str = ""
+                    // // Should end the connection here
+                    // // [TODO] Add a goroutime to handle ACK from the requester
 
-            if ok {
-                // send back the list of nodes
-                // nodes_str := strings.Join(nodes, ",")
-                for _, node := range(fileMap[sdfsFilename].nodeIds) {
-                    nodes_str = nodes_str + strconv.Itoa(node) + ","
+                    // // reader := bufio.NewReader(conn)
+                    // ack, err := conn_reader.ReadString('\n')
+
+                    // fmt.Printf("MASTER ACK: %s\n", ack)
+
+                    // if err != nil {
+                    //     log.Printf("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
+                    // }
+                    // ack = ack[:len(ack)-1]
+
+                    // if ack == "quorum" {
+                    //     fileMap[sdfsFilename].timestamp = time.Now().Unix()
+                    //     fmt.Printf("Received quorum for %s\n", sdfsFilename)
+                    //     // [TODO] after quorum, send message to nodes; move file from temp to shared
+                    // }  
+
+                } else {
+                    var emptylist = []int{}
+                    nodes := getRandomNodes(emptylist, 3)
+                    nodes = append(nodes, sender)
+
+                    var nodes_str = ""
+                    for _, node := range(nodes) {
+                        nodes_str = nodes_str + strconv.Itoa(node) + ","
+                    }
+                    nodes_str = nodes_str[:len(nodes_str)-1]
+                    fmt.Printf("master nodes str: %s\n", nodes_str)
+                    // nodes_str := strings.Join(nodes, ",")
+                    reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
+                    fmt.Printf("%s\n", reply)
+                    fmt.Fprintf(conn, reply)
+
+                    // Should end the connection here********************************************
+
+                    // reader := bufio.NewReader(conn)
+                    // ack, err := conn_reader.ReadString('\n')
+                    // if err != nil {
+                    //     log.Printf("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
+                    // }
+                    // ack = ack[:len(ack)-1]
+
+                    // if ack == "quorum" {
+                    //     var newfiledata fileData
+                    //     newfiledata.timestamp = time.Now().Unix()
+                    //     newfiledata.nodeIds = nodes
+                    //     fileMap[sdfsFilename] = &newfiledata
+
+                    //     for _, node := range(nodes) {
+                    //         nodedata, ok := nodeMap[node]
+                    //         if ok {
+                    //             nodedata.fileNames = append(nodedata.fileNames, sdfsFilename)
+                    //         } else {
+                    //             var newnodedata nodeData
+                    //             newnodedata.fileNames = []string {sdfsFilename}
+                    //             nodeMap[node] = &newnodedata
+                    //         }
+                    //     }
+                    //     fmt.Printf("Received quorum for %s\n", sdfsFilename)
+                        // [TODO] after quorum, send message to nodes; move file from temp to shared
+                    } 
+                
+
+                // Have to check for cases when one of the nodes fail midway
+
+            case "get":
+                sdfsFilename := split_message[1]
+                _, ok := fileMap[sdfsFilename]
+                var nodes_str = ""
+
+                if ok {
+                    // send back the list of nodes
+                    // nodes_str := strings.Join(nodes, ",")
+                    for _, node := range(fileMap[sdfsFilename].nodeIds) {
+                        nodes_str = nodes_str + strconv.Itoa(node) + ","
+                    }
+                    nodes_str = nodes_str[:len(nodes_str)-1]                
                 }
-                nodes_str = nodes_str[:len(nodes_str)-1]                
-            }
-            reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
-            fmt.Fprintf(conn, reply)
+                reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
+                fmt.Fprintf(conn, reply)
 
-        case "delete":
-            sdfsFilename := split_message[1]
-            _, ok := fileMap[sdfsFilename]
-            if ok {
-                // [TODO] Delete that file from the fileMap
-                for _, nodeId := range(fileMap[sdfsFilename].nodeIds) {
-                    go deleteFile(nodeId, sdfsFilename)
+            case "delete":
+                sdfsFilename := split_message[1]
+                _, ok := fileMap[sdfsFilename]
+                if ok {
+                    // [TODO] Delete that file from the fileMap
+                    for _, nodeId := range(fileMap[sdfsFilename].nodeIds) {
+                        go deleteFile(nodeId, sdfsFilename)
 
-                } 
-                delete(fileMap, sdfsFilename)
-            }
-
-        case "ack": 
-            action = split_message[1]
-            if action == "put" {
-
-            } else if action == "replicate" {
-
-            }
-
-        case "givenode":
-            sender,err := strconv.Atoi(split_message[1])
-            excludenodeIds_str := strings.Split(split_reply[2], ",")
-            EnodeIds := []int{}
-            for _, node_str := range excludenodeIds_str {
-                node, err := strconv.Atoi(node_str)
-                if err != nil {
-                    panic(err)
-                    // break // Free up the user 
+                    } 
+                    delete(fileMap, sdfsFilename)
                 }
-                EnodeIds = append(EnodeIds, node)
+
+            case "ack": 
+                action := split_message[1]
+                srcNode, err := strconv.Atoi(split_message[2])
+                destNodes_str := split_message[3]
+                sdfsFilename := split_message[4]
+
+                if action == "put" {
+                    if conflictMap[sdfsFilename].id == srcNode {
+                        destNodes := string2List(destNodes_str)
+                        for _, node := range(destNodes) {
+                            go sendConfirmation(node, sdfsFilename, srcNode)
+                        }
+                        updateTimestamp := time.Now().Unix()
+                        var newfiledata fileData 
+                        newfiledata.timestamp = updateTimestamp
+                        newfiledata.nodeIds = destNodes
+
+                        fileMap[sdfsFilename] = &newfiledata
+
+                        for _, node := range(destNodes) {
+                            nodedata, ok := nodeMap[node]
+                            if ok {
+                                nodedata[sdfsFilename] = updateTimestamp
+                            } else {
+                                nodeMap[node] = make(map[string]int64)
+                                nodeMap[node][sdfsFilename] = updateTimestamp
+                            }
+                        }
+                    } else {
+                        // ignore
+                    }
+
+
+                } else if action == "replicate" {
+                    
+
+                }
+
+            case "replace":
+                // sender, err := strconv.Atoi(split_message[1])
+                sdfsFilename := split_message[1]
+                excludeList_str := split_message[2]
+
+                excludeList := string2List(excludeList_str)
+
+                newNode := getRandomNodes(excludeList, 1)
+                message := fmt.Sprintf("%d\n",newNode)
+                fmt.Fprintf(conn, message) // Sent the new node to the put_requester
             }
-            newNode := getRandomNode(excludeList []int,1)
-            message = fmt.Sprintf("%d\n",newNode)
-            fmt.Fprintf(conn,message) // Sent the new node to the put_requester
-
-
-
-
-
-
-
-        }
-        conn.Close()
+            conn.Close()
     }
+    }
+}
+
+func sendConfirmation(subject int, sdfsFilename string, sender int) {
+    timeout := 20 * time.Second
+
+    ip := memberMap[subject].ip
+    port := fileTransferPort
+
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
+    if err != nil {
+        log.Printf("[ME %d] Unable to dial a connection to %d (to send confirmation for %s)\n", myVid, subject, sdfsFilename)
+        return
+    }
+    defer conn.Close()
+
+    message := fmt.Sprintf("movefile %s %d", sdfsFilename, sender)
+    padded_message := fillString(message, 64)
+    conn.Write([]byte(padded_message))
+
+    fmt.Printf("Sent a movefile %s request to %d\n", sdfsFilename, subject)
+}
+
+func string2List(given_str string) ([]int) {
+    list_str := strings.Split(given_str, ",")
+    nodes := []int{}
+    for _, e := range list_str {
+        node, err := strconv.Atoi(e)
+        if err != nil {
+            log.Printf("[ME %d] Cannot convert %s to an int\n", myVid, e)
+        }
+        nodes = append(nodes, node)
+    }
+    return nodes
 }
 
 func deleteFile(nodeId int, sdfsFilename string) {
@@ -582,7 +639,7 @@ func copyFile(srcFile string, destFile string) (bool){
 
 var ackTimeOut = 5
 
-func replicateFile(nodeId int, sdfsFilename string) {
+func replicateFile(nodeId int, sdfsFilename string) (bool) {
     timeout := 20 * time.Second
 
     ip := memberMap[nodeId].ip
@@ -591,7 +648,7 @@ func replicateFile(nodeId int, sdfsFilename string) {
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, nodeId, sdfsFilename)
-        return
+        return false
     }
     defer conn.Close()
 
@@ -604,13 +661,13 @@ func replicateFile(nodeId int, sdfsFilename string) {
     f, err := os.Open(shared_dir + sdfsFilename)
     if err != nil {
         log.Printf("[ME %d] Cannot open shared file %s\n", sdfsFilename)
-        return
+        return false
     }
 
     fileInfo, err := f.Stat()
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, sdfsFilename)
-        return
+        return false
     }
 
     fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
@@ -626,20 +683,20 @@ func replicateFile(nodeId int, sdfsFilename string) {
                 break
             } else {
                 log.Printf("[ME %d] Error while reading file %s\n", myVid, sdfsFilename)
-                return
+                return false
             }
         }
 
         _, err = conn.Write(sendBuffer)
         if err != nil{
             log.Printf("[ME %d] Could not send %s file bytes to %d\n", myVid, sdfsFilename, nodeId)
-            return
+            return false
         }
 
     }
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
 
-    conn.SetReadDeadline(time.Now().Add(ackTimeOut * time.Second))
+    conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))
 
     reader := bufio.NewReader(conn)
     ack, err := reader.ReadString('\n')
@@ -656,8 +713,8 @@ func replicateFile(nodeId int, sdfsFilename string) {
     }
 }
 
-func sendAcktoMaster(action string, srcNode int, destNode int, fileName string) {
-    ack_message := fmt.Sprintf("ack %s %d %d %s", action, srcNode, destNode, fileName)
+func sendAcktoMaster(action string, srcNode int, destNodes string, fileName string) {
+    ack_message := fmt.Sprintf("ack %s %d %s %s", action, srcNode, destNodes, fileName)
 
     timeout := time.Duration(20) * time.Second
 
@@ -672,12 +729,13 @@ func sendAcktoMaster(action string, srcNode int, destNode int, fileName string) 
     return
 }
 
-func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup) {
+func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int, doneList []int) {
 
     if nodeId == myVid {
         success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename + "." + strconv.Itoa(nodeId))
 
         if success {
+            doneList = append(doneList, nodeId)
             wg.Done()
         }
         return
@@ -733,55 +791,60 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         if err != nil{
             log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, localFilename, nodeId)
             // request another node to write this file from master
-            newnode = replaceNode(nodeId, sdfsFilename)
+            newnode := replaceNode(nodeId, sdfsFilename, allNodes)
+            go sendFile(newnode, localFilename, sdfsFilename, wg,allNodes,doneList)
             return
         }
 
     }
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
 
-    conn.SetReadDeadline(time.Now().Add(ackTimeOut * time.Second))
+    conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))
 
     reader := bufio.NewReader(conn)
     ack, err := reader.ReadString('\n')
     if err != nil {
         log.Printf("[ME %d] Error while reading ACK from %d for %s file\n", myVid, nodeId, sdfsFilename)
-        newnode = replaceNode(nodeId, sdfsFilename)
-        go sendFile(newnode, localFilename, sdfsFilename, &wg)
+        newnode := replaceNode(nodeId, sdfsFilename, allNodes)
+        allNodes = append(allNodes, newnode)
+        go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes, doneList)
         return
     }
     ack = ack[:len(ack)-1]
 
     if ack == "done" {
         fmt.Printf("Received an ack from node %d\n", nodeId)
+        doneList = append(doneList, nodeId)
         wg.Done()
     }  
 }
 
-func replaceNode(oldnode int, sdfsFilename string) {
+func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
     timeout := 20 * time.Second
 
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        return
+        return -1
     }
     defer conn.Close()
 
-    master_command := fmt.Sprintf("replace %s %s", oldnode, sdfsFilename)
+    master_command := fmt.Sprintf("replace %s %s %s", oldnode, sdfsFilename, list2String(excludeList))
     fmt.Fprintf(conn, master_command)
 
     reader := bufio.NewReader(conn)
     reply, err := reader.ReadString('\n')
     if err != nil {
-        
+        // Handle
     }
+    newNode,_ := strconv.Atoi(reply[:len(reply)-1])
+    return newNode
 
 }
 
 var fileTimeMap = make(map[string]int64)
 
-func executeCommand(command string) {
+func executeCommand(command string, userReader *bufio.Reader) {
 
     timeout := 20 * time.Second
 
@@ -876,13 +939,17 @@ func executeCommand(command string) {
         fmt.Printf("%s\n", reply)
         split_reply := strings.Split(reply, " ")
         // Check if it is putreply
-        if split_reply[0] == "conflict"{
+        if split_reply[0] == "conflict" {
             // Wait for user input
-            user_reader := bufio.NewReader(os.Stdin)
-            confResp, _ := user_reader.ReadString('\n')
+            // user_reader := bufio.NewReader(os.Stdin)
+            confResp, _ := userReader.ReadString('\n')
             _,err = fmt.Fprintf(conn,confResp)
             if err != nil{
                 // Issue with the master
+            }
+
+            if confResp != "yes" {
+                break
             }
             // read the new input from the master
             reply, err := reader.ReadString('\n')
@@ -892,8 +959,11 @@ func executeCommand(command string) {
             }
             reply = reply[:len(reply)-1]
             fmt.Printf("%s\n", reply)
-            split_reply := strings.Split(reply, " ")
+            split_reply = strings.Split(reply, " ")
         }
+
+        conn.Close()
+
         nodeIds_str := strings.Split(split_reply[2], ",")
         nodeIds := []int{}
         for _, node_str := range nodeIds_str {
@@ -910,15 +980,23 @@ func executeCommand(command string) {
         var wg sync.WaitGroup
         wg.Add(4)
 
+        doneList := make([]int, 0, 4)
+
         for _, node := range nodeIds {
-            go sendFile(node, localFilename, sdfsFilename, &wg)
+            go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds, doneList)
         }
         fmt.Printf("Waiting for quorum\n")
         wg.Wait()
 
+        doneList_str := list2String(doneList)
+
+        sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+
+
         // conn is already closed , use ACK to send to the master
-        fmt.Fprintf(conn, "quorum\n")
-        fmt.Printf("sent quorum to master\n")
+        // fmt.Fprintf(conn, "quorum\n")
+        // fmt.Printf("sent quorum to master\n")
+
     }
 }
 
@@ -940,7 +1018,7 @@ func scanCommands() {
                     break
                 }
             }
-            executeCommand(command)
+            executeCommand(command, reader)
         }
     }
 }
@@ -970,24 +1048,24 @@ func scanCommands() {
 
 // }
 
-func getRandomNodes(excludeList []int, count int) int {
-    success = true
+func getRandomNodes(excludeList []int, count int) ([]int) {
+    success := true
 
     result := []int{}
 
     for {
-        randomnode = rand.Intn(len(memberMap))
+        randomnode := rand.Intn(len(memberMap))
         if !memberMap[randomnode].alive {
             continue
         }
-        for _, excludenode := excludeList {
+        for _, excludenode := range(excludeList) {
             if randomnode == excludenode {
                 success = false
                 break
             }
         }
         if success {
-            result = result.append(randomnode)
+            result = append(result, randomnode)
             if len(result) == count {
                 return result
             }
@@ -1008,7 +1086,7 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
     }
     defer conn.Close()
 
-    message := fmt.Sprintf("replicate %s %d", fileName, destNode)
+    message := fmt.Sprintf("replicatefile %s %d", fileName, destNode)
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
 
@@ -1016,12 +1094,11 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
     return
 }
 
-
 func replicateFiles (subjectNode int) {
     // This function tries to make a replica of all files stored by subjectNode.
 
-    for i, fileName := range nodeMap[subjectNode].fileNames {
 
+    for fileName, _ := range nodeMap[subjectNode] {
         // Remove from the fileMap node list
         filenodes := fileMap[fileName].nodeIds
         idx := -1
@@ -1036,35 +1113,23 @@ func replicateFiles (subjectNode int) {
 
         newnode = getRandomNodes(filenodes, 1)
 
-        initiateReplica(fileName, filenodes[0], newnode)
-
-
-
-                
-
-        // Find a new node to send the file to
-        // newNodeId := findRandomNode(nodes) // given the list find something outside it
-        // // select the first node or any random node to send the file to this node
-        // act_newNodeId = putFileShared(nodes[0], newNodeId, fileName) // What of the nodes[0] fail too, do that later
-        // nodes = append(nodes,act_newNodeId)
-        // var newfiledata fileData
-        // newfiledata.timestamp = fileName[fileMap].timestamp
-        // newfiledata.nodeIds = nodes
-        // fileMap[fileName] = &newfiledata
-
+        go initiateReplica(fileName, filenodes[0], newnode)
     }
 
 }
 
 // this function needs work more 
-func ReplicateFile() {
+func HandleFileReplication () {
     for{
-        if myip == masterIP{
+        if myip == masterIP {
             // Run the code
 
-            for _,fileName := range(fileMap){
-                if len(fileMap[fileMap].nodeIds) < 4{
-                    // Copy files
+            for fileName, filenodes := range(fileMap){
+                if len(filenodes) < 4 { 
+                    newnodes = getRandomNodes(filenodes, 4 - len(filenodes))
+                    for _, newnode := range(newnodes) {
+                        go initiateReplica(fileName, filenodes[0], newnode)
+                    }
                 }
             }
 
