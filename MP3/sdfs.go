@@ -12,6 +12,7 @@ import (
     "fmt"
     "time"
     "io/ioutil"
+    "math/rand"
 )
 
 var head = 0
@@ -202,7 +203,15 @@ func listenFileTransferPort() {
                     break
                 }
 
-                log.Printf("[ME %d] Successfully deleted the file %s\n", myVid, sdfsFilename)   
+                log.Printf("[ME %d] Successfully deleted the file %s\n", myVid, sdfsFilename) 
+
+            case "replicatefile":
+                sdfsFilename := split_message[1]
+                destNode, _ := strconv.Atoi(split_message[2])
+
+                go sendFile()
+
+
 
             // case "distributefile":
             //     destId := strconv.Atoi(split_message[1])
@@ -378,9 +387,15 @@ func listenMasterRequests() {
 
                 } 
                 delete(fileMap, sdfsFilename)
-            } 
+            }
 
-            // do you want to handle else?
+        case "ack": 
+            action = split_message[1]
+            if action == "put" {
+
+            } else if action == "replicate" {
+
+            }
         }
         conn.Close()
     }
@@ -479,10 +494,107 @@ func copyFile(srcFile string, destFile string) (bool){
     return true
 }
 
+var ackTimeOut = 5
+
+func replicateFile(nodeId int, sdfsFilename string) {
+    timeout := time.Duration(20) * time.Second
+
+    ip := memberMap[nodeId].ip
+    port := fileTransferPort
+
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
+    if err != nil {
+        log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, nodeId, sdfsFilename)
+        return
+    }
+    defer conn.Close()
+
+    message := fmt.Sprintf("putfile %s", sdfsFilename)
+    padded_message := fillString(message, 64)
+    fmt.Printf("%s\n", padded_message)
+
+    conn.Write([]byte(padded_message))
+
+    // fmt.Fprintf(conn, message)
+    fmt.Printf("Sent a putfile request to %d\n", nodeId)
+
+    f, err := os.Open(shared_dir + sdfsFilename)
+    if err != nil {
+        log.Printf("[ME %d] Cannot open shared file %s\n", sdfsFilename)
+        return
+    }
+
+    fileInfo, err := f.Stat()
+    if err != nil {
+        log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, sdfsFilename)
+        return
+    }
+
+    fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
+    log.Printf("[ME %d] Sending file %s of size %s to %d", myVid, sdfsFilename, fileSize, nodeId)
+
+    conn.Write([]byte(fileSize))
+
+    sendBuffer := make([]byte, BUFFERSIZE)
+
+    for {
+        _, err = f.Read(sendBuffer)
+        if err != nil {
+            if err == io.EOF {
+                break
+            } else {
+                log.Printf("[ME %d] Error while reading file %s", myVid, sdfsFilename)
+                return
+            }
+        }
+
+        _, err = conn.Write(sendBuffer)
+        if err != nil{
+            log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, sdfsFilename, nodeId)
+            return
+        }
+
+    }
+    log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
+
+    conn.SetReadDeadline(time.Now().Add(ackTimeOut * time.Second))
+
+    reader := bufio.NewReader(conn)
+    ack, err := reader.ReadString('\n')
+    if err != nil {
+        log.Println("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
+        return
+    }
+    ack = ack[:len(ack)-1]
+
+    if ack == "DONE" {
+        return true
+    } else {
+        return false
+    }
+
+}
+
+func sendAcktoMaster(action string, srcNode int, destNode int, fileName string) {
+    ack_message := fmt.Sprintf("ack %s %d %d %s", action, srcNode, destNode, fileName)
+
+    timeout := time.Duration(20) * time.Second
+
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    if err != nil {
+        log.Println("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        return
+    }
+    defer conn.Close()
+
+    fmt.Fprintf(conn, ack_message)
+    return
+}
+
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup) {
-    fmt.Printf("Inside send file\n")
+
     if nodeId == myVid {
-        success := copyFile(local_dir + localFilename, shared_dir + sdfsFilename)
+        success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename)
 
         if success {
             wg.Done()
@@ -732,22 +844,72 @@ func scanCommands() {
 
 // }
 
+func getRandomNode(excludeList []int) int {
+    success = true
 
-func HandleFileDistribution(nodeId int){
-    // Look for the list of the files in the node
-    for i,fileName := range nodeMap[nodeId].fileNames{
-        // Search for the nodes in which the files are there
-        nodes := fileMap[fileName].nodeIds
-        // delete the current node from the list
-        idx := -1
-        for i,node := range nodes{
-            if node == nodeId{
-                idx = i
-                nodes[idx] = nodes[len(nodes)-1]
-                nodes = nodes[:len(nodes)-1] // delete the last element
+    for {
+        randomnode = rand.Intn(len(memberMap))
+        if !memberMap[randomnode].alive {
+            continue
+        }
+        for _, excludenode := excludeList {
+            if randomnode == excludenode {
+                success = false
                 break
             }
         }
+        if success {
+            return randomnode
+        }
+    }
+}
+
+func initiateReplica(fileName string, srcNode int, destNode int) {
+    timeout := time.Duration(20) * time.Second
+
+    ip := memberMap[srcNode].ip
+    port := fileTransferPort
+
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
+    if err != nil {
+        log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, srcNode, fileName)
+        return
+    }
+    defer conn.Close()
+
+    message := fmt.Sprintf("replicate %s %d", fileName, destNode)
+    padded_message := fillString(message, 64)
+    conn.Write([]byte(padded_message))
+
+    log.Printf("[ME %d] Sent replicate %s file message from %d (at %d)\n", myVid, fileName, srcNode, destNode)
+    return
+}
+
+
+func replicateFiles (subjectNode int) {
+    // This function tries to make a replica of all files stored by subjectNode.
+
+    for i, fileName := range nodeMap[subjectNode].fileNames {
+
+        // Remove from the fileMap node list
+        filenodes := fileMap[fileName].nodeIds
+        idx := -1
+        for i, node := range filenodes {
+            if node == subjectNode {
+                idx = i
+                break
+            }
+        }
+        filenodes[idx] = filenodes[len(filenodes)-1]
+        filenodes = filenodes[:len(nodes)-1]
+
+        newnode = getRandomNode(filenodes)
+
+        initiateReplica(fileName, filenodes[0], newnode)
+
+
+
+                
 
         // Find a new node to send the file to
         // newNodeId := findRandomNode(nodes) // given the list find something outside it
@@ -767,6 +929,12 @@ func ReplicateFile() {
     for{
         if myip == masterIP{
             // Run the code
+
+            for _,fileName := range(fileMap){
+                if len(fileMap[fileMap].nodeIds) < 4{
+                    // Copy files
+                }
+            }
 
         }
 
