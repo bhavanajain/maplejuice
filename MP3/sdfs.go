@@ -389,7 +389,10 @@ func deleteFile(nodeId int, sdfsFilename string) {
     defer conn.Close()
 
     message := fmt.Sprintf("deletefile %s", sdfsFilename)
-    fmt.Fprintf(conn, message)
+    padded_message := fillString(message, 64)
+    conn.Write([]byte(padded_message))
+    
+    // fmt.Fprintf(conn, message)
 
     log.Printf("[ME %d] Sent deletefile %s to %d\n", myVid, sdfsFilename, nodeId)
 }
@@ -583,12 +586,12 @@ func executeCommand(command string) {
         reply = reply[:len(reply)-1]
         split_reply := strings.Split(reply, " ")
 
-        log.Printf("%s: ", split_reply[1])
+        fmt.Printf("%s: ", split_reply[1])
         nodeIds := strings.Split(split_reply[2], ",")
         for _, nodeId := range nodeIds {
-            log.Printf("%s ", nodeId)
+            fmt.Printf("%s ", nodeId)
         } 
-        log.Printf("\n")
+        fmt.Printf("\n")
 
     case "get":
         sdfsFilename := split_command[1]
