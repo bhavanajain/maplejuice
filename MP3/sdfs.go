@@ -605,7 +605,7 @@ func executeCommand(command string) {
         split_reply := strings.Split(reply, " ")
         nodeIds_str := strings.Split(split_reply[2], ",")
 
-        fmt.Printf("nodestr: %s", nodeIds_str)
+        fmt.Printf("nodestr: %s %d\n", nodeIds_str, len(nodeIds_str))
 
         if len(nodeIds_str) == 0 {
             fmt.Printf("invalid file name\n")
