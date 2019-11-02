@@ -12,7 +12,7 @@ import (
     "fmt"
     "time"
     "io/ioutil"
-    // "math/rand"
+    "math/rand"
 )
 
 var head = 0
