@@ -478,6 +478,7 @@ func listenMasterRequests() {
                 sdfsFilename := split_message[4]
 
                 if action == "put" {
+
                     if conflictMap[sdfsFilename].id == srcNode {
                         destNodes := string2List(destNodes_str)
                         for _, node := range(destNodes) {
@@ -513,7 +514,7 @@ func listenMasterRequests() {
 
                 } else if action == "replicate" {
 
-
+                    //TOFU
                 }
 
             case "replace":
@@ -736,7 +737,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
 }
 
 func sendAcktoMaster(action string, srcNode int, destNodes string, fileName string) {
-    ack_message := fmt.Sprintf("ack %s %d %s %s", action, srcNode, destNodes, fileName)
+    ack_message := fmt.Sprintf("ack %s %d %s %s\n", action, srcNode, destNodes, fileName)
 
     timeout := time.Duration(20) * time.Second
 
