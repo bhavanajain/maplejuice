@@ -311,7 +311,14 @@ func listenMasterRequests() {
                     }
                     confResp := confResp[:len(confResp)-1]
                     if confResp == "yes"{
-                        
+                        // Update the conflictMap
+                        var newConflict conflictData
+                        newConflict.id = sender
+                        newConflict.timestamp = time.Now().Unix()
+                        conflictMap[sdsFileName] = &newConflict
+                    }else{
+                        // don't want to proceed ignore this request
+                        break
                     }
 
 
@@ -379,7 +386,7 @@ func listenMasterRequests() {
                 fmt.Printf("%s\n", reply)
                 fmt.Fprintf(conn, reply)
 
-                // Should end the connection here
+                // Should end the connection here********************************************
 
                 // reader := bufio.NewReader(conn)
                 ack, err := conn_reader.ReadString('\n')
@@ -446,6 +453,29 @@ func listenMasterRequests() {
             } else if action == "replicate" {
 
             }
+
+        case "givenode":
+            sender,err := strconv.Atoi(split_message[1])
+            excludenodeIds_str := strings.Split(split_reply[2], ",")
+            EnodeIds := []int{}
+            for _, node_str := range excludenodeIds_str {
+                node, err := strconv.Atoi(node_str)
+                if err != nil {
+                    panic(err)
+                    // break // Free up the user 
+                }
+                EnodeIds = append(EnodeIds, node)
+            }
+            newNode := getRandomNode(excludeList []int,1)
+            message = fmt.Sprintf("%d\n",newNode)
+            fmt.Fprintf(conn,message) // Sent the new node to the put_requester
+
+
+
+
+
+
+
         }
         conn.Close()
     }
@@ -813,22 +843,43 @@ func executeCommand(command string) {
 
         master_command := fmt.Sprintf("put %s %d\n", sdfsFilename,myVid)
         fmt.Printf("%s\n", master_command)
-        fmt.Fprintf(conn, master_command)
+        fmt.Fprintf(conn, master_command) // Sent the request to master
 
-        reader := bufio.NewReader(conn)
+        reader := bufio.NewReader(conn) // Master response
         reply, err := reader.ReadString('\n')
         if err != nil{
-            log.Printf("")
+            log.Printf(" Can't move forward with put reqest")
+            break // free up the user request
         }
         reply = reply[:len(reply)-1]
         fmt.Printf("%s\n", reply)
         split_reply := strings.Split(reply, " ")
+        // Check if it is putreply
+        if split_reply[0] == "conflict"{
+            // Wait for user input
+            user_reader := bufio.NewReader(os.Stdin)
+            confResp, _ := user_reader.ReadString('\n')
+            _,err = fmt.Fprintf(conn,confResp)
+            if err != nil{
+                // Issue with the master
+            }
+            // read the new input from the master
+            reply, err := reader.ReadString('\n')
+            if err != nil{
+                log.Printf(" Can't move forward with put reqest")
+                break // Free up the user command
+            }
+            reply = reply[:len(reply)-1]
+            fmt.Printf("%s\n", reply)
+            split_reply := strings.Split(reply, " ")
+        }
         nodeIds_str := strings.Split(split_reply[2], ",")
         nodeIds := []int{}
         for _, node_str := range nodeIds_str {
             node, err := strconv.Atoi(node_str)
             if err != nil {
                 panic(err)
+                // break // Free up the user 
             }
             nodeIds = append(nodeIds, node)
         }
@@ -843,6 +894,8 @@ func executeCommand(command string) {
         }
         fmt.Printf("Waiting for quorum\n")
         wg.Wait()
+
+        // conn is already closed , use ACK to send to the master
         fmt.Fprintf(conn, "quorum\n")
         fmt.Printf("sent quorum to master\n")
     }
@@ -977,6 +1030,7 @@ func replicateFiles (subjectNode int) {
 
 }
 
+// this function needs work more 
 func ReplicateFile() {
     for{
         if myip == masterIP{
