@@ -1083,18 +1083,25 @@ func scanCommands() {
 
 func getRandomNodes(excludeList []int, count int) ([]int) {
     fmt.Printf("Exclude list: %v\n", excludeList)
-    success := true
+    var success = true
 
-    result := []int{}
+    result := make(map[int]bool)
 
     for {
+        success = true
         randomnode := rand.Intn(len(memberMap))
         fmt.Printf("%d\n", randomnode)
+
+        _, ok := result[randomnode]
+        if ok {
+            continue
+        }
 
         if !memberMap[randomnode].alive {
             fmt.Printf("%d not alive\n", randomnode)
             continue
         }
+
         for _, excludenode := range(excludeList) {
             if randomnode == excludenode {
                 success = false
@@ -1103,10 +1110,15 @@ func getRandomNodes(excludeList []int, count int) ([]int) {
             }
         }
         if success {
+            result[randomnode] = true
             result = append(result, randomnode)
             fmt.Printf("result: %v\n", result)
             if len(result) == count {
-                return result
+                keys := make([]int, 0, len(result))
+                for k := range mymap {
+                    keys = append(keys, k)
+                }
+                return keys
             }
         }
     }
