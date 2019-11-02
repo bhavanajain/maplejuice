@@ -29,6 +29,7 @@ func distributedFileSystem() {
     // }
     
     go listenMasterRequests()
+    
     go listenFileTransferPort()
     go scanCommands()
 
@@ -64,7 +65,7 @@ func main() {
 func membership(wg *sync.WaitGroup) {
 	
 	myIP = getmyIP()
-	log.Printf("%s", myIP)
+	fmt.Printf("%s", myIP)
 
 	if myIP == introducer {
 		myVid = 0
@@ -91,6 +92,7 @@ func membership(wg *sync.WaitGroup) {
 		// this garbage collection can occur concurrent to the addToDead list
 
 	} else{
+		fmt.Printf("Send join request to introducer\n")
 		sendJoinRequest()
 	}
 	go updateFingerTable()
