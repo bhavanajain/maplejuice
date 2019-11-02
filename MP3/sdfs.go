@@ -307,8 +307,8 @@ func listenMasterRequests() {
                 fmt.Printf("%s\n", reply)
                 fmt.Fprintf(conn, reply)
 
-                reader := bufio.NewReader(conn)
-                ack, err := reader.ReadString('\n')
+                // reader := bufio.NewReader(conn)
+                ack, err := conn_reader.ReadString('\n')
                 if err != nil {
                     log.Println("[Master] Error while reading ACK from %d for %s file", myVid, conn.RemoteAddr().String(), sdfsFilename)
                 }
@@ -330,6 +330,7 @@ func listenMasterRequests() {
                             nodeMap[node] = &newnodedata
                         }
                     }
+                    fmt.Printf("Received quorum for %s\n", sdfsFilename)
                     // [TODO] after quorum, send message to nodes; move file from temp to shared
                 } 
             }
