@@ -54,6 +54,11 @@ func getRandomNodes() []int {
     return nodes
 }
 
+func findRandomNode() int{ // temporary function
+    node := 5
+    return node
+}
+
 func listenFileTransferPort() {
     // This port serves file transfers
     // message type: getfile, putfile, deletefile
@@ -196,6 +201,14 @@ func listenFileTransferPort() {
                 }
 
                 log.Printf("[ME %d] Successfully deleted the file %s\n", myVid, sdfsFilename)   
+
+            case "distributefile":
+                destId := strconv.Atoi(split_message[1])
+                sdfsFilename := split_message[2]
+
+
+
+
         }
         conn.Close()
     }
@@ -690,6 +703,62 @@ func scanCommands() {
             executeCommand(command)
         }
     }
+}
+
+
+func putFileShared(sourceId int, destId int, fileName string) int{ // the final node to which the data is sent
+    // Master is doing this
+    timeout := time.Duration(20) * time.Second
+    ip := memberMap[nodeId].ip
+    port := fileTransferPort
+
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
+    if err != nil {
+        log.Println("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, ip, port)
+        return
+    }
+    defer conn.Close()
+
+    // Send this command to distribute the file to other nodes
+    message := fmt.Sprintf("distributefile %d %s\n",destId,fileName)
+    fmt.Fprintf(conn,message)
+    // Read the message back from the source_ID
+    return destId
+
+   
+    
+
+}
+
+
+func HandleFileDistribution(nodeId int){
+    // Look for the list of the files in the node
+    for i,fileName := range nodeMap[nodeId].fileNames{
+        // Search for the nodes in which the files are there
+        nodes := fileMap[fileName].nodeIds
+        // delete the current node from the list
+        idx := -1
+        for i,node := range nodes{
+            if node == nodeId{
+                idx = i
+                nodes[idx] = nodes[len(nodes)-1]
+                nodes = nodes[:len(nodes)-1] // delete the last element
+                break
+            }
+        }
+
+        // Find a new node to send the file to
+        newNodeId := findRandomNode(nodes) // given the list find something outside it
+        // select the first node or any random node to send the file to this node
+        act_newNodeId = putFileShared(nodes[0], newNodeId, fileName) // What of the nodes[0] fail too, do that later
+        nodes = append(nodes,act_newNodeId)
+        var newfiledata fileData
+        newfiledata.timestamp = fileName[fileMap].timestamp
+        newfiledata.nodeIds = nodes
+        fileMap[fileName] = &newfiledata
+
+    }
+
 }
 
 
