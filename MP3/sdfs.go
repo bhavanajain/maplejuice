@@ -370,7 +370,7 @@ func listenMasterRequests() {
                     // nodes_str := strings.Join(fileMap[sdfsFilename].nodeIds, ",")
                     reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
                     fmt.Printf("Sending putreply: %s", reply)
-                    
+
                     fmt.Fprintf(conn, reply)
 
                     // // Should end the connection here
@@ -978,6 +978,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             if err != nil{
                 // Issue with the master
             }
+            confResp = confResp[:len(confResp)-1]
 
             if confResp != "yes" {
                 break
