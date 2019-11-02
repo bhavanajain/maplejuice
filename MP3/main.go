@@ -20,15 +20,19 @@ func distributedFileSystem() {
     os.RemoveAll(temp_dir)
     os.MkdirAll(temp_dir, 0777)
 
-    myIP := getmyIP()
-    if myIP == masterIP {
-        go listenMasterRequests()
-    } else {
-        go listenFileTransferPort()
-        go scanCommands()
-    }
+    // myIP := getmyIP()
+    // if myIP == masterIP {
+    //     go listenMasterRequests()
+    // } else {
+    //     go listenFileTransferPort()
+    //     go scanCommands()
+    // }
+    
+    go listenMasterRequests()
+    go listenFileTransferPort()
+    go scanCommands()
 
-    go ReplicateFile()
+    go HandleFileReplication()
 
 }
 

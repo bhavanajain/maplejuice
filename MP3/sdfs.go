@@ -243,7 +243,7 @@ func getmyIP() (string) {
 }
 
 var fileMap = make(map[string]*fileData)
-var nodeMap = map[int]map[string]int64
+var nodeMap = map[int]map[string]int64{}
 var conflictMap = make(map[string]*conflictData)
 
 // var filePutTimeMap = make(map[string]int64)
@@ -460,6 +460,10 @@ func listenMasterRequests() {
             case "ack": 
                 action := split_message[1]
                 srcNode, err := strconv.Atoi(split_message[2])
+                if err != nil {
+                    log.Printf("[ME %d] Cannot convert %s to int\n", myVid, split_message[2])
+                    break
+                }
                 destNodes_str := split_message[3]
                 sdfsFilename := split_message[4]
 
@@ -473,17 +477,24 @@ func listenMasterRequests() {
                         var newfiledata fileData 
                         newfiledata.timestamp = updateTimestamp
                         newfiledata.nodeIds = destNodes
-
                         fileMap[sdfsFilename] = &newfiledata
 
                         for _, node := range(destNodes) {
-                            nodedata, ok := nodeMap[node]
+                            _, ok := nodeMap[node]
                             if ok {
-                                nodedata[sdfsFilename] = updateTimestamp
+                                nodeMap[node][sdfsFilename] = updateTimestamp
                             } else {
                                 nodeMap[node] = make(map[string]int64)
                                 nodeMap[node][sdfsFilename] = updateTimestamp
                             }
+
+                            // nodedata, ok := nodeMap[node]
+                            // if ok {
+                            //     nodedata[sdfsFilename] = updateTimestamp
+                            // } else {
+                            //     nodeMap[node] = make(map[string]int64)
+                            //     nodeMap[node][sdfsFilename] = updateTimestamp
+                            // }
                         }
                     } else {
                         // ignore
@@ -491,13 +502,14 @@ func listenMasterRequests() {
 
 
                 } else if action == "replicate" {
-                    
+
 
                 }
 
             case "replace":
                 // sender, err := strconv.Atoi(split_message[1])
                 sdfsFilename := split_message[1]
+                fmt.Printf("%s\n", sdfsFilename)
                 excludeList_str := split_message[2]
 
                 excludeList := string2List(excludeList_str)
@@ -1109,11 +1121,11 @@ func replicateFiles (subjectNode int) {
             }
         }
         filenodes[idx] = filenodes[len(filenodes)-1]
-        filenodes = filenodes[:len(nodes)-1]
+        filenodes = filenodes[:len(filenodes)-1]
 
-        newnode = getRandomNodes(filenodes, 1)
+        newnode := getRandomNodes(filenodes, 1)
 
-        go initiateReplica(fileName, filenodes[0], newnode)
+        go initiateReplica(fileName, filenodes[0], newnode[0])
     }
 
 }
@@ -1121,12 +1133,13 @@ func replicateFiles (subjectNode int) {
 // this function needs work more 
 func HandleFileReplication () {
     for{
-        if myip == masterIP {
+        if myIP == masterIP {
             // Run the code
 
-            for fileName, filenodes := range(fileMap){
+            for fileName, _ := range(fileMap){
+                filenodes := fileMap[fileName].nodeIds
                 if len(filenodes) < 4 { 
-                    newnodes = getRandomNodes(filenodes, 4 - len(filenodes))
+                    newnodes := getRandomNodes(filenodes, 4 - len(filenodes))
                     for _, newnode := range(newnodes) {
                         go initiateReplica(fileName, filenodes[0], newnode)
                     }
