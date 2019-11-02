@@ -30,6 +30,8 @@ var local_dir = "local/"
 var shared_dir = "shared/"
 var temp_dir = "temp/"
 
+var replicatePeriod = 10
+
 var masterIP = "172.22.152.106"
 var masterPort = 8084
 var fileTransferPort = 8085
@@ -202,6 +204,9 @@ func listenFileTransferPort() {
 
                 log.Printf("[ME %d] Successfully deleted the file %s\n", myVid, sdfsFilename)   
 
+            // case "distributefile":
+            //     destId := strconv.Atoi(split_message[1])
+            //     sdfsFilename := split_message[2]
 
 
 
@@ -703,7 +708,29 @@ func scanCommands() {
 }
 
 
+// func putFileShared(sourceId int, destId int, fileName string) int{ // the final node to which the data is sent
+//     // Master is doing this
+//     timeout := time.Duration(20) * time.Second
+//     ip := memberMap[nodeId].ip
+//     port := fileTransferPort
 
+//     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
+//     if err != nil {
+//         log.Println("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, ip, port)
+//         return
+//     }
+//     defer conn.Close()
+
+//     // Send this command to distribute the file to other nodes
+//     message := fmt.Sprintf("distributefile %d %s\n",destId,fileName)
+//     fmt.Fprintf(conn,message)
+//     // Read the message back from the source_ID
+//     return destId
+
+   
+    
+
+// }
 
 
 func HandleFileDistribution(nodeId int){
@@ -722,9 +749,29 @@ func HandleFileDistribution(nodeId int){
             }
         }
 
+        // Find a new node to send the file to
+        // newNodeId := findRandomNode(nodes) // given the list find something outside it
+        // // select the first node or any random node to send the file to this node
+        // act_newNodeId = putFileShared(nodes[0], newNodeId, fileName) // What of the nodes[0] fail too, do that later
+        // nodes = append(nodes,act_newNodeId)
+        // var newfiledata fileData
+        // newfiledata.timestamp = fileName[fileMap].timestamp
+        // newfiledata.nodeIds = nodes
+        // fileMap[fileName] = &newfiledata
 
     }
 
+}
+
+func ReplicateFile() {
+    for{
+        if myip == masterIP{
+            // Run the code
+
+        }
+
+        time.Sleep(time.Duration(replicatePeriod) * time.Second)
+    }
 }
 
 

@@ -27,6 +27,8 @@ func distributedFileSystem() {
         go scanCommands()
     }
 
+    go ReplicateFile()
+
 }
 
 func main() {
