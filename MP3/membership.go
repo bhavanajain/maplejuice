@@ -116,11 +116,11 @@ func receiveHeartbeat() {
 }
 
 func printMembershipList() {
-	log.Printf("My members: [")
+	fmt.Printf("My members: [")
 	for id := range(memberMap) {
-		log.Printf("%d ", id)
+		fmt.Printf("%d ", id)
 	}
-	log.Printf("]\n")
+	fmt.Printf("]\n")
 }
 
 func printChildren() {
@@ -129,6 +129,16 @@ func printChildren() {
 		child_list = append(child_list, child_vid)
 	}
 	log.Printf("[ME %d] Children = %v", myVid, child_list)
+	fmt.Printf("[ME %d] Children = %v", myVid, child_list)
+}
+
+func printMonitors() {
+	child_list := []int{}
+	for _, monNode := range monitors {
+		child_list = append(child_list, monNode.vid)
+	}
+	log.Printf("[ME %d] monitors = %v", myVid, child_list)
+	fmt.Printf("[ME %d] monitors = %v", myVid, child_list)
 }
 
 func checkChildren() {
@@ -603,6 +613,8 @@ func updateMonitors() {
 	if !reflect.DeepEqual(old_monitors, new_monitors) {
 		log.Printf("[ME %d] Updated monitors from %v to %v", myVid, old_monitors, new_monitors)
 	}
+
+	printMonitors()
 }
 
 func printGarbage() {
@@ -668,6 +680,7 @@ func listenOtherPort() (err error) {
 				LeaderHandler(subject,newPort)
 				disseminate(message)
 			}
+			// fmt.Printf("")
 
 		case "ADD":
 			var newnode MemberNode
@@ -680,6 +693,8 @@ func listenOtherPort() (err error) {
 
 			printChildren()
 
+			// fmt.Printf("updated children: %v\n", children)
+
 		case "REMOVE":
 			_, ok := children[subject]
 			if ok {
@@ -687,6 +702,8 @@ func listenOtherPort() (err error) {
 			}
 
 			printChildren()
+
+			// fmt.Printf("updated children: %v\n", children)
 
 		case "INTRODUCER":
 			if myVid == 0 {
@@ -737,6 +754,9 @@ func listenOtherPort() (err error) {
 			sendMessageAddr(newnode.ip, message, num_tries)
 
 			log.Printf("[ME %d] Set my %s to %d", myVid, strings.ToLower(message_type), subject)
+
+			// fmt.Printf("updated monitors: %v\n", monitors)
+			printMonitors()
 
 		case "YOU":
 			myVid = subject
@@ -794,6 +814,7 @@ func listenOtherPort() (err error) {
 
 			_, ok := eventTimeMap[subject]
 			if (!ok || eventTimeMap[subject] < origin_time) {
+				fmt.Printf("Processing CRASH for %d\n", subject)
 				eventTimeMap[subject] = origin_time
 				disseminate(message)
 
@@ -828,6 +849,7 @@ func listenOtherPort() (err error) {
 						go LeaderElection()
 					}
 				}
+				printMembershipList()
 			}			
 
 		case "SUSPECT":
