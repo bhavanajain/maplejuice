@@ -98,10 +98,15 @@ func listenFileTransferPort() {
 
             case "getfile":
                 sdfsFilename := split_message[1]
-                f, err := os.Open(shared_dir + sdfsFilename)
+                fmt.Printf("blah-%s-blah\n", shared_dir + sdfsFilename)
+                filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
+                fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
+                // f, err := os.Open(shared_dir + sdfsFilename)
+                f, err := os.Open(filePath)
+
                 if err != nil {
                     fmt.Println(err)
-                    log.Printf("[ME %d] Can't open file %s\n", myVid, sdfsFilename)
+                    log.Printf("[ME %d] Can't open file %s\n", myVid, shared_dir + sdfsFilename)
                     break
                 }
 
