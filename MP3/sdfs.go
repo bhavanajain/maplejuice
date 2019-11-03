@@ -100,13 +100,14 @@ func listenFileTransferPort() {
                 sdfsFilename := split_message[1]
                 f, err := os.Open(shared_dir + sdfsFilename)
                 if err != nil {
+                    fmt.Println(err)
                     log.Printf("[ME %d] Can't open file %s\n", myVid, sdfsFilename)
                     break
                 }
 
                 fileInfo, err := f.Stat()
                 if err != nil {
-                    log.Printf("[ME %D] Can't access file stats %s\n", myVid, sdfsFilename)
+                    log.Printf("[ME %d] Can't access file stats %s\n", myVid, sdfsFilename)
                     return
                 }
 
@@ -615,7 +616,12 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 
     bufferFileSize := make([]byte, 10)
 
-    conn.Read(bufferFileSize)
+    _, err = conn.Read(bufferFileSize)
+    if err != nil {
+        log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
+        fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
+        return false
+    }
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
