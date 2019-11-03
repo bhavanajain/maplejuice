@@ -13,6 +13,7 @@ import (
     "time"
     "io/ioutil"
     "math/rand"
+    "errors"
     // "os/exec"
 )
 
@@ -55,6 +56,8 @@ func fillString(returnString string, toLength int) string {
     }
     return returnString
 }
+
+
 
 func listenFileTransferPort() {
     // This port serves file transfers
@@ -318,6 +321,7 @@ func listenMasterRequests() {
                         confResp,err := conn_reader.ReadString('\n')
                         if err != nil{
                             // Close the connection and don't procees
+                            fmt.Printf("Timed out for conlict %d \n",sender)
                             break
                         }
                         confResp = confResp[:len(confResp)-1]
@@ -897,6 +901,32 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
 
 var fileTimeMap = make(map[string]int64)
 
+func Readln(reader *bufio.Reader, timeout time.Duration) (string, error) {
+    s := make(chan string)
+    e := make(chan error)
+    go func() {
+
+        reader := bufio.NewReader(os.Stdin)
+        line, err := reader.ReadString('\n')
+        if err != nil {
+                    e <- err
+                } else {
+                    s <- line
+                }
+        close(s)
+        close(e)
+    }()
+
+    select {
+        case line := <-s:
+            return line, nil
+        case err := <-e:
+            return "", err
+        case <-time.After(timeout):
+            return "", errors.New("timeout")
+    }
+}
+
 func executeCommand(command string, userReader *bufio.Reader) {
 
     timeout := 20 * time.Second
@@ -1034,7 +1064,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
         if split_reply[0] == "conflict" {
             // Wait for user input
             // user_reader := bufio.NewReader(os.Stdin)
-            confResp, _ := userReader.ReadString('\n')
+            // confResp, _ := userReader.ReadString('\n')
+            confResp, err := Readln(userReader, 30 * time.Second)
+            if err != nil {
+                fmt.Printf("%s\n", err)
+                break
+            }
             fmt.Printf("This is the confResp: %s", confResp)
 
             _, err = fmt.Fprintf(conn, confResp)
