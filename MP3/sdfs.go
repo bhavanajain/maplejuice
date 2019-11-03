@@ -232,6 +232,8 @@ func listenFileTransferPort() {
                     break
                 }
 
+                delete(fileTimeMap, sdsFileName)
+
                 log.Printf("[ME %d] Successfully deleted the file %s\n", myVid, sdfsFilename) 
 
             case "replicatefile":
@@ -1151,7 +1153,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
 func scanCommands() {
     for {
-        
+
         reader := bufio.NewReader(os.Stdin)
         command, _ := reader.ReadString('\n')
         command = command[:len(command)-1]
