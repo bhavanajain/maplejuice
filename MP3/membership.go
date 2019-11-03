@@ -185,6 +185,9 @@ func checkSuspicion(vid int) {
 			if myIP == masterIP {
 				go replicateFiles(suspect) // Redistribute it's file
 			}
+			if memberMap[vid].ip == masterIP{
+				go LeaderElection()
+			}
 			break
 		}
 	}
@@ -395,7 +398,7 @@ func checkIntroducer() {
 		time.Sleep(time.Duration(introPingPeriod) * time.Second)
 		if memberMap[0].alive == false {
 			// If introducer is dead, periodically send your record to the introducer
-			message := fmt.Sprintf("INTRODUCER,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID)
+			message := fmt.Sprintf("INTRODUCER,%d,%s,%d,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID,masterIP,masterPort,masterNodeId)
 			sendMessage(0, message, num_tries)
 		}
 	
@@ -440,6 +443,10 @@ func completeJoinRequests() (err error) {
 	log.Printf("[ME %d] Started listening on the introducer port %d", myVid, introducerPort)
 
 	for {
+		if ongoingElection == true{
+			// wait on this till the election is finished, don't let other nodes to join
+			<- electiondone
+		}
 		var buf [512]byte
 		_, addr, err := introducerConn.ReadFromUDP(buf[0:])
 		if err != nil {
@@ -470,7 +477,7 @@ func completeJoinRequests() (err error) {
 		log.Printf("[ME %d] Added entry ip=%s timestamp=%d at vid=%d", myVid, newnode.ip, newnode.timestamp, newVid)
 
 		// Send the node's record
-		message := fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
+		message := fmt.Sprintf("YOU,%d,%s,%d,%s,%d,%d", newVid, newnode.ip, newnode.timestamp,masterIP,masterPort,masterNodeId)
 		sendMessage(newVid, message, num_tries)
 
 		// Send introducer record
@@ -651,6 +658,16 @@ func listenOtherPort() (err error) {
 		log.Printf("[ME %d] Message = %s", myVid, message)
 
 		switch message_type {
+
+		case "LEADER":
+			// Modify the leader and carryON
+			// fmt.Printf("[ME %d] Leader Message : %s \n",message)
+			if masterIP != memberMap[subject].ip {
+				fmt.Printf("[ME %d] Leader Message : %s \n",myVid,message)
+				newPort,_ :=strconv.Atoi(split_message[2])
+				LeaderHandler(subject,newPort)
+			}
+
 		case "ADD":
 			var newnode MemberNode
 			newnode = createMember(split_message[2], split_message[3])
@@ -679,6 +696,13 @@ func listenOtherPort() (err error) {
 
 					tempmax, _ := strconv.Atoi(split_message[4])
 					maxID = max(maxID, tempmax)
+					nMasPort,_ := strconv.Atoi(split_message[6])
+					if nMasPort > masterPort{
+					masterIP = split_message[5]
+					masterPort = nMasPort
+					masterNodeId,_ = strconv.Atoi(split_message[7])
+					fmt.Printf("[ME %d] Introdicer Uodated master %d , masterPort %d \n",myVid,masterNodeId,masterPort)
+					}
 					
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
 					updateMonitors()
@@ -718,10 +742,14 @@ func listenOtherPort() (err error) {
 			var newnode MemberNode
 			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
+			masterIP = split_message[4]
+			masterPort,_ = strconv.Atoi(split_message[5])
+			masterNodeId,_ = strconv.Atoi(split_message[6])
 
 			go checkIntroducer()
 
 			log.Printf("[ME %d] Processed my memberMap entry", myVid)
+			fmt.Printf("[ME %d] Processed my masterIP %s, masterPort %d entry", myVid,masterIP,masterPort)
 
 		case "MEMBER":
 			if subject == myVid {
@@ -793,6 +821,10 @@ func listenOtherPort() (err error) {
 					// Check the files beloging to the dead node and redistribute the files
 					if myIP == masterIP {
 						go replicateFiles(subject) // Redistribute it's file
+					}
+
+					if memberMap[subject].ip == masterIP {
+						go LeaderElection()
 					}
 				}
 			}			
