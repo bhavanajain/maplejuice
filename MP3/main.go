@@ -106,7 +106,8 @@ func membership(wg *sync.WaitGroup) {
 		fmt.Printf("completed join request\n")
 	}
 	go updateFingerTable()
-
+	time.Sleep(7*time.Second)
+	fmt.Printf("[ME %d]\n",myVid)
 	sigs := make(chan os.Signal, 1)
 
 	signal.Notify(sigs, syscall.SIGQUIT)
