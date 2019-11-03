@@ -77,7 +77,7 @@ func listenFileTransferPort() {
         conn.Read(bufferMessage)
         message := strings.Trim(string(bufferMessage), ":")
         
-        fmt.Printf("[ME %d] Received a new message %s\n", myVid, message)
+        log.Printf("[ME %d] Received a new message %s\n", myVid, message)
 
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
@@ -111,14 +111,14 @@ func listenFileTransferPort() {
                     log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
                     break
                 } else{
-                    fmt.Println(err)
-                    fmt.Printf("Size of the file is %d \n",val.Size())
+                    // fmt.Println(err)
+                    // fmt.Printf("Size of the file is %d \n",val.Size())
                 }
 
                 f1_race, err := os.Open(filePath)
 
                 if err != nil {
-                    fmt.Println(err)
+                    // fmt.Println(err)
                     log.Printf("[ME %d] Can't open file %s\n", myVid, shared_dir + sdfsFilename)
                     break
                 }
@@ -168,12 +168,12 @@ func listenFileTransferPort() {
                 sdfsFilename := split_message[1]
                 sender := split_message[2]
 
-                fmt.Printf("%s %s\n", message_type, sdfsFilename)
+                // fmt.Printf("%s %s\n", message_type, sdfsFilename)
 
                 bufferFileSize := make([]byte, 10)
                 conn.Read(bufferFileSize)
 
-                fmt.Printf("%s\n", string(bufferFileSize))
+                // fmt.Printf("%s\n", string(bufferFileSize))
                 fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
 
                 log.Printf("[ME %d] Incoming filesize %d\n", myVid, fileSize)
@@ -292,7 +292,7 @@ func listenMasterRequests() {
             message = message[:len(message)-1]
         }
         
-        fmt.Printf("Message received %s", message)
+        // fmt.Printf("Message received %s", message)
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
         // Need to know the sender id
@@ -307,7 +307,7 @@ func listenMasterRequests() {
 
                 // Check in the conflict map for an entry
 
-                fmt.Printf("Check conflictMap for %d\n", sender)
+                // fmt.Printf("Check conflictMap for %d\n", sender)
 
                 _, ok := conflictMap[sdfsFilename]
                 if ok {
@@ -321,11 +321,11 @@ func listenMasterRequests() {
                         confResp,err := conn_reader.ReadString('\n')
                         if err != nil{
                             // Close the connection and don't procees
-                            fmt.Printf("Timed out for conlict %d \n",sender)
+                            // fmt.Printf("Timed out for conlict %d \n",sender)
                             break
                         }
                         confResp = confResp[:len(confResp)-1]
-                        fmt.Printf("Master recv: %s blah", confResp)
+                        // fmt.Printf("Master recv: %s blah", confResp)
                         if confResp == "yes"{
                             // Update the conflictMap
                             var newConflict conflictData
@@ -355,7 +355,7 @@ func listenMasterRequests() {
                     newConflict.timestamp = time.Now().Unix()
                     conflictMap[sdfsFilename] = &newConflict
 
-                    fmt.Printf("Added to conflictMap\n")
+                    // fmt.Printf("Added to conflictMap\n")
                 }
 
 
@@ -371,7 +371,7 @@ func listenMasterRequests() {
 
                     // nodes_str := strings.Join(fileMap[sdfsFilename].nodeIds, ",")
                     reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
-                    fmt.Printf("Sending putreply: %s", reply)
+                    // fmt.Printf("Sending putreply: %s", reply)
 
                     fmt.Fprintf(conn, reply)
 
@@ -395,22 +395,22 @@ func listenMasterRequests() {
                     // }  
 
                 } else {
-                    fmt.Printf("Not found in filemap\n")
+                    // fmt.Printf("Not found in filemap\n")
                     var excludelist = []int{sender}
                     nodes := getRandomNodes(excludelist, 3)
                     nodes = append(nodes, sender)
 
-                    fmt.Printf("random nodes: %v\n", nodes)
+                    // fmt.Printf("random nodes: %v\n", nodes)
 
                     var nodes_str = ""
                     for _, node := range(nodes) {
                         nodes_str = nodes_str + strconv.Itoa(node) + ","
                     }
                     nodes_str = nodes_str[:len(nodes_str)-1]
-                    fmt.Printf("master nodes str: %s\n", nodes_str)
+                    // fmt.Printf("master nodes str: %s\n", nodes_str)
                     // nodes_str := strings.Join(nodes, ",")
                     reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
-                    fmt.Printf("Sent reply: %s\n", reply)
+                    // fmt.Printf("Sent reply: %s\n", reply)
                     fmt.Fprintf(conn, reply)
 
                     // Should end the connection here********************************************
@@ -537,7 +537,7 @@ func listenMasterRequests() {
             case "replace":
                 // sender, err := strconv.Atoi(split_message[1])
                 sdfsFilename := split_message[1]
-                fmt.Printf("%s\n", sdfsFilename)
+                // fmt.Printf("%s\n", sdfsFilename)
                 excludeList_str := split_message[2]
 
                 excludeList := string2List(excludeList_str)
@@ -568,7 +568,7 @@ func sendConfirmation(subject int, sdfsFilename string, sender int) {
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
 
-    fmt.Printf("Sent a movefile %s request to %d\n", sdfsFilename, subject)
+    // fmt.Printf("Sent a movefile %s request to %d\n", sdfsFilename, subject)
 }
 
 func string2List(given_str string) ([]int) {
@@ -637,7 +637,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
-    fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
+    // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
 
     file, err := os.Create(local_dir + localFilename)
     if err != nil {
@@ -656,7 +656,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
                 log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, nodeId)
                 break
             }
-            fmt.Printf("%s %s -> filesize = %d,  total bytes received = %d\n", sdfsFilename, localFilename, fileSize, receivedBytes)
+            // fmt.Printf("%s %s -> filesize = %d,  total bytes received = %d\n", sdfsFilename, localFilename, fileSize, receivedBytes)
             success = true
             break
         }
@@ -670,7 +670,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 
     if success {
         log.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
-        fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
+        // fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
     }
     return success
 }
@@ -709,7 +709,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
 
-    fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
+    // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
 
     f, err := os.Open(shared_dir + sdfsFilename)
     if err != nil {
@@ -814,7 +814,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
 
-    fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
+    // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
 
     f, err := os.Open(local_dir + localFilename) 
     if err != nil {
@@ -870,7 +870,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     ack = ack[:len(ack)-1]
 
     if ack == "done" {
-        fmt.Printf("Received an ack from node %d\n", nodeId)
+        // fmt.Printf("Received an ack from node %d\n", nodeId)
         doneList = append(doneList, nodeId)
         wg.Done()
     }  
@@ -944,7 +944,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
     switch command_type {
     case "open":
         sdfsFilename := split_command[1]
-        fmt.Printf("Trying to open %s\n", shared_dir+sdfsFilename)
+        // fmt.Printf("Trying to open %s\n", shared_dir+sdfsFilename)
 
         f, err := os.Open(shared_dir + sdfsFilename)
         if err != nil {
@@ -956,12 +956,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
             log.Printf("[ME %d] Can't access file stats %s\n", myVid, sdfsFilename)
             return
         }
-        fmt.Printf("file size = %d\n", fileInfo.Size())
+        // fmt.Printf("file size = %d\n", fileInfo.Size())
 
         fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
-        fmt.Printf("file size = %s\n", fileSize)
+        // fmt.Printf("file size = %s\n", fileSize)
 
-        fmt.Printf("success open %s\n", sdfsFilename)
+        // fmt.Printf("success open %s\n", sdfsFilename)
         f.Close()
         
     case "ls":
@@ -986,6 +986,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("\n")
 
     case "get":
+        initTime := time.Now()
         sdfsFilename := split_command[1]
         localFilename := split_command[2]
 
@@ -1004,13 +1005,14 @@ func executeCommand(command string, userReader *bufio.Reader) {
         split_reply := strings.Split(reply, " ")
 
         if len(split_reply[2]) == 0 {
-            fmt.Printf("invalid file name\n")
+            // fmt.Printf("invalid file name\n")
+            log.Printf("invalid file name\n")
             break
         }
 
         nodeIds_str := strings.Split(split_reply[2], ",")
 
-        fmt.Printf("nodestr: %v %d\n", nodeIds_str, len(nodeIds_str))
+        // fmt.Printf("nodestr: %v %d\n", nodeIds_str, len(nodeIds_str))
 
         nodeIds := []int{}
         for _, node_str := range nodeIds_str {
@@ -1029,9 +1031,13 @@ func executeCommand(command string, userReader *bufio.Reader) {
             }
         }
 
+        elapsed := time.Since(initTime)
+
         if !success {
             fmt.Printf("[ME %d] Could not fetch %s shared to %s local\n", myVid, sdfsFilename, localFilename)
         }
+
+        fmt.Printf("Tinme taken for Get %s\n",elapsed)
 
     case "delete":
         fmt.Fprintf(conn, command + "\n")
@@ -1039,11 +1045,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
     case "put":
         // please send your ID with the message, so put will be "put sdsFileName myVID"
+        initTime := time.Now()
         localFilename := split_command[1] 
 
         _, err := os.Stat(local_dir + localFilename)
         if os.IsNotExist(err) {
-            fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
+            // fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
             log.Printf("[ME %d] Got a put for %s, but the file does not exist\n", myVid, localFilename)
             break
         }
@@ -1073,7 +1080,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
                 fmt.Printf("%s Please press enter to proceed\n", err)
                 break
             }
-            fmt.Printf("This is the confResp: %s", confResp)
+            // fmt.Printf("This is the confResp: %s", confResp)
 
             _, err = fmt.Fprintf(conn, confResp)
             if err != nil{
@@ -1108,7 +1115,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             nodeIds = append(nodeIds, node)
         }
 
-        fmt.Printf("Got nodeIds %v, prepare to send file\n", nodeIds)
+        // fmt.Printf("Got nodeIds %v, prepare to send file\n", nodeIds)
 
         var wg sync.WaitGroup
         wg.Add(4)
@@ -1118,13 +1125,21 @@ func executeCommand(command string, userReader *bufio.Reader) {
         for _, node := range nodeIds {
             go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
         }
-        fmt.Printf("Waiting for quorum\n")
+        // fmt.Printf("Waiting for quorum\n")
         wg.Wait()
 
-        fmt.Printf("done list: %v\n", doneList)
+        
+
+        // fmt.Printf("done list: %v\n", doneList)
         doneList_str := list2String(doneList)
 
         sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+
+        elapsed := time.Since(initTime)
+
+        fmt.Printf("Time taken for Put %s\n",elapsed)
+
+
 
 
         // conn is already closed , use ACK to send to the master
@@ -1184,7 +1199,7 @@ func scanCommands() {
 // }
 
 func getRandomNodes(excludeList []int, count int) ([]int) {
-    fmt.Printf("Exclude list: %v\n", excludeList)
+    // fmt.Printf("Exclude list: %v\n", excludeList)
     var success = true
 
     result := make(map[int]bool)
@@ -1192,7 +1207,7 @@ func getRandomNodes(excludeList []int, count int) ([]int) {
     for {
         success = true
         randomnode := rand.Intn(len(memberMap))
-        fmt.Printf("%d\n", randomnode)
+        // fmt.Printf("%d\n", randomnode)
 
         _, ok := result[randomnode]
         if ok {
@@ -1200,21 +1215,21 @@ func getRandomNodes(excludeList []int, count int) ([]int) {
         }
 
         if !memberMap[randomnode].alive {
-            fmt.Printf("%d not alive\n", randomnode)
+            // fmt.Printf("%d not alive\n", randomnode)
             continue
         }
 
         for _, excludenode := range(excludeList) {
             if randomnode == excludenode {
                 success = false
-                fmt.Printf("Failed for %d\n", randomnode)
+                // fmt.Printf("Failed for %d\n", randomnode)
                 break
             }
         }
         if success {
             result[randomnode] = true
             // result = append(result, randomnode)
-            fmt.Printf("result: %v\n", result)
+            // fmt.Printf("result: %v\n", result)
             if len(result) == count {
                 keys := make([]int, 0, len(result))
                 for k := range result {
@@ -1254,7 +1269,7 @@ func replicateFiles (subjectNode int) {
 
     for fileName, _ := range nodeMap[subjectNode] {
         // Remove from the fileMap node list
-        fmt.Printf("Inside replicate on crash of %d: filename = %s\n", subjectNode, fileName)
+        // fmt.Printf("Inside replicate on crash of %d: filename = %s\n", subjectNode, fileName)
         filenodes := fileMap[fileName].nodeIds
         idx := -1
         for i, node := range filenodes {
@@ -1263,7 +1278,7 @@ func replicateFiles (subjectNode int) {
                 break
             }
         }
-        fmt.Printf("idx = %d, len of filenodes = %d\n", idx, len(filenodes))
+        // fmt.Printf("idx = %d, len of filenodes = %d\n", idx, len(filenodes))
         filenodes[idx] = filenodes[len(filenodes)-1]
         filenodes = filenodes[:len(filenodes)-1]
         fileMap[fileName].nodeIds = filenodes
