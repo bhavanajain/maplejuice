@@ -517,7 +517,7 @@ func listenMasterRequests() {
                         go deleteFile(nodeId, sdfsFilename)
                         _, ok2 := nodeMap[nodeId][sdfsFilename]
                         if ok2 {
-                            delete(nodeMap[nodeId], sdfsFileName)
+                            delete(nodeMap[nodeId], sdfsFilename)
                         } else {
                             fmt.Printf("File %s not found in the node %d\n",sdfsFilename,nodeId)
                         }
