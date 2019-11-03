@@ -13,7 +13,7 @@ import (
     "time"
     "io/ioutil"
     "math/rand"
-    "os/exec"
+    // "os/exec"
 )
 
 var head = 0
