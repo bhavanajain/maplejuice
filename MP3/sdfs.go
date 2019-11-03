@@ -1062,6 +1062,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         if len(split_reply[2]) == 0 {
             // fmt.Printf("invalid file name\n")
             log.Printf("invalid file name\n")
+            fmt.Printf("invalid file name\n")
             break
         }
 
