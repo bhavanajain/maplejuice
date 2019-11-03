@@ -1385,6 +1385,10 @@ func HandleFileReplication () {
 
 
 func LeaderElection() {
+
+    if ongoingElection == true{
+        return
+    }
     ongoingElection = true
     // Could wait for some second to let the node stabilize
     // the process
