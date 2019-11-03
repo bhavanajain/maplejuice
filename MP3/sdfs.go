@@ -1201,6 +1201,7 @@ func replicateFiles (subjectNode int) {
 
     for fileName, _ := range nodeMap[subjectNode] {
         // Remove from the fileMap node list
+        fmt.Printf("Inside replicate on crash of %d: filename = %s\n", subjectNode, fileName)
         filenodes := fileMap[fileName].nodeIds
         idx := -1
         for i, node := range filenodes {
@@ -1209,6 +1210,7 @@ func replicateFiles (subjectNode int) {
                 break
             }
         }
+        fmt.Printf("idx = %d, len of filenodes = %d\n", idx, len(filenodes))
         filenodes[idx] = filenodes[len(filenodes)-1]
         filenodes = filenodes[:len(filenodes)-1]
 
