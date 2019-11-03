@@ -1380,6 +1380,8 @@ func LeaderElection() {
     ongoingElection = true
     // Could wait for some second to let the node stabilize
     // the process
+    fmt.Printf("[ME %d] Leader Election started \n",myVid)
+    time.Sleep(3*time.Second)
     predId := getPredecessor(myVid)
     succId := getSuccessor(myVid)
 
@@ -1443,7 +1445,7 @@ func LeaderHandler( subject int) {
 
     masterIP = memberMap[subject].ip
     // Then start tranferring your own nodes to everyone in a go routuine
-    go func() {
+    go func(subject int) {
         // Start a tcp connection with the master
         leaderSucc := true
         timeout := time.Duration(20) * time.Second
@@ -1480,7 +1482,7 @@ func LeaderHandler( subject int) {
 
         return
 
-    }()
+    }(subject)
     return
 }
 
