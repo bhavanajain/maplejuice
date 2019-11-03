@@ -1282,6 +1282,9 @@ func replicateFiles (subjectNode int) {
             }
         }
         // fmt.Printf("idx = %d, len of filenodes = %d\n", idx, len(filenodes))
+        if idx == -1 {
+            continue
+        }
         filenodes[idx] = filenodes[len(filenodes)-1]
         filenodes = filenodes[:len(filenodes)-1]
         fileMap[fileName].nodeIds = filenodes
