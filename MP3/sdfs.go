@@ -103,7 +103,7 @@ func listenFileTransferPort() {
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
                 fmt.Printf("%s\n",sdfsFilename)
-                cmd := fmt.Sprintf("ls - shared/%s",sdfsFilename)
+                cmd := fmt.Sprintf("ls -l shared/%s",sdfsFilename)
                 //cmd := fmt.Sprintf("ls %s",shared_dir)
 
 
