@@ -701,6 +701,7 @@ func listenOtherPort() (err error) {
 					masterIP = split_message[5]
 					masterPort = nMasPort
 					masterNodeId,_ = strconv.Atoi(split_message[7])
+					fmt.Printf("[ME %d] Introdicer Uodated master %d , masterPort %d \n",myVid,masterNodeId,masterPort)
 					}
 					
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
