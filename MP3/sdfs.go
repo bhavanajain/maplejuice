@@ -102,10 +102,10 @@ func listenFileTransferPort() {
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
                 // f, err := os.Open(shared_dir + sdfsFilename)
-                _, err := os.Stat(shared_dir + sdfsFilename)
+                _, err := os.Stat(filePath)
                 if os.IsNotExist(err) {
-                    fmt.Printf("Got a get for %s, but the file does not exist\n", sdsFileName)
-                    log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdsFileName)
+                    fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
+                    log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
                     break
                 }
                 f1_race, err := os.Open(filePath)
