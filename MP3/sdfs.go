@@ -1079,7 +1079,7 @@ func scanCommands() {
             for fileName := range(fileTimeMap) {
                 fmt.Printf("%s ", fileName)
             }
-        case "ls", "get", "delete", "put":
+        case "ls", "get", "delete", "put", "open":
             if command_type == "get" {
                 if len(split_command) < 3 {
                     break
