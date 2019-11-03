@@ -19,6 +19,9 @@ func distributedFileSystem() {
     os.MkdirAll(shared_dir, 0777)
     os.RemoveAll(temp_dir)
     os.MkdirAll(temp_dir, 0777)
+    
+    os.RemoveAll(test_dir)
+    os.MkdirAll(test_dir, 0777)
 
     myIP := getmyIP()
     if myIP == masterIP {
