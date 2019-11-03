@@ -286,7 +286,7 @@ func list2String(list []int) (string) {
 func listenMasterRequests() {
     ln, _ := net.Listen("tcp", ":" + strconv.Itoa(masterPort))
     for {
-    if myIP == masterIP {
+    // if myIP == masterIP {
 
         conn, _ := ln.Accept()
         log.Printf("[Master] Accepted a new connection\n")     
@@ -592,7 +592,7 @@ func listenMasterRequests() {
                 fmt.Fprintf(conn, message) // Sent the new node to the put_requester
             }
             conn.Close()
-    }
+    //}
     }
 }
 
