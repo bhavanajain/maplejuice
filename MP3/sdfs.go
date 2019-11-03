@@ -1015,6 +1015,14 @@ func executeCommand(command string, userReader *bufio.Reader) {
     case "put":
         // please send your ID with the message, so put will be "put sdsFileName myVID"
         localFilename := split_command[1] 
+
+        _, err := os.Stat(local_dir + localFilename)
+        if os.IsNotExist(err) {
+            fmt.Printf("Got a put for %s, but the file does not exist\n", myVid, localFilename)
+            log.Printf("[ME %d] Got a put for %s, but the file does not exist\n", myVid, localFilename)
+            break
+        }
+
         sdfsFilename := split_command[2]
 
         master_command := fmt.Sprintf("put %s %d\n", sdfsFilename,myVid)
