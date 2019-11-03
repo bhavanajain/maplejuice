@@ -185,6 +185,9 @@ func checkSuspicion(vid int) {
 			if myIP == masterIP {
 				go replicateFiles(suspect) // Redistribute it's file
 			}
+			if memberMap[vid].ip == masterIP{
+				go LeaderElection()
+			}
 			break
 		}
 	}
@@ -440,6 +443,10 @@ func completeJoinRequests() (err error) {
 	log.Printf("[ME %d] Started listening on the introducer port %d", myVid, introducerPort)
 
 	for {
+		if ongoingElection == true{
+			// wait on this till the election is finished, don't let other nodes to join
+			<- electiondone
+		}
 		var buf [512]byte
 		_, addr, err := introducerConn.ReadFromUDP(buf[0:])
 		if err != nil {
@@ -651,6 +658,13 @@ func listenOtherPort() (err error) {
 		log.Printf("[ME %d] Message = %s", myVid, message)
 
 		switch message_type {
+
+		case "LEADER":
+			// Modify the leader and carryON
+			if masterIP != memberMap[subject].ip {
+				LeaderHandler(subject)
+			}
+
 		case "ADD":
 			var newnode MemberNode
 			newnode = createMember(split_message[2], split_message[3])
@@ -793,6 +807,10 @@ func listenOtherPort() (err error) {
 					// Check the files beloging to the dead node and redistribute the files
 					if myIP == masterIP {
 						go replicateFiles(subject) // Redistribute it's file
+					}
+
+					if memberMap[subject].ip == masterIP {
+						go LeaderElection()
 					}
 				}
 			}			

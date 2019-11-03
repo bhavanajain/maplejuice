@@ -44,6 +44,10 @@ var masterIP = "172.22.156.103"
 var masterPort = 8084
 var fileTransferPort = 8085
 
+var ongoingElection = false
+
+var electiondone = make(chan bool, 1)
+
 
 func fillString(returnString string, toLength int) string {
     for {
@@ -300,6 +304,40 @@ func listenMasterRequests() {
         // Need to know the sender id
 
         switch message_type {
+            case "file":
+                sender, _ := strconv.Atoi(split_message[1])
+                for{
+                    fileResp,err := conn_reader.ReadString('\n')
+                    if err != nil{
+                        // Issue in connection
+                    }
+                    fileResp = fileResp[:len(fileResp)-1]
+                    split_resp := strings.Split(fileResp," ")
+                    if split_resp[0] == "done"{
+                        break
+                    }else{
+                        fileName := split_resp[2]
+                        // Handling the fileName part
+                        _,ok := fileMap[fileName]
+                        if ok{
+                            fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,sender) 
+                        }else{
+                            var newfiledata fileData 
+                            newfiledata.timestamp,_ = strconv.ParseInt(split_resp[3], 10, 64)
+                            newfiledata.nodeIds = string2List(split_resp[1])
+                            fileMap[fileName] = &newfiledata
+                        }
+                        // Handle the nodeMap one
+                        _,ok = nodeMap[sender]
+                        if ok{
+                            nodeMap[sender][fileName] = fileMap[fileName].timestamp
+                        }else{
+                            nodeMap[sender] = make(map[string]int64)
+                            nodeMap[sender][fileName] = fileMap[fileName].timestamp
+                        }
+                    }
+                }
+
             case "put":
                 // master should give a list of three other nodes
 
@@ -579,8 +617,11 @@ func sendConfirmation(subject int, sdfsFilename string, sender int) {
 }
 
 func string2List(given_str string) ([]int) {
-    list_str := strings.Split(given_str, ",")
     nodes := []int{}
+    if len(given_str) == 0{
+        return nodes
+    }
+    list_str := strings.Split(given_str, ",")
     for _, e := range list_str {
         node, err := strconv.Atoi(e)
         if err != nil {
@@ -1314,6 +1355,7 @@ func replicateFiles (subjectNode int) {
 // this function needs work more 
 func HandleFileReplication () {
     for{
+        time.Sleep(time.Duration(replicatePeriod) * time.Second)
         if myIP == masterIP {
             // Run the code
 
@@ -1329,8 +1371,117 @@ func HandleFileReplication () {
 
         }
 
-        time.Sleep(time.Duration(replicatePeriod) * time.Second)
+        
     }
+}
+
+
+func LeaderElection() {
+    ongoingElection = true
+    // Could wait for some second to let the node stabilize
+    // the process
+    predId := getPredecessor(myVid)
+    succId := getSuccessor(myVid)
+
+    if myVid < predId && myVid < succId {
+        // I'm the leader
+        masterIP = myIP // set my IP as the master IP
+
+
+        go listenMasterRequests()
+        go HandleFileReplication()
+
+        // Move your own things to fileMap and nodeMap
+        for fileName := range(fileTimeMap){
+            // Handling the fileName part
+            _,ok := fileMap[fileName]
+            if ok{
+                fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,myVid) 
+            }else{
+                var newfiledata fileData 
+                newfiledata.timestamp = fileMap[fileName].timestamp
+                newfiledata.nodeIds = string2List(strconv.Itoa(myVid))
+                fileMap[fileName] = &newfiledata
+            }
+
+            // Handle the nodeMap one
+            _,ok = nodeMap[myVid]
+            if ok{
+                nodeMap[myVid][fileName] = fileMap[fileName].timestamp
+            }else{
+                nodeMap[myVid] = make(map[string]int64)
+                nodeMap[myVid][fileName] = fileMap[fileName].timestamp
+            }
+
+        }
+
+
+        ongoingElection = false
+        electiondone <- true  
+        fmt.Printf("[ME %d] New Master Elected %d\n",myVid,myVid)
+                      
+
+
+    }
+
+    // send everyone the leadership message
+    // Can use disseminate
+    leaderMsg := fmt.Sprintf("LEADER,%d",myVid)
+    disseminate(leaderMsg)
+
+
+
+ 
+
+
+    // Finish by doing
+    // ongoingElection = false
+    // electiondone <- true   
+}
+
+func LeaderHandler( subject int) {
+
+    masterIP = memberMap[subject].ip
+    // Then start tranferring your own nodes to everyone in a go routuine
+    go func() {
+        // Start a tcp connection with the master
+        leaderSucc := true
+        timeout := time.Duration(20) * time.Second
+
+        conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+        if err != nil{
+            fmt.Printf("[ME %d]Unable to connect to new Master %d \n",myVid,subject)
+        }
+        defer conn.Close()
+
+        // Send your fileTimeMap for
+        message:= fmt.Sprintf("file %d\n",myVid)
+        _,err = fmt.Fprintf(conn,message)
+        if err!= nil{
+            leaderSucc = false
+        }
+        for fileName := range(fileTimeMap){
+            message:= fmt.Sprintf("fileName %d %s %d\n",myVid,fileName,fileTimeMap[fileName])
+            _, err = fmt.Fprintf(conn,message)
+            if err != nil{
+                fmt.Println(err)
+                leaderSucc = false
+                break
+            }
+
+        }
+        if leaderSucc{
+            message:= fmt.Sprintf("done %d\n",myVid)
+            _, err = fmt.Fprintf(conn,message)
+            fmt.Printf("[ME %d] New Master Elected %d\n",myVid,subject)
+        } 
+        ongoingElection = false
+        electiondone <- true   
+
+        return
+
+    }()
+    return
 }
 
 
