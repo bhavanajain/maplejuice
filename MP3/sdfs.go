@@ -41,8 +41,8 @@ var temp_dir = "temp/"
 var replicatePeriod = 10
 
 var masterIP = "172.22.156.103"
-var masterPort = 8084
-var fileTransferPort = 8085
+var masterPort = 8085
+var fileTransferPort = 8084
 
 var ongoingElection = false
 
@@ -289,7 +289,7 @@ func listenMasterRequests() {
         fmt.Println(err)
     }
     for {
-    // if myIP == masterIP {
+    if myIP == masterIP {
 
         conn, err := ln.Accept()
         if err != nil{
@@ -598,7 +598,7 @@ func listenMasterRequests() {
                 fmt.Fprintf(conn, message) // Sent the new node to the put_requester
             }
             conn.Close()
-    //}
+    }
     }
 }
 
@@ -1402,7 +1402,7 @@ func LeaderElection() {
         fmt.Printf("[ME %d] I'm the leader \n",myVid)
         // I'm the leader
         masterIP = myIP // set my IP as the master IP
-        masterPort = masterPort+2
+        masterPort = masterPort+1
 
 
         go listenMasterRequests()
