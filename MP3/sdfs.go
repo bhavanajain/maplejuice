@@ -471,8 +471,12 @@ func listenMasterRequests() {
                     for _, nodeId := range(fileMap[sdfsFilename].nodeIds) {
                         go deleteFile(nodeId, sdfsFilename)
 
-                    } 
+                    }
                     delete(fileMap, sdfsFilename)
+                    fmt.Fprintf(conn,"Deletion progressing\n") 
+                    
+                }else{
+                    fmt.Fprintf(conn,"File does not exist\n")
                 }
 
             case "ack": 
@@ -1042,8 +1046,18 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("Tinme taken for Get %s\n",elapsed)
 
     case "delete":
+
         fmt.Fprintf(conn, command + "\n")
         log.Printf("[ME %d] Forwarded the %s command to the master\n", myVid, command)
+        reader := bufio.NewReader(conn)
+        reply, err := reader.ReadString('\n')
+        if err!= nil{
+            fmt.Println(err)
+        }else{
+            fmt.Printf("%s",reply)
+        }
+
+
 
     case "put":
         // please send your ID with the message, so put will be "put sdsFileName myVID"
