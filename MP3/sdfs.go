@@ -1368,7 +1368,9 @@ func HandleFileReplication () {
             for fileName, _ := range(fileMap){
                 filenodes := fileMap[fileName].nodeIds
                 if len(filenodes) < 4 { 
+                    fmt.Printf("[ME %d] Handling file Replication for %s\n",myVid,fileName)
                     newnodes := getRandomNodes(filenodes, 4 - len(filenodes))
+                    fmt.Printf("Init vector %v , Added nodes %v\n",filenodes, newnodes)
                     for _, newnode := range(newnodes) {
                         go initiateReplica(fileName, filenodes[0], newnode)
                     }
