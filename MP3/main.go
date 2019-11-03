@@ -102,7 +102,7 @@ func membership(wg *sync.WaitGroup) {
 	} else{
 		fmt.Printf("Send join request to introducer\n")
 		sendJoinRequest()
-		fmt.Printf("[ME %d]\n", myVid)
+		// fmt.Printf("[ME %d]\n", myVid)
 		fmt.Printf("completed join request\n")
 	}
 	go updateFingerTable()
