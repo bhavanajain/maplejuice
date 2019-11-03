@@ -102,6 +102,12 @@ func listenFileTransferPort() {
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
                 // f, err := os.Open(shared_dir + sdfsFilename)
+                _, err := os.Stat(shared_dir + sdfsFilename)
+                if os.IsNotExist(err) {
+                    fmt.Printf("Got a get for %s, but the file does not exist\n", sdsFileName)
+                    log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdsFileName)
+                    break
+                }
                 f1_race, err := os.Open(filePath)
 
                 if err != nil {
@@ -634,6 +640,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 
     _, err = conn.Read(bufferFileSize)
     if err != nil {
+        fmt.Println(err) // what error are you getting?
         log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
         return false
