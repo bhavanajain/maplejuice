@@ -529,15 +529,15 @@ func listenMasterRequests() {
                     
                     go sendConfirmation(destNode, sdfsFilename, srcNode)
                     
-                    updateTimestamp = time.Now().Unix()
-                    fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, dest)
+                    updateTimestamp := time.Now().Unix()
+                    fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
 
                     _, ok := nodeMap[destNode]
                     if ok {
                         nodeMap[destNode][sdfsFilename] = updateTimestamp
                     } else {
-                        nodeMap[node] = make(map[string]int64)
-                        nodeMap[node][sdfsFilename] = updateTimestamp
+                        nodeMap[destNode] = make(map[string]int64)
+                        nodeMap[destNode][sdfsFilename] = updateTimestamp
                     }                    
                 }
 
@@ -766,6 +766,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     if ack == "done" {
         destNode := []int{nodeId}
         sendAcktoMaster("replicate", myVid, list2String(destNode), sdfsFilename)
+        return true
     } else {
         return false
     }
