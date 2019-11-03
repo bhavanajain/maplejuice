@@ -932,7 +932,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
     switch command_type {
     case "open":
         sdfsFilename := split_command[1]
-        fmt.Printf("Trying to open %s\n", sdfsFilename)
+        fmt.Printf("Trying to open %s\n", shared_dir+sdfsFilename)
 
         f, err := os.Open(shared_dir + sdfsFilename)
         if err != nil {
