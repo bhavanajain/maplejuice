@@ -182,6 +182,9 @@ func checkSuspicion(vid int) {
 			eventTimeMap[vid] = crash_time
 			disseminate(message)
 			updateMonitors()
+			if myIP == masterIP {
+				go replicateFiles(subject) // Redistribute it's file
+			}
 			break
 		}
 	}
@@ -761,7 +764,7 @@ func listenOtherPort() (err error) {
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
 			_, ok := eventTimeMap[subject]
-			if (!ok || eventTimeMap[subject] < origin_time){
+			if (!ok || eventTimeMap[subject] < origin_time) {
 				eventTimeMap[subject] = origin_time
 				disseminate(message)
 
@@ -789,7 +792,7 @@ func listenOtherPort() (err error) {
 					log.Printf("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
 					// Check the files beloging to the dead node and redistribute the files
 					if myIP == masterIP {
-						go replicateFiles (subject) // Redistribute it's file
+						go replicateFiles(subject) // Redistribute it's file
 					}
 				}
 			}			
