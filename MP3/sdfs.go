@@ -906,7 +906,7 @@ func Readln(reader *bufio.Reader, timeout time.Duration) (string, error) {
     e := make(chan error)
     go func() {
 
-        reader := bufio.NewReader(os.Stdin)
+        // reader := bufio.NewReader(os.Stdin)
         line, err := reader.ReadString('\n')
         if err != nil {
                     e <- err
