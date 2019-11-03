@@ -38,7 +38,7 @@ var temp_dir = "temp/"
 
 var replicatePeriod = 10
 
-var masterIP = "172.22.152.106"
+var masterIP = "172.22.156.103"
 var masterPort = 8084
 var fileTransferPort = 8085
 
