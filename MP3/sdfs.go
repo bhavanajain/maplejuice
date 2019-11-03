@@ -515,6 +515,12 @@ func listenMasterRequests() {
                     // [TODO] Delete that file from the fileMap
                     for _, nodeId := range(fileMap[sdfsFilename].nodeIds) {
                         go deleteFile(nodeId, sdfsFilename)
+                        _, ok2 := nodeMap[nodeId][sdfsFilename]
+                        if ok2 {
+                            delete(nodeMap[nodeId], sdfsFileName)
+                        } else {
+                            fmt.Printf("File %s not found in the node %d\n",sdfsFilename,nodeId)
+                        }
 
                     }
                     delete(fileMap, sdfsFilename)
@@ -1357,7 +1363,7 @@ func replicateFiles (subjectNode int) {
             }
         }
         // fmt.Printf("idx = %d, len of filenodes = %d\n", idx, len(filenodes))
-        if idx == -1 {
+        if (idx == -1 || len(filenodes) == 0) {
             continue
         }
         filenodes[idx] = filenodes[len(filenodes)-1]
