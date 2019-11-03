@@ -103,11 +103,24 @@ func listenFileTransferPort() {
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
                 fmt.Printf("%s\n",sdfsFilename)
-                cmd := fmt.Sprintf("ls -l shared/%s",sdfsFilename)
+                cmd := fmt.Sprintf("ls -l shared/")
                 //cmd := fmt.Sprintf("ls %s",shared_dir)
 
 
                 out, err := exec.Command("sh","-c",cmd).Output()
+                // f, err := os.Open(shared_dir + sdfsFilename)
+                if err != nil{
+                    fmt.Println(cmd)
+                    fmt.Println("syscall error",err)
+                }else{
+                    fmt.Printf("%s\n",out)
+                }
+
+                cmd := fmt.Sprintf("ls -l shared/%s",sdfsFilename)
+                //cmd := fmt.Sprintf("ls %s",shared_dir)
+
+
+                out, err = exec.Command("sh","-c",cmd).Output()
                 // f, err := os.Open(shared_dir + sdfsFilename)
                 if err != nil{
                     fmt.Println(cmd)
