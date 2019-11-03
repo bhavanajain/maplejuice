@@ -1404,7 +1404,7 @@ func LeaderElection() {
                 fileMap[fileName].timestamp = fileTimeMap[fileName]
             }else{
                 var newfiledata fileData 
-                newfiledata.timestamp = fileMap[fileName].timestamp
+                newfiledata.timestamp = fileTimeMap[fileName]
                 newfiledata.nodeIds = string2List(strconv.Itoa(myVid))
                 fileMap[fileName] = &newfiledata
             }
@@ -1412,10 +1412,10 @@ func LeaderElection() {
             // Handle the nodeMap one
             _,ok = nodeMap[myVid]
             if ok{
-                nodeMap[myVid][fileName] = fileMap[fileName].timestamp
+                nodeMap[myVid][fileName] = fileTimeMap[fileName]
             }else{
                 nodeMap[myVid] = make(map[string]int64)
-                nodeMap[myVid][fileName] = fileMap[fileName].timestamp
+                nodeMap[myVid][fileName] = fileTimeMap[fileName]
             }
 
         }
@@ -1426,13 +1426,14 @@ func LeaderElection() {
         fmt.Printf("[ME %d] New Master Elected %d\n",myVid,myVid)
                       
 
-
+        leaderMsg := fmt.Sprintf("LEADER,%d",myVid)
+        disseminate(leaderMsg)
     }
 
     // send everyone the leadership message
     // Can use disseminate
-    leaderMsg := fmt.Sprintf("LEADER,%d",myVid)
-    disseminate(leaderMsg)
+    
+    
 
 
 
@@ -1442,6 +1443,7 @@ func LeaderElection() {
     // Finish by doing
     // ongoingElection = false
     // electiondone <- true   
+    return
 }
 
 func LeaderHandler( subject int) {

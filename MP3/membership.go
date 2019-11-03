@@ -663,7 +663,7 @@ func listenOtherPort() (err error) {
 			// Modify the leader and carryON
 			// fmt.Printf("[ME %d] Leader Message : %s \n",message)
 			if masterIP != memberMap[subject].ip {
-				fmt.Printf("[ME %d] Leader Message : %s \n",message)
+				fmt.Printf("[ME %d] Leader Message : %s \n",myVid,message)
 				LeaderHandler(subject)
 			}
 
