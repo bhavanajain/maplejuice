@@ -13,6 +13,7 @@ import (
     "time"
     "io/ioutil"
     "math/rand"
+    "os/exec"
 )
 
 var head = 0
@@ -101,7 +102,15 @@ func listenFileTransferPort() {
                 fmt.Printf("blah-%s-blah\n", shared_dir + sdfsFilename)
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
+
+                cmd := fmt.Sprintf("cp %s %s",filePath,"testFile.txt")
+
+                _, err := exec.Command("sh","-c",cmd).Output()
                 // f, err := os.Open(shared_dir + sdfsFilename)
+                if err != nil{
+                    fmt.Printf("syscall error \n")
+                }
+                filePath = "testFile.txt"
                 val, err := os.Stat(filePath)
                 if os.IsNotExist(err) {
                     fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
@@ -158,6 +167,12 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
+                // cmd := "rm testFile.txt"
+                // out, err = exec.Command("sh","-c",cmd).Output()
+                // if err != nil{
+                //     fmt.Printf("syscall error \n")
+                // }
+
 
             case "putfile":
                 sdfsFilename := split_message[1]
