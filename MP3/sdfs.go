@@ -104,7 +104,7 @@ func listenFileTransferPort() {
                 sdfsFilename := split_message[1]
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
 
-                val, err := os.Stat(filePath)
+                _, err := os.Stat(filePath)
 
                 if os.IsNotExist(err) {
                     fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
@@ -536,7 +536,7 @@ func listenMasterRequests() {
 
             case "replace":
                 // sender, err := strconv.Atoi(split_message[1])
-                sdfsFilename := split_message[1]
+                // sdfsFilename := split_message[1]
                 // fmt.Printf("%s\n", sdfsFilename)
                 excludeList_str := split_message[2]
 
@@ -942,27 +942,27 @@ func executeCommand(command string, userReader *bufio.Reader) {
     command_type := split_command[0]
 
     switch command_type {
-    case "open":
-        sdfsFilename := split_command[1]
-        // fmt.Printf("Trying to open %s\n", shared_dir+sdfsFilename)
+    // case "open":
+    //     sdfsFilename := split_command[1]
+    //     // fmt.Printf("Trying to open %s\n", shared_dir+sdfsFilename)
 
-        f, err := os.Open(shared_dir + sdfsFilename)
-        if err != nil {
-            fmt.Println(err)
-        }
+    //     f, err := os.Open(shared_dir + sdfsFilename)
+    //     if err != nil {
+    //         fmt.Println(err)
+    //     }
 
-        fileInfo, err := f.Stat()
-        if err != nil {
-            log.Printf("[ME %d] Can't access file stats %s\n", myVid, sdfsFilename)
-            return
-        }
-        // fmt.Printf("file size = %d\n", fileInfo.Size())
+    //     fileInfo, err := f.Stat()
+    //     if err != nil {
+    //         log.Printf("[ME %d] Can't access file stats %s\n", myVid, sdfsFilename)
+    //         return
+    //     }
+    //     // fmt.Printf("file size = %d\n", fileInfo.Size())
 
-        fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
-        // fmt.Printf("file size = %s\n", fileSize)
+    //     // fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
+    //     // fmt.Printf("file size = %s\n", fileSize)
 
-        // fmt.Printf("success open %s\n", sdfsFilename)
-        f.Close()
+    //     // fmt.Printf("success open %s\n", sdfsFilename)
+    //     f.Close()
         
     case "ls":
         sdfsFilename := split_command[1]
@@ -1161,7 +1161,7 @@ func scanCommands() {
             for fileName := range(fileTimeMap) {
                 fmt.Printf("%s ", fileName)
             }
-        case "ls", "get", "delete", "put", "open":
+        case "ls", "get", "delete", "put":
             if command_type == "get" {
                 if len(split_command) < 3 {
                     break
