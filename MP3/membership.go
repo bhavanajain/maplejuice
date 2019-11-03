@@ -666,6 +666,7 @@ func listenOtherPort() (err error) {
 				fmt.Printf("[ME %d] Leader Message : %s \n",myVid,message)
 				newPort,_ :=strconv.Atoi(split_message[2])
 				LeaderHandler(subject,newPort)
+				disseminate(message)
 			}
 
 		case "ADD":
