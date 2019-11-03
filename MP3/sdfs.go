@@ -902,6 +902,15 @@ func executeCommand(command string, userReader *bufio.Reader) {
     command_type := split_command[0]
 
     switch command_type {
+    case "open":
+        sdfsFilename := split_command[1]
+        f, err := os.Open(shared_dir + sdfsFilename)
+        if err != nil {
+            fmt.Println(err)
+        }
+        fmt.Println("success open %s\n", sdfsFilename)
+        f.Close()
+        
     case "ls":
         sdfsFilename := split_command[1]
 
