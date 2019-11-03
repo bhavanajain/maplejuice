@@ -1211,6 +1211,7 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
 func replicateFiles (subjectNode int) {
     // This function tries to make a replica of all files stored by subjectNode.
 
+    fmt.Printf("CRASH ")
 
     for fileName, _ := range nodeMap[subjectNode] {
         // Remove from the fileMap node list
