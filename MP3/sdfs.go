@@ -140,7 +140,7 @@ func listenFileTransferPort() {
                     log.Printf("[ME %d] Successfully sent the complete file %s\n", myVid, sdfsFilename)
                 } else {
                     log.Printf("[ME %d] Could not send the complete file %s\n", myVid, sdfsFilename)
-                    break
+                    // break
                 }
 
                 f.Close()
@@ -693,7 +693,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     }
     defer conn.Close()
 
-    message := fmt.Sprintf("putfile %s %s", sdfsFilename, myVid)
+    message := fmt.Sprintf("putfile %s %d", sdfsFilename, myVid)
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
 
@@ -872,7 +872,7 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
     }
     defer conn.Close()
 
-    master_command := fmt.Sprintf("replace %s %s %s", oldnode, sdfsFilename, list2String(excludeList))
+    master_command := fmt.Sprintf("replace %d %s %s", oldnode, sdfsFilename, list2String(excludeList))
     fmt.Fprintf(conn, master_command)
 
     reader := bufio.NewReader(conn)
@@ -902,6 +902,15 @@ func executeCommand(command string, userReader *bufio.Reader) {
     command_type := split_command[0]
 
     switch command_type {
+    case "open":
+        sdfsFilename := split_command[1]
+        f, err := os.Open(shared_dir + sdfsFilename)
+        if err != nil {
+            fmt.Println(err)
+        }
+        fmt.Println("success open %s\n", sdfsFilename)
+        f.Close()
+        
     case "ls":
         sdfsFilename := split_command[1]
 
