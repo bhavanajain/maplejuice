@@ -288,7 +288,10 @@ func listenMasterRequests() {
     for {
     // if myIP == masterIP {
 
-        conn, _ := ln.Accept()
+        conn, err := ln.Accept()
+        if err != nil{
+            fmt.Println(err)
+        }
         log.Printf("[Master] Accepted a new connection\n")     
 
         conn_reader := bufio.NewReader(conn)
@@ -1393,7 +1396,7 @@ func LeaderElection() {
 
 
         go listenMasterRequests()
-        go HandleFileReplication()
+        
 
         // Move your own things to fileMap and nodeMap
         for fileName := range(fileTimeMap){
@@ -1428,6 +1431,9 @@ func LeaderElection() {
 
         leaderMsg := fmt.Sprintf("LEADER,%d",myVid)
         disseminate(leaderMsg)
+
+        time.Sleep(1*time.Second)
+        go HandleFileReplication()
     }
 
     // send everyone the leadership message
