@@ -118,7 +118,9 @@ func receiveHeartbeat() {
 func printMembershipList() {
 	fmt.Printf("My members: [")
 	for id := range(memberMap) {
-		fmt.Printf("%d ", id)
+		if memberMap[id].alive {
+			fmt.Printf("%d ", id)
+		}
 	}
 	fmt.Printf("]\n")
 }
@@ -128,8 +130,8 @@ func printChildren() {
 	for child_vid := range children {
 		child_list = append(child_list, child_vid)
 	}
-	log.Printf("[ME %d] Children = %v", myVid, child_list)
-	fmt.Printf("[ME %d] Children = %v", myVid, child_list)
+	log.Printf("[ME %d] Children = %v\n", myVid, child_list)
+	fmt.Printf("[ME %d] Children = %v\n", myVid, child_list)
 }
 
 func printMonitors() {
@@ -137,8 +139,8 @@ func printMonitors() {
 	for _, monNode := range monitors {
 		child_list = append(child_list, monNode.vid)
 	}
-	log.Printf("[ME %d] monitors = %v", myVid, child_list)
-	fmt.Printf("[ME %d] monitors = %v", myVid, child_list)
+	log.Printf("[ME %d] monitors = %v\n", myVid, child_list)
+	fmt.Printf("[ME %d] monitors = %v\n", myVid, child_list)
 }
 
 func checkChildren() {
