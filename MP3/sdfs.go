@@ -1400,6 +1400,8 @@ func LeaderElection() {
 
 
         go listenMasterRequests()
+
+        time.Sleep(1*time.Second)
         
 
         // Move your own things to fileMap and nodeMap
@@ -1469,6 +1471,8 @@ func LeaderHandler( subject int, newPort int) {
         // Start a tcp connection with the master
         leaderSucc := true
         timeout := time.Duration(20) * time.Second
+
+
 
         conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
         if err != nil{
