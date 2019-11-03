@@ -290,7 +290,10 @@ func listenMasterRequests() {
         conn_reader := bufio.NewReader(conn)
 
         message, _ := conn_reader.ReadString('\n')
-        message = message[:len(message)-1]
+        if len(message) > 0 {
+            message = message[:len(message)-1]
+        }
+        
         fmt.Printf("Message received %s", message)
         split_message := strings.Split(message, " ")
         message_type := split_message[0]
