@@ -13,6 +13,7 @@ import (
     "time"
     "io/ioutil"
     "math/rand"
+    // "os/exec"
 )
 
 var head = 0
@@ -38,7 +39,7 @@ var temp_dir = "temp/"
 
 var replicatePeriod = 10
 
-var masterIP = "172.22.152.106"
+var masterIP = "172.22.156.103"
 var masterPort = 8084
 var fileTransferPort = 8085
 
@@ -98,10 +99,19 @@ func listenFileTransferPort() {
 
             case "getfile":
                 sdfsFilename := split_message[1]
-                fmt.Printf("blah-%s-blah\n", shared_dir + sdfsFilename)
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
-                fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
-                // f, err := os.Open(shared_dir + sdfsFilename)
+
+                val, err := os.Stat(filePath)
+
+                if os.IsNotExist(err) {
+                    fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
+                    log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
+                    break
+                } else{
+                    fmt.Println(err)
+                    fmt.Printf("Size of the file is %d \n",val.Size())
+                }
+
                 f1_race, err := os.Open(filePath)
 
                 if err != nil {
@@ -149,6 +159,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
+
 
             case "putfile":
                 sdfsFilename := split_message[1]
@@ -251,28 +262,6 @@ func getmyIP() (string) {
 var fileMap = make(map[string]*fileData)
 var nodeMap = map[int]map[string]int64{}
 var conflictMap = make(map[string]*conflictData)
-
-// var filePutTimeMap = make(map[string]int64)
-
-// func putFileMaster()
-
-// [TODO] change nodeMap to contain a map rather than a list
-
-// func deleteFromList(nodeId int, sdfsFilename string) {
-//     idx := -1
-//     for i, filename := range(nodeMap[nodeId].fileNames) {
-//         if filename == sdfsFilename {
-//             idx = i
-//             break
-//         }
-//     }
-//     if idx != -1 {
-//         nodeMap[nodeId].fileNames[idx] = nodeMap[nodeId].fileNames[len(nodeMap[nodeId].fileNames)-1]
-//         nodeMap[nodeId].fileNames = nodeMap[nodeId].fileNames[:len(nodeMap[nodeId].fileNames)-1]
-//     } else {
-//         log.Printf("[ME %d] Could not find filename %s in the nodeMap of %d\n", myVid, sdfsFilename, nodeId)
-//     }
-// }
 
 func list2String(list []int) (string) {
     var list_str = ""
@@ -627,13 +616,16 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     defer conn.Close()
 
     message := fmt.Sprintf("getfile %s", sdfsFilename)
+    padded_message := fillString(message, 64)
+    conn.Write([]byte(padded_message))
 
-    fmt.Fprintf(conn, message)
+    // fmt.Fprintf(conn, message)
 
     bufferFileSize := make([]byte, 10)
 
     _, err = conn.Read(bufferFileSize)
     if err != nil {
+        fmt.Println(err) // what error are you getting?
         log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
         return false
@@ -922,7 +914,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
     switch command_type {
     case "open":
         sdfsFilename := split_command[1]
-        fmt.Printf("Trying to open %s\n", sdfsFilename)
+        fmt.Printf("Trying to open %s\n", shared_dir+sdfsFilename)
 
         f, err := os.Open(shared_dir + sdfsFilename)
         if err != nil {
@@ -1018,7 +1010,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         _, err := os.Stat(local_dir + localFilename)
         if os.IsNotExist(err) {
-            fmt.Printf("Got a put for %s, but the file does not exist\n", myVid, localFilename)
+            fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
             log.Printf("[ME %d] Got a put for %s, but the file does not exist\n", myVid, localFilename)
             break
         }
