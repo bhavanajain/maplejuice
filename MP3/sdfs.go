@@ -593,7 +593,7 @@ func deleteFile(nodeId int, sdfsFilename string) {
     log.Printf("[ME %d] Sent deletefile %s to %d\n", myVid, sdfsFilename, nodeId)
 }
 
-func getFile(nodeId int, sdfsFilename string, localFilename string) {
+func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     timeout := time.Duration(20) * time.Second
 
     ip := memberMap[nodeId].ip
@@ -602,7 +602,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) {
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, nodeId, sdfsFilename)
-        return
+        return false
     }
     defer conn.Close()
 
@@ -621,35 +621,37 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) {
     file, err := os.Create(local_dir + localFilename)
     if err != nil {
         log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilename) 
+        return false
     }
     defer file.Close()
 
     var receivedBytes int64
-    success := true
+    success := false
     for {
         if (fileSize - receivedBytes) < BUFFERSIZE {
-            _, err = io.CopyN(file, conn, (fileSize - receivedBytes))
+            bytesW, err := io.CopyN(file, conn, (fileSize - receivedBytes))
+            receivedBytes += bytesW
             if err != nil {
                 log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, nodeId)
-                success = false
                 break
             }
+            fmt.Printf("%s %s -> filesize = %d,  total bytes received = %d\n", sdfsFilename, localFilename, fileSize, receivedBytes)
+            success = true
             break
         }
         _, err = io.CopyN(file, conn, BUFFERSIZE)
         if err != nil {
             log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, nodeId)
-            success = false
             break
         }
         receivedBytes += BUFFERSIZE
     }
+
     if success {
         log.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
         fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
-
     }
-    return
+    return success
 }
 
 func copyFile(srcFile string, destFile string) (bool){
@@ -890,7 +892,6 @@ func executeCommand(command string, userReader *bufio.Reader) {
     split_command := strings.Split(command, " ")
     command_type := split_command[0]
 
-
     switch command_type {
     case "ls":
         sdfsFilename := split_command[1]
@@ -946,7 +947,17 @@ func executeCommand(command string, userReader *bufio.Reader) {
             nodeIds = append(nodeIds, node)
         }
 
-        getFile(nodeIds[0], sdfsFilename, localFilename)
+        success := false
+        for _, node := range(nodeIds) {
+            success = getFile(node, sdfsFilename, localFilename)
+            if success {
+                break
+            }
+        }
+
+        if !success {
+            fmt.Printf("[ME %d] Could not fetch %s shared to %s local\n", myVid, sdfsFilename, localFilename)
+        }
 
     case "delete":
         fmt.Fprintf(conn, command + "\n")
