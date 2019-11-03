@@ -232,7 +232,7 @@ func listenFileTransferPort() {
                     break
                 }
 
-                delete(fileTimeMap, sdsFileName)
+                delete(fileTimeMap, sdfsFilename)
 
                 log.Printf("[ME %d] Successfully deleted the file %s\n", myVid, sdfsFilename) 
 
