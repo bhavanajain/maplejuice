@@ -284,7 +284,10 @@ func list2String(list []int) (string) {
 }
 
 func listenMasterRequests() {
-    ln, _ := net.Listen("tcp", ":" + strconv.Itoa(masterPort))
+    ln, err := net.Listen("tcp", ":" + strconv.Itoa(masterPort))
+    if err != nil{
+        fmt.Println(err)
+    }
     for {
     // if myIP == masterIP {
 
