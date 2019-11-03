@@ -1396,6 +1396,7 @@ func LeaderElection() {
         fmt.Printf("[ME %d] I'm the leader \n",myVid)
         // I'm the leader
         masterIP = myIP // set my IP as the master IP
+        masterPort = masterPort+2
 
 
         go listenMasterRequests()
@@ -1432,7 +1433,7 @@ func LeaderElection() {
         fmt.Printf("[ME %d] New Master Elected %d\n",myVid,myVid)
                       
 
-        leaderMsg := fmt.Sprintf("LEADER,%d",myVid)
+        leaderMsg := fmt.Sprintf("LEADER,%d,%d",myVid,masterPort)
         disseminate(leaderMsg)
 
         time.Sleep(1*time.Second)
@@ -1455,13 +1456,14 @@ func LeaderElection() {
     return
 }
 
-func LeaderHandler( subject int) {
+func LeaderHandler( subject int, newPort int) {
 
     if masterIP == memberMap[subject].ip{
         return
     }
 
     masterIP = memberMap[subject].ip
+    masterPort = newPort
     // Then start tranferring your own nodes to everyone in a go routuine
     go func(subject int) {
         // Start a tcp connection with the master

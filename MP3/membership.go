@@ -664,7 +664,8 @@ func listenOtherPort() (err error) {
 			// fmt.Printf("[ME %d] Leader Message : %s \n",message)
 			if masterIP != memberMap[subject].ip {
 				fmt.Printf("[ME %d] Leader Message : %s \n",myVid,message)
-				LeaderHandler(subject)
+				newPort,_ :=strconv.Atoi(split_message[2])
+				LeaderHandler(subject,newPort)
 			}
 
 		case "ADD":
