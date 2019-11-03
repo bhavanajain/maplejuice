@@ -102,7 +102,7 @@ func listenFileTransferPort() {
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
                 // f, err := os.Open(shared_dir + sdfsFilename)
-                f, err := os.Open(filePath)
+                f1_race, err := os.Open(filePath)
 
                 if err != nil {
                     fmt.Println(err)
@@ -110,7 +110,7 @@ func listenFileTransferPort() {
                     break
                 }
 
-                fileInfo, err := f.Stat()
+                fileInfo, err := f1_race.Stat()
                 if err != nil {
                     log.Printf("[ME %d] Can't access file stats %s\n", myVid, sdfsFilename)
                     return
@@ -124,7 +124,7 @@ func listenFileTransferPort() {
 
                 success := true
                 for {
-                    _, err = f.Read(sendBuffer)
+                    _, err = f1_race.Read(sendBuffer)
                     if err != nil {
                         if err == io.EOF {
                             break
@@ -148,7 +148,7 @@ func listenFileTransferPort() {
                     // break
                 }
 
-                f.Close()
+                f1_race.Close()
 
             case "putfile":
                 sdfsFilename := split_message[1]
