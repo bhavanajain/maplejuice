@@ -474,6 +474,7 @@ func listenMasterRequests() {
                     }
                     delete(fileMap, sdfsFilename)
                     fmt.Fprintf(conn,"Deletion progressing\n") 
+
                     
                 }else{
                     fmt.Fprintf(conn,"File does not exist\n")
