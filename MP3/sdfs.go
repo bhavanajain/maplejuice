@@ -98,8 +98,8 @@ func listenFileTransferPort() {
 
                 log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
 
-                cmd := fmt.Sprintf("cp  %s %s"sharedFilePath, temp_dir+sdfsFilename)
-                _, err := exec.Command("sh","-c",cmd).Output()
+                cmd := fmt.Sprintf("cp  %s %s",sharedFilePath, temp_dir+sdfsFilename)
+                _, err = exec.Command("sh","-c",cmd).Output()
                 if err != nil{
                     fmt.Println("Can't copy")
                 }
@@ -130,7 +130,7 @@ func listenFileTransferPort() {
                 //     fmt.Printf("%s\n",out)
                 // }
 
-                cmd = fmt.Sprintf("cp test/%s %s",sdfsFilename,"testFile.txt")
+                cmd := fmt.Sprintf("cp test/%s %s",sdfsFilename,"testFile.txt")
                 //cmd := fmt.Sprintf("ls %s",shared_dir)
 
 
