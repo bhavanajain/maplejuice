@@ -1443,6 +1443,7 @@ func LeaderElection() {
 
         leaderMsg := fmt.Sprintf("LEADER,%d,%d",myVid,masterPort)
         disseminate(leaderMsg)
+        
 
         time.Sleep(1*time.Second)
         go HandleFileReplication()
