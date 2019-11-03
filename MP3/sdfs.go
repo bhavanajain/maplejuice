@@ -116,7 +116,7 @@ func listenFileTransferPort() {
                     fmt.Printf("%s\n",out)
                 }
 
-                cmd := fmt.Sprintf("ls -l shared/%s",sdfsFilename)
+                cmd = fmt.Sprintf("ls -l shared/%s",sdfsFilename)
                 //cmd := fmt.Sprintf("ls %s",shared_dir)
 
 
