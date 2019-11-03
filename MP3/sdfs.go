@@ -196,7 +196,7 @@ func listenFileTransferPort() {
                 f.Close()
 
                 if success {
-                    log.Printf("Successfully received %s file  from %d\n", sdfsFilename, sender)
+                    log.Printf("Successfully received %s file  from %s\n", sdfsFilename, sender)
                 } else {
                     log.Printf("Couldn't successfully receive the file %s from %d\n", sdfsFilename, sender)
                 }
@@ -523,11 +523,22 @@ func listenMasterRequests() {
                     } else {
                         // ignore
                     }
-
-
                 } else if action == "replicate" {
+                    destNodes := string2List(destNodes_str)
+                    destNode := destNodes[0]
+                    
+                    go sendConfirmation(destNode, sdfsFilename, srcNode)
+                    
+                    updateTimestamp = time.Now().Unix()
+                    fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, dest)
 
-                    //TOFU
+                    _, ok := nodeMap[destNode]
+                    if ok {
+                        nodeMap[destNode][sdfsFilename] = updateTimestamp
+                    } else {
+                        nodeMap[node] = make(map[string]int64)
+                        nodeMap[node][sdfsFilename] = updateTimestamp
+                    }                    
                 }
 
             case "replace":
@@ -753,7 +764,8 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     ack = ack[:len(ack)-1]
 
     if ack == "done" {
-        return true
+        destNode := []int{nodeId}
+        sendAcktoMaster("replicate", myVid, list2String(destNode), sdfsFilename)
     } else {
         return false
     }
@@ -1213,12 +1225,13 @@ func replicateFiles (subjectNode int) {
         fmt.Printf("idx = %d, len of filenodes = %d\n", idx, len(filenodes))
         filenodes[idx] = filenodes[len(filenodes)-1]
         filenodes = filenodes[:len(filenodes)-1]
+        fileMap[fileName].nodeIds = filenodes
 
         newnode := getRandomNodes(filenodes, 1)
 
         go initiateReplica(fileName, filenodes[0], newnode[0])
     }
-
+    delete(nodeMap, subjectNode)
 }
 
 // this function needs work more 
