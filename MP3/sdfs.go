@@ -98,11 +98,11 @@ func listenFileTransferPort() {
 
                 log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
 
-                cmd := fmt.Sprintf("cp  %s %s",sharedFilePath, test_dir+sdfsFilename)
-                _, err = exec.Command("sh","-c",cmd).Output()
-                if err != nil{
-                    fmt.Println("Can't copy")
-                }
+                // cmd := fmt.Sprintf("cp  %s %s",sharedFilePath, test_dir+sdfsFilename)
+                // _, err = exec.Command("sh","-c",cmd).Output()
+                // if err != nil{
+                //     fmt.Println("Can't copy")
+                // }
             //     //cmd := fmt.Sprintf("ls %s",shared_dir)
 
 
@@ -117,32 +117,34 @@ func listenFileTransferPort() {
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
                 fmt.Printf("%s\n",sdfsFilename)
-                // cmd := fmt.Sprintf("ls -l shared/")
+                
+                // // cmd := fmt.Sprintf("ls -l shared/")
+                // // //cmd := fmt.Sprintf("ls %s",shared_dir)
+
+
+                // // out, err := exec.Command("sh","-c",cmd).Output()
+                // // // f, err := os.Open(shared_dir + sdfsFilename)
+                // // if err != nil{
+                // //     fmt.Println(cmd)
+                // //     fmt.Println("syscall error",err)
+                // // }else{
+                // //     fmt.Printf("%s\n",out)
+                // // }
+
+                // cmd := fmt.Sprintf("cp test/%s %s",sdfsFilename,"testFile.txt")
                 // //cmd := fmt.Sprintf("ls %s",shared_dir)
 
 
-                // out, err := exec.Command("sh","-c",cmd).Output()
+                // _, err = exec.Command("sh","-c",cmd).Output()
                 // // f, err := os.Open(shared_dir + sdfsFilename)
                 // if err != nil{
                 //     fmt.Println(cmd)
                 //     fmt.Println("syscall error",err)
                 // }else{
-                //     fmt.Printf("%s\n",out)
+                //     //fmt.Printf("%s\n",out)
                 // }
+                // filePath = "testFile.txt"
 
-                cmd := fmt.Sprintf("cp test/%s %s",sdfsFilename,"testFile.txt")
-                //cmd := fmt.Sprintf("ls %s",shared_dir)
-
-
-                _, err = exec.Command("sh","-c",cmd).Output()
-                // f, err := os.Open(shared_dir + sdfsFilename)
-                if err != nil{
-                    fmt.Println(cmd)
-                    fmt.Println("syscall error",err)
-                }else{
-                    //fmt.Printf("%s\n",out)
-                }
-                filePath = "testFile.txt"
                 val, err := os.Stat(filePath)
                 if os.IsNotExist(err) {
                     fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
