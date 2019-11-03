@@ -1024,7 +1024,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
     //     // fmt.Printf("success open %s\n", sdfsFilename)
     //     f.Close()
-        
+
+    
     case "ls":
         sdfsFilename := split_command[1]
 
@@ -1223,17 +1224,27 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
 func scanCommands() {
     for {
-
+        fmt.Printf("\n")
         reader := bufio.NewReader(os.Stdin)
         command, _ := reader.ReadString('\n')
         command = command[:len(command)-1]
         split_command := strings.Split(command, " ")
         command_type := split_command[0]
         switch command_type {
+        case "children":
+            printChildren()
+
+        case "monitors":
+            printMonitors()
+
+        case "members":
+            printMembershipList()
+        
         case "store":
             for fileName := range(fileTimeMap) {
                 fmt.Printf("%s ", fileName)
             }
+
         case "ls", "get", "delete", "put":
             if command_type == "get" {
                 if len(split_command) < 3 {
