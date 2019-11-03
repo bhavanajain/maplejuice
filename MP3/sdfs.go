@@ -1018,7 +1018,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         _, err := os.Stat(local_dir + localFilename)
         if os.IsNotExist(err) {
-            fmt.Printf("Got a put for %s, but the file does not exist\n", myVid, localFilename)
+            fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
             log.Printf("[ME %d] Got a put for %s, but the file does not exist\n", myVid, localFilename)
             break
         }
