@@ -589,7 +589,9 @@ func listenMasterRequests() {
                     } else {
                         nodeMap[destNode] = make(map[string]int64)
                         nodeMap[destNode][sdfsFilename] = updateTimestamp
-                    }                    
+                    } 
+
+                    fmt.Printf("Completed Replication of file : %s, receivedTime: %d\n",sdfsFilename,time.Now().UnixNano())                   
                 }
 
             case "replace":
@@ -1349,7 +1351,9 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
 func replicateFiles (subjectNode int) {
     // This function tries to make a replica of all files stored by subjectNode.
 
-    fmt.Printf("CRASH ")
+    fmt.Printf("CRASH \n")
+    fmt.Printf("Replication started for node : %d, timestamp : %d\n",subjectNode,time.Now().UnixNano())
+
 
     for fileName, _ := range nodeMap[subjectNode] {
         // Remove from the fileMap node list
