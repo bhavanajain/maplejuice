@@ -30,6 +30,8 @@ func distributedFileSystem() {
     }
     go listenFileTransferPort()
     go scanCommands()
+
+
     
     // go listenMasterRequests()
 
@@ -95,14 +97,16 @@ func membership(wg *sync.WaitGroup) {
 		go completeJoinRequests()
 		go garbageCollection()
 		// this garbage collection can occur concurrent to the addToDead list
+		fmt.Printf("[ME %d]\n", myVid)
 
 	} else{
 		fmt.Printf("Send join request to introducer\n")
 		sendJoinRequest()
+		fmt.Printf("[ME %d]\n", myVid)
 		fmt.Printf("completed join request\n")
 	}
 	go updateFingerTable()
-	fmt.Printf("[ME %d]\n", myVid)
+
 	sigs := make(chan os.Signal, 1)
 
 	signal.Notify(sigs, syscall.SIGQUIT)
