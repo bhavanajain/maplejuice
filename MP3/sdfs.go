@@ -117,7 +117,7 @@ func listenFileTransferPort() {
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
                 fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
                 fmt.Printf("%s\n",sdfsFilename)
-                
+
                 // // cmd := fmt.Sprintf("ls -l shared/")
                 // // //cmd := fmt.Sprintf("ls %s",shared_dir)
 
@@ -146,6 +146,7 @@ func listenFileTransferPort() {
                 // filePath = "testFile.txt"
 
                 val, err := os.Stat(filePath)
+                
                 if os.IsNotExist(err) {
                     fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
                     log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
@@ -685,8 +686,10 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     defer conn.Close()
 
     message := fmt.Sprintf("getfile %s", sdfsFilename)
-
-    fmt.Fprintf(conn, message)
+    padded_message := fillString(message, 64)
+    conn.Write([]byte(padded_message))
+    
+    // fmt.Fprintf(conn, message)
 
     bufferFileSize := make([]byte, 10)
 
