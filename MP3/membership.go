@@ -398,7 +398,7 @@ func checkIntroducer() {
 		time.Sleep(time.Duration(introPingPeriod) * time.Second)
 		if memberMap[0].alive == false {
 			// If introducer is dead, periodically send your record to the introducer
-			message := fmt.Sprintf("INTRODUCER,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID)
+			message := fmt.Sprintf("INTRODUCER,%d,%s,%d,%d,%s,%d,%d",myVid,memberMap[myVid].ip,memberMap[myVid].timestamp,maxID,masterIP,masterPort,masterNodeId)
 			sendMessage(0, message, num_tries)
 		}
 	
@@ -477,7 +477,7 @@ func completeJoinRequests() (err error) {
 		log.Printf("[ME %d] Added entry ip=%s timestamp=%d at vid=%d", myVid, newnode.ip, newnode.timestamp, newVid)
 
 		// Send the node's record
-		message := fmt.Sprintf("YOU,%d,%s,%d", newVid, newnode.ip, newnode.timestamp)
+		message := fmt.Sprintf("YOU,%d,%s,%d,%s,%d,%d", newVid, newnode.ip, newnode.timestamp,masterIP,masterPort,masterNodeId)
 		sendMessage(newVid, message, num_tries)
 
 		// Send introducer record
@@ -696,6 +696,12 @@ func listenOtherPort() (err error) {
 
 					tempmax, _ := strconv.Atoi(split_message[4])
 					maxID = max(maxID, tempmax)
+					nMasPort,_ = strconv.Atoi(split_message[6])
+					if nMasPort > masterPort{
+					masterIP = split_message[5]
+					masterPort = nMasPort
+					masterNodeId,_ = strconv.Atoi(split_message[7])
+					}
 					
 					message := fmt.Sprintf("JOIN,%d,%s,%d", 0, memberMap[0].ip,memberMap[0].timestamp)
 					updateMonitors()
@@ -735,10 +741,14 @@ func listenOtherPort() (err error) {
 			var newnode MemberNode
 			newnode = createMember(split_message[2], split_message[3])
 			memberMap[subject] = &newnode
+			masterIP = split_message[4]
+			masterPort,_ = strconv.Atoi(split_message[5])
+			masterNodeId,_ = strconv.Atoi(split_message[6])
 
 			go checkIntroducer()
 
 			log.Printf("[ME %d] Processed my memberMap entry", myVid)
+			fmt.Printf("[ME %d] Processed my masterIP %s, masterPort %d entry", myVid,masterIP,masterPort)
 
 		case "MEMBER":
 			if subject == myVid {

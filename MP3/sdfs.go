@@ -43,6 +43,7 @@ var replicatePeriod = 10
 var masterIP = "172.22.156.103"
 var masterPort = 8085
 var fileTransferPort = 8084
+var masterNodeId = 0
 
 var ongoingElection = false
 
@@ -1403,6 +1404,7 @@ func LeaderElection() {
         // I'm the leader
         masterIP = myIP // set my IP as the master IP
         masterPort = masterPort+1
+        masterNodeId = myVid
 
 
         go listenMasterRequests()
@@ -1473,6 +1475,7 @@ func LeaderHandler( subject int, newPort int) {
 
     masterIP = memberMap[subject].ip
     masterPort = newPort
+    masterNodeId = subject
     // Then start tranferring your own nodes to everyone in a go routuine
     go func(subject int) {
         // Start a tcp connection with the master
