@@ -910,7 +910,18 @@ func executeCommand(command string, userReader *bufio.Reader) {
         if err != nil {
             fmt.Println(err)
         }
-        fmt.Println("success open %s\n", sdfsFilename)
+
+        fileInfo, err := f.Stat()
+        if err != nil {
+            log.Printf("[ME %d] Can't access file stats %s\n", myVid, sdfsFilename)
+            return
+        }
+        fmt.Printf("file size = %d\n", fileInfo.Size())
+
+        fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
+        fmt.Printf("file size = %s\n", fileSize)
+
+        fmt.Printf("success open %s\n", sdfsFilename)
         f.Close()
         
     case "ls":
