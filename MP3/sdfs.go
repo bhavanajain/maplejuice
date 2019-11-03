@@ -36,7 +36,6 @@ type conflictData struct{
 var local_dir = "local/"
 var shared_dir = "shared/"
 var temp_dir = "temp/"
-var test_dir = "test/"
 
 var replicatePeriod = 10
 
@@ -98,63 +97,21 @@ func listenFileTransferPort() {
 
                 log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
 
-                // cmd := fmt.Sprintf("cp  %s %s",sharedFilePath, test_dir+sdfsFilename)
-                // _, err = exec.Command("sh","-c",cmd).Output()
-                // if err != nil{
-                //     fmt.Println("Can't copy")
-                // }
-            //     //cmd := fmt.Sprintf("ls %s",shared_dir)
-
-
-            //out, err := exec.Command("sh","-c",cmd).Output()
-
-            // case "getfile":
-
-
             case "getfile":
                 sdfsFilename := split_message[1]
-                fmt.Printf("blah-%s-blah\n", shared_dir + sdfsFilename)
                 filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
-                fmt.Printf("filepath using sprintf: %s-blah\n", filePath)
-                fmt.Printf("%s\n",sdfsFilename)
-
-                // // cmd := fmt.Sprintf("ls -l shared/")
-                // // //cmd := fmt.Sprintf("ls %s",shared_dir)
-
-
-                // // out, err := exec.Command("sh","-c",cmd).Output()
-                // // // f, err := os.Open(shared_dir + sdfsFilename)
-                // // if err != nil{
-                // //     fmt.Println(cmd)
-                // //     fmt.Println("syscall error",err)
-                // // }else{
-                // //     fmt.Printf("%s\n",out)
-                // // }
-
-                // cmd := fmt.Sprintf("cp test/%s %s",sdfsFilename,"testFile.txt")
-                // //cmd := fmt.Sprintf("ls %s",shared_dir)
-
-
-                // _, err = exec.Command("sh","-c",cmd).Output()
-                // // f, err := os.Open(shared_dir + sdfsFilename)
-                // if err != nil{
-                //     fmt.Println(cmd)
-                //     fmt.Println("syscall error",err)
-                // }else{
-                //     //fmt.Printf("%s\n",out)
-                // }
-                // filePath = "testFile.txt"
 
                 val, err := os.Stat(filePath)
-                
+
                 if os.IsNotExist(err) {
                     fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
                     log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
                     break
-                }else{
+                } else{
                     fmt.Println(err)
                     fmt.Printf("Size of the file is %d \n",val.Size())
                 }
+
                 f1_race, err := os.Open(filePath)
 
                 if err != nil {
@@ -202,11 +159,6 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                // cmd := "rm testFile.txt"
-                // out, err = exec.Command("sh","-c",cmd).Output()
-                // if err != nil{
-                //     fmt.Printf("syscall error \n")
-                // }
 
 
             case "putfile":
@@ -310,28 +262,6 @@ func getmyIP() (string) {
 var fileMap = make(map[string]*fileData)
 var nodeMap = map[int]map[string]int64{}
 var conflictMap = make(map[string]*conflictData)
-
-// var filePutTimeMap = make(map[string]int64)
-
-// func putFileMaster()
-
-// [TODO] change nodeMap to contain a map rather than a list
-
-// func deleteFromList(nodeId int, sdfsFilename string) {
-//     idx := -1
-//     for i, filename := range(nodeMap[nodeId].fileNames) {
-//         if filename == sdfsFilename {
-//             idx = i
-//             break
-//         }
-//     }
-//     if idx != -1 {
-//         nodeMap[nodeId].fileNames[idx] = nodeMap[nodeId].fileNames[len(nodeMap[nodeId].fileNames)-1]
-//         nodeMap[nodeId].fileNames = nodeMap[nodeId].fileNames[:len(nodeMap[nodeId].fileNames)-1]
-//     } else {
-//         log.Printf("[ME %d] Could not find filename %s in the nodeMap of %d\n", myVid, sdfsFilename, nodeId)
-//     }
-// }
 
 func list2String(list []int) (string) {
     var list_str = ""
@@ -688,7 +618,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     message := fmt.Sprintf("getfile %s", sdfsFilename)
     padded_message := fillString(message, 64)
     conn.Write([]byte(padded_message))
-    
+
     // fmt.Fprintf(conn, message)
 
     bufferFileSize := make([]byte, 10)
