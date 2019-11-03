@@ -183,7 +183,7 @@ func checkSuspicion(vid int) {
 			disseminate(message)
 			updateMonitors()
 			if myIP == masterIP {
-				go replicateFiles(subject) // Redistribute it's file
+				go replicateFiles(suspect) // Redistribute it's file
 			}
 			break
 		}
