@@ -1386,6 +1386,8 @@ func LeaderElection() {
     succId := getSuccessor(myVid)
 
     if myVid < predId && myVid < succId {
+
+        fmt.Printf("[ME %d] I'm the leader \n",myVid)
         // I'm the leader
         masterIP = myIP // set my IP as the master IP
 
@@ -1399,6 +1401,7 @@ func LeaderElection() {
             _,ok := fileMap[fileName]
             if ok{
                 fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,myVid) 
+                fileMap[fileName].timestamp = fileTimeMap[fileName]
             }else{
                 var newfiledata fileData 
                 newfiledata.timestamp = fileMap[fileName].timestamp
@@ -1442,6 +1445,10 @@ func LeaderElection() {
 }
 
 func LeaderHandler( subject int) {
+
+    if masterIP == memberMap[subject].ip{
+        return
+    }
 
     masterIP = memberMap[subject].ip
     // Then start tranferring your own nodes to everyone in a go routuine
