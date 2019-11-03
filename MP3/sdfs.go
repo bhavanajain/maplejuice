@@ -108,6 +108,7 @@ func listenFileTransferPort() {
                     log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
                     break
                 }else{
+                    fmt.Println(err)
                     fmt.Printf("Size of the file is %d \n",val.Size())
                 }
                 f1_race, err := os.Open(filePath)
