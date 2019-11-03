@@ -38,7 +38,7 @@ var local_dir = "local/"
 var shared_dir = "shared/"
 var temp_dir = "temp/"
 
-var replicatePeriod = 10
+var replicatePeriod = 30
 
 var masterIP = "172.22.152.106"
 var masterPort = 8085
