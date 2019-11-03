@@ -108,7 +108,8 @@ func listenFileTransferPort() {
                 _, err := exec.Command("sh","-c",cmd).Output()
                 // f, err := os.Open(shared_dir + sdfsFilename)
                 if err != nil{
-                    fmt.Printf("syscall error \n")
+                    fmt.Println(cmd)
+                    fmt.Println("syscall error",err)
                 }
                 filePath = "testFile.txt"
                 val, err := os.Stat(filePath)
