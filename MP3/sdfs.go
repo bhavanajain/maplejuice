@@ -909,10 +909,10 @@ func Readln(reader *bufio.Reader, timeout time.Duration) (string, error) {
         // reader := bufio.NewReader(os.Stdin)
         line, err := reader.ReadString('\n')
         if err != nil {
-                    e <- err
-                } else {
-                    s <- line
-                }
+            e <- err
+        } else {
+            s <- line
+        }
         close(s)
         close(e)
     }()
@@ -1070,7 +1070,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             // confResp, _ := userReader.ReadString('\n')
             confResp, err := Readln(userReader, 30 * time.Second)
             if err != nil {
-                fmt.Printf("%s\n", err)
+                fmt.Printf("%s Please press enter to proceed\n", err)
                 break
             }
             fmt.Printf("This is the confResp: %s", confResp)
@@ -1153,7 +1153,7 @@ func scanCommands() {
                 }
             }
             executeCommand(command, reader)
-            fmt.Printf("Exited the executeCommand function \n")
+            // fmt.Printf("Exited the executeCommand function \n")
         }
     }
 }
