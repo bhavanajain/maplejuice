@@ -696,7 +696,7 @@ func listenOtherPort() (err error) {
 
 					tempmax, _ := strconv.Atoi(split_message[4])
 					maxID = max(maxID, tempmax)
-					nMasPort,_ = strconv.Atoi(split_message[6])
+					nMasPort,_ := strconv.Atoi(split_message[6])
 					if nMasPort > masterPort{
 					masterIP = split_message[5]
 					masterPort = nMasPort
