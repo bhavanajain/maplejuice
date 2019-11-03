@@ -1362,7 +1362,7 @@ func replicateFiles (subjectNode int) {
 // this function needs work more 
 func HandleFileReplication () {
     for{
-        time.Sleep(time.Duration(replicatePeriod) * time.Second)
+        time.Sleep(time.Duration(int(0.2*float64(replicatePeriod*1000))) * time.Millisecond)
         if myIP == masterIP {
             // Run the code
 
@@ -1379,6 +1379,7 @@ func HandleFileReplication () {
             }
 
         }
+        time.Sleep(time.Duration(int(0.8*float64(replicatePeriod*1000))) * time.Millisecond)
 
         
     }
