@@ -997,6 +997,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
         if err != nil {
             log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
         }
+
+        conn.Close()    // [NEW]
+
         reply = reply[:len(reply)-1]
         split_reply := strings.Split(reply, " ")
 
@@ -1150,6 +1153,7 @@ func scanCommands() {
                 }
             }
             executeCommand(command, reader)
+            fmt.Printf("Exited the executeCommand function \n")
         }
     }
 }
