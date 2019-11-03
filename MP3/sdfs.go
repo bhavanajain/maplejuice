@@ -1151,7 +1151,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
 func scanCommands() {
     for {
-        fmt.Printf("[ME %d]\n",myVid)
+        
         reader := bufio.NewReader(os.Stdin)
         command, _ := reader.ReadString('\n')
         command = command[:len(command)-1]
