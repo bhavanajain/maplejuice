@@ -773,7 +773,7 @@ func listenOtherPort() (err error) {
 			go checkIntroducer()
 
 			log.Printf("[ME %d] Processed my memberMap entry", myVid)
-			fmt.Printf("[ME %d] Processed my masterIP %s, masterPort %d entry", myVid,masterIP,masterPort)
+			fmt.Printf("[ME %d] Processed my masterIP %s, masterPort %d entry\n", myVid, masterIP, masterPort)
 
 		case "MEMBER":
 			if subject == myVid {
@@ -787,7 +787,7 @@ func listenOtherPort() (err error) {
 				// introducer is anyway going to send it monitors.
 			}
 			
-			log.Printf("[ME %d] Processed a new memberMap entry vid=%d", myVid, subject)
+			log.Printf("[ME %d] Processed a new memberMap entry vid=%d\n", myVid, subject)
 
 		case "JOIN":
 			origin_time, _ := strconv.ParseInt(string(split_message[3]), 10, 64)

@@ -88,8 +88,6 @@ func membership(wg *sync.WaitGroup) {
 	go listenOtherPort()
 
 	time.Sleep(time.Duration(introPingPeriod) * time.Second)
-	
-	fmt.Printf("I am here, trying to join\n")
 
 	if myIP == introducer {
 		// there should be a delay here - depending on how frequently the introducer is being pinged
@@ -100,10 +98,7 @@ func membership(wg *sync.WaitGroup) {
 		fmt.Printf("[ME %d]\n", myVid)
 
 	} else{
-		fmt.Printf("Send join request to introducer\n")
 		sendJoinRequest()
-		// fmt.Printf("[ME %d]\n", myVid)
-		fmt.Printf("completed join request\n")
 	}
 	go updateFingerTable()
 	time.Sleep(7*time.Second)
