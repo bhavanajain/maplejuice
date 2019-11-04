@@ -16,7 +16,7 @@ import (
     "errors"
 )
 
-const BUFFERSIZE = 1024
+const BUFFERSIZE = 16384
 
 type fileData struct {
     timestamp int64
