@@ -320,30 +320,30 @@ func listenMasterRequests() {
     */
 
     ln, err := net.Listen("tcp", ":" + strconv.Itoa(masterPort))
-    if err != nil{
+    if err != nil {
         fmt.Println(err)
     }
 
     for {
-    if myIP == masterIP {
+        if myIP == masterIP {
 
-        conn, err := ln.Accept()
-        if err != nil{
-            fmt.Println(err)
-        }
-        log.Printf("[ME %d] Accepted a new connection on the master port %d\n", myVid, masterPort)     
+            conn, err := ln.Accept()
+            if err != nil{
+                fmt.Println(err)
+            }
+            log.Printf("[ME %d] Accepted a new connection on the master port %d\n", myVid, masterPort)     
 
-        conn_reader := bufio.NewReader(conn)
-        message, _ := conn_reader.ReadString('\n')
-        if len(message) > 0 {
-            // remove the '\n' char at the end
-            message = message[:len(message)-1]
-        }
-        
-        split_message := strings.Split(message, " ")
-        message_type := split_message[0]
+            conn_reader := bufio.NewReader(conn)
+            message, _ := conn_reader.ReadString('\n')
+            if len(message) > 0 {
+                // remove the '\n' char at the end
+                message = message[:len(message)-1]
+            }
+            
+            split_message := strings.Split(message, " ")
+            message_type := split_message[0]
 
-        switch message_type {
+            switch message_type {
             case "file":
                 /*
                     "file sender"
@@ -624,9 +624,10 @@ func listenMasterRequests() {
                 fmt.Fprintf(conn, message)
             }
             conn.Close()
-    }
+        }
     }
 }
+
 
 func sendConfirmation(subject int, sdfsFilename string, sender int) {
     timeout := 20 * time.Second
@@ -981,12 +982,10 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
 
 var fileTimeMap = make(map[string]int64)
 
-func Readln(reader *bufio.Reader, timeout time.Duration) (string, error) {
+func ReadWithTimeout(reader *bufio.Reader, timeout time.Duration) (string, error) {
     s := make(chan string)
     e := make(chan error)
     go func() {
-
-        // reader := bufio.NewReader(os.Stdin)
         line, err := reader.ReadString('\n')
         if err != nil {
             e <- err
@@ -1021,30 +1020,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
     split_command := strings.Split(command, " ")
     command_type := split_command[0]
 
-    switch command_type {
-    // case "open":
-    //     sdfsFilename := split_command[1]
-    //     // fmt.Printf("Trying to open %s\n", shared_dir+sdfsFilename)
-
-    //     f, err := os.Open(shared_dir + sdfsFilename)
-    //     if err != nil {
-    //         fmt.Println(err)
-    //     }
-
-    //     fileInfo, err := f.Stat()
-    //     if err != nil {
-    //         log.Printf("[ME %d] Can't access file stats %s\n", myVid, sdfsFilename)
-    //         return
-    //     }
-    //     // fmt.Printf("file size = %d\n", fileInfo.Size())
-
-    //     // fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
-    //     // fmt.Printf("file size = %s\n", fileSize)
-
-    //     // fmt.Printf("success open %s\n", sdfsFilename)
-    //     f.Close()
-
-    
+    switch command_type {    
     case "ls":
         sdfsFilename := split_command[1]
 
@@ -1167,7 +1143,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             // Wait for user input
             // user_reader := bufio.NewReader(os.Stdin)
             // confResp, _ := userReader.ReadString('\n')
-            confResp, err := Readln(userReader, 30 * time.Second)
+            confResp, err := ReadWithTimeout(userReader, 30 * time.Second)
             if err != nil {
                 fmt.Printf("%s Please press enter to proceed\n", err)
                 break
