@@ -1095,7 +1095,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             fmt.Printf("[ME %d] Could not fetch %s shared to %s local\n", myVid, sdfsFilename, localFilename)
         }
 
-        fmt.Printf("Tinme taken for Get %s\n",elapsed)
+        fmt.Printf("Time taken for get %s\n", elapsed)
 
     case "delete":
 
@@ -1193,27 +1193,15 @@ func executeCommand(command string, userReader *bufio.Reader) {
         for _, node := range nodeIds {
             go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
         }
-        // fmt.Printf("Waiting for quorum\n")
+
         wg.Wait()
 
-        
-
-        // fmt.Printf("done list: %v\n", doneList)
         doneList_str := list2String(doneList)
-
         sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
 
         elapsed := time.Since(initTime)
 
-        fmt.Printf("Time taken for Put %s\n",elapsed)
-
-
-
-
-        // conn is already closed , use ACK to send to the master
-        // fmt.Fprintf(conn, "quorum\n")
-        // fmt.Printf("sent quorum to master\n")
-
+        fmt.Printf("Time taken for put %s\n",elapsed)
     }
 }
 
