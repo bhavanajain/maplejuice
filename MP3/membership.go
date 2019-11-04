@@ -617,7 +617,7 @@ func updateMonitors() {
 		log.Printf("[ME %d] Updated monitors from %v to %v", myVid, old_monitors, new_monitors)
 	}
 
-	printMonitors()
+	// printMonitors()
 }
 
 func printGarbage() {
@@ -694,7 +694,7 @@ func listenOtherPort() (err error) {
 			cnode.timestamp = time.Now().Unix()
 			children[subject] = &cnode
 
-			printChildren()
+			// printChildren()
 
 			// fmt.Printf("updated children: %v\n", children)
 
@@ -704,7 +704,7 @@ func listenOtherPort() (err error) {
 				delete(children, subject)
 			}
 
-			printChildren()
+			// printChildren()
 
 			// fmt.Printf("updated children: %v\n", children)
 
@@ -759,7 +759,7 @@ func listenOtherPort() (err error) {
 			log.Printf("[ME %d] Set my %s to %d", myVid, strings.ToLower(message_type), subject)
 
 			// fmt.Printf("updated monitors: %v\n", monitors)
-			printMonitors()
+			// printMonitors()
 
 		case "YOU":
 			myVid = subject
@@ -816,8 +816,11 @@ func listenOtherPort() (err error) {
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
 			_, ok := eventTimeMap[subject]
+
 			if (!ok || eventTimeMap[subject] < origin_time) {
+
 				fmt.Printf("Processing CRASH for %d\n", subject)
+
 				eventTimeMap[subject] = origin_time
 				disseminate(message)
 
@@ -843,9 +846,10 @@ func listenOtherPort() (err error) {
 					updateMonitors()
 
 					log.Printf("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
-					// Check the files beloging to the dead node and redistribute the files
+
+					// Check the files belonging to the dead node and redistribute the files
 					if myIP == masterIP {
-						go replicateFiles(subject) // Redistribute it's file
+						go replicateFiles(subject)
 					}
 
 					if memberMap[subject].ip == masterIP {
@@ -927,20 +931,3 @@ func sendJoinRequest() {
 	log.Printf("[ME %d] Sent a JOIN request to introducer ip=%s", myVid, introducer)
 	return
 }
-
-// func getmyIP() (string) {
-// 	var myip string
-// 	addrs, err := net.InterfaceAddrs()
-// 	if err != nil {
-// 		log.Fatalf("Cannot get my IP")
-// 		os.Exit(1)
-// 	}
-// 	for _, a := range addrs {
-// 		if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-// 			if ipnet.IP.To4() != nil {
-// 				myip = ipnet.IP.String()
-// 			}
-// 		}
-// 	}
-// 	return myip
-// }
