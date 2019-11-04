@@ -1229,6 +1229,9 @@ func scanCommands() {
         case "children":
             printChildren()
 
+        case "me":
+            fmt.Printf("%d\n", myVid)
+
         case "monitors":
             printMonitors()
 
@@ -1246,47 +1249,20 @@ func scanCommands() {
                     break
                 }
             }
+
             executeCommand(command, reader)
             // fmt.Printf("Exited the executeCommand function \n")
         }
     }
 }
 
-
-// func putFileShared(sourceId int, destId int, fileName string) int{ // the final node to which the data is sent
-//     // Master is doing this
-//     timeout := time.Duration(20) * time.Second
-//     ip := memberMap[nodeId].ip
-//     port := fileTransferPort
-
-//     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
-//     if err != nil {
-//         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, ip, port)
-//         return
-//     }
-//     defer conn.Close()
-
-//     // Send this command to distribute the file to other nodes
-//     message := fmt.Sprintf("distributefile %d %s\n",destId,fileName)
-//     fmt.Fprintf(conn,message)
-//     // Read the message back from the source_ID
-//     return destId
-
-   
-    
-
-// }
-
 func getRandomNodes(excludeList []int, count int) ([]int) {
-    // fmt.Printf("Exclude list: %v\n", excludeList)
     var success = true
-
     result := make(map[int]bool)
 
     for {
         success = true
         randomnode := rand.Intn(len(memberMap))
-        // fmt.Printf("%d\n", randomnode)
 
         _, ok := result[randomnode]
         if ok {
@@ -1294,21 +1270,17 @@ func getRandomNodes(excludeList []int, count int) ([]int) {
         }
 
         if !memberMap[randomnode].alive {
-            // fmt.Printf("%d not alive\n", randomnode)
             continue
         }
 
         for _, excludenode := range(excludeList) {
             if randomnode == excludenode {
                 success = false
-                // fmt.Printf("Failed for %d\n", randomnode)
                 break
             }
         }
         if success {
             result[randomnode] = true
-            // result = append(result, randomnode)
-            // fmt.Printf("result: %v\n", result)
             if len(result) == count {
                 keys := make([]int, 0, len(result))
                 for k := range result {
@@ -1342,7 +1314,7 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
     return
 }
 
-func replicateFiles (subjectNode int) {
+func replicateFiles(subjectNode int) {
     // This function tries to make a replica of all files stored by subjectNode.
 
     fmt.Printf("CRASH \n")
@@ -1376,7 +1348,7 @@ func replicateFiles (subjectNode int) {
 }
 
 // this function needs work more 
-func HandleFileReplication () {
+func HandleFileReplication() {
     for{
         time.Sleep(time.Duration(int(0.2*float64(replicatePeriod*1000))) * time.Millisecond)
         if myIP == masterIP {
