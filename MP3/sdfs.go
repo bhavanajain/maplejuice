@@ -1183,8 +1183,6 @@ func executeCommand(command string, userReader *bufio.Reader) {
             nodeIds = append(nodeIds, node)
         }
 
-        // fmt.Printf("Got nodeIds %v, prepare to send file\n", nodeIds)
-
         var wg sync.WaitGroup
         wg.Add(4)
 
