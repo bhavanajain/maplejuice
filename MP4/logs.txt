@@ -1,0 +1,3 @@
+2019/11/22 12:32:39 Listening on heartbeat port 8080
+2019/11/22 12:32:39 [ME 0] Started listening on the otherport 8081
+2019/11/22 12:32:39 [ME 0] Started listening on file transfer port 8084

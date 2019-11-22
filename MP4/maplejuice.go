@@ -1115,7 +1115,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
         */
 
         localFilename := split_command[1]
-        numMaples := split_command[2]
+        sdfsFilename := "sdfs_" + localFilename
+        // numMaples := split_command[2]
 
         // s1: put the maple_exe in sdfs
         var wg sync.WaitGroup
@@ -1123,8 +1124,13 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         doneList = make([]int, 0, len(memberMap))
 
+        allNodes := []int{}
         for nodeId := range memberMap {
-            go sendFile(nodeId, localFilename, "sdfs_" + localFilename, &wg, nodeIds)
+            allNodes = append(allNodes, nodeId)
+        }
+
+        for nodeId := range memberMap {
+            go sendFile(nodeId, localFilename, sdfsFilename, &wg, allNodes)
         }
         wg.Wait()
         doneList_str := list2String(doneList)
