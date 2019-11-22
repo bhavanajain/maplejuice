@@ -874,6 +874,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
         if success {
             doneList = append(doneList, nodeId)
+            fmt.Printf("sent the file to %d\n", nodeId)
             wg.Done()
         }
         return
@@ -953,6 +954,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     if ack == "done" {
         // fmt.Printf("Received an ack from node %d\n", nodeId)
         doneList = append(doneList, nodeId)
+        fmt.Printf("Sent the file to %d\n", nodeId)
         wg.Done()
     }  
 }
