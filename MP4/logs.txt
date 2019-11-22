@@ -1,3 +1,6 @@
-2019/11/22 12:32:39 Listening on heartbeat port 8080
-2019/11/22 12:32:39 [ME 0] Started listening on the otherport 8081
-2019/11/22 12:32:39 [ME 0] Started listening on file transfer port 8084
+2019/11/22 12:35:58 [ME 0] Started listening on the otherport 8081
+2019/11/22 12:35:58 Listening on heartbeat port 8080
+2019/11/22 12:35:58 [ME 0] Started listening on file transfer port 8084
+2019/11/22 12:36:03 [ME 0] Sent a JOIN request to introducer ip=172.22.152.106
+2019/11/22 12:36:03 [ME 0] Finger Table entries = []
+2019/11/22 12:36:06 [ME 0] Unable to connect with the master ip=172.22.152.106 port=8085
