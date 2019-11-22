@@ -1138,7 +1138,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         }
         wg.Wait()
         doneList_str := list2String(doneList)
-        sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+        // sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
 
         fmt.Printf("Sent %s file to everyone\n", localFilename)
 
