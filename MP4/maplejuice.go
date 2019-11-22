@@ -1110,14 +1110,27 @@ func executeCommand(command string, userReader *bufio.Reader) {
         }
 
     case "maple":
+        /*
+        maple maple_exe num_maples
+        */
+
+        localFilename := split_command[1]
+        numMaples := split_command[2]
 
         // s1: put the maple_exe in sdfs
-        for node := range memberMap {
-            go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
+        var wg sync.WaitGroup
+        wg.Add(len(memberMap))
+
+        doneList = make([]int, 0, len(memberMap))
+
+        for nodeId := range memberMap {
+            go sendFile(nodeId, localFilename, "sdfs_" + localFilename, &wg, nodeIds)
         }
         wg.Wait()
         doneList_str := list2String(doneList)
         sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+
+        fmt.Printf("Sent %s file to everyone\n", localFilename)
 
         // s2: send the command to the master
         
