@@ -1140,7 +1140,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         doneList_str := list2String(doneList)
         // sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
 
-        fmt.Printf("Sent %s file to everyone\n", localFilename)
+        fmt.Printf("Sent %s file to everyone %v\n", localFilename, doneList_str)
 
         // s2: send the command to the master
         
