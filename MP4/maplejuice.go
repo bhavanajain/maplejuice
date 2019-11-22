@@ -14,6 +14,7 @@ import (
     "io/ioutil"
     "math/rand"
     "errors"
+    // "math"
 )
 
 const BUFFERSIZE = 1024
@@ -50,6 +51,7 @@ var fileMap = make(map[string]*fileData)
 var nodeMap = map[int]map[string]int64{}
 var conflictMap = make(map[string]*conflictData)
 
+var messageLength = 256
 
 func fillString(givenString string, toLength int) string {
     // pads `givenString` with ':' to make it of `toLength` size
@@ -115,7 +117,7 @@ func listenFileTransferPort() {
     for {
         conn, _ := ln.Accept()
         log.Printf("[ME %d] Accepted a new connection from %s\n", myVid, conn.RemoteAddr().(*net.TCPAddr).IP.String())     
-        bufferMessage := make([]byte, 64)
+        bufferMessage := make([]byte, messageLength)
         
         conn.Read(bufferMessage)
         message := strings.Trim(string(bufferMessage), ":")
@@ -126,6 +128,28 @@ func listenFileTransferPort() {
         message_type := split_message[0]
 
         switch message_type {
+        case "runmap":
+            /*
+            runmap mapleId sdfsMapleExe inputFile sdfsInterPrefix
+            */
+            // s1. get inputFile
+            mapleId, _ := strconv.Atoi(split_message[1])
+
+            sdfsMapleExe := split_message[2]
+            sdfsMapleExe = "shared/" + sdfsMapleExe
+
+            inputFile := split_message[3]
+            localFilename := "local_" + inputFile
+            getFileWrapper(inputFile, localFilename)
+            fmt.Printf("i got the file %s %s\n", inputFile, localFilename)
+            sdfsInterPrefix := split_message[4]
+
+            fmt.Printf("%s\n", sdfsInterPrefix)
+
+            // s2. run the command
+            fmt.Printf("hey! I am running the maple task # %d\n", mapleId)
+
+
             case "movefile":
                 /*
                     "movefile sdfsFilename sender"
@@ -646,7 +670,7 @@ func sendConfirmation(subject int, sdfsFilename string, sender int) {
     defer conn.Close()
 
     message := fmt.Sprintf("movefile %s %d", sdfsFilename, sender)
-    padded_message := fillString(message, 64)
+    padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
     // fmt.Printf("Sent a movefile %s request to %d\n", sdfsFilename, subject)
@@ -682,7 +706,7 @@ func deleteFile(nodeId int, sdfsFilename string) {
     defer conn.Close()
 
     message := fmt.Sprintf("deletefile %s", sdfsFilename)
-    padded_message := fillString(message, 64)
+    padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
     // fmt.Fprintf(conn, message)
@@ -704,7 +728,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     defer conn.Close()
 
     message := fmt.Sprintf("getfile %s", sdfsFilename)
-    padded_message := fillString(message, 64)
+    padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
     // fmt.Fprintf(conn, message)
@@ -790,7 +814,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     defer conn.Close()
 
     message := fmt.Sprintf("putfile %s %d", sdfsFilename, myVid)
-    padded_message := fillString(message, 64)
+    padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
     // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
@@ -896,7 +920,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     defer conn.Close()
 
     message := fmt.Sprintf("putfile %s %d", sdfsFilename, myVid)
-    padded_message := fillString(message, 64)
+    padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
     // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
@@ -1011,6 +1035,9 @@ func ReadWithTimeout(reader *bufio.Reader, timeout time.Duration) (string, error
     }
 }
 
+
+var mapleMap = make(map[int]int)
+
 func executeCommand(command string, userReader *bufio.Reader) {
 
     timeout := 20 * time.Second
@@ -1116,11 +1143,15 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
     case "maple":
         /*
-        maple maple_exe num_maples
+        maple maple_exe num_maples sdfs_intermediate sdfs_input
         */
 
         localFilename := split_command[1]
         sdfsFilename := "sdfs_" + localFilename
+        numMaples := split_command[2]
+        fmt.Printf("num of maples%d\n", numMaples)
+        sdfsInterPrefix := split_command[3]
+        sdfsSrcPrefix := split_command[4]
 
         fmt.Printf("files %s %s\n", localFilename, sdfsFilename)
         // numMaples := split_command[2]
@@ -1146,8 +1177,25 @@ func executeCommand(command string, userReader *bufio.Reader) {
         // sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
 
         fmt.Printf("Sent %s file to everyone %v\n", localFilename, doneList_str)
+        // calculate list of files
 
-        // s2: send the command to the master
+        mapleFiles := []string{}
+        for file := range fileMap {
+            if strings.Contains(file, sdfsSrcPrefix) {
+                mapleFiles = append(mapleFiles, file)
+            }
+        }
+        var mapleId = 0
+        var idx = 0
+        for _, inputFile := range mapleFiles {
+            // sdfsFilename is the maple exe that nodes have to run
+            mapleMap[mapleId] = allNodes[idx]
+            go sendMapleInfo(allNodes[idx], mapleId, sdfsFilename, inputFile, sdfsInterPrefix)
+            idx = (idx + 1) % len(allNodes)
+            mapleId = mapleId + 1
+        }
+
+
         
 
 
@@ -1334,7 +1382,7 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
     defer conn.Close()
 
     message := fmt.Sprintf("replicatefile %s %d", fileName, destNode)
-    padded_message := fillString(message, 64)
+    padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
     log.Printf("[ME %d] Sent replicate %s file message from %d (at %d)\n", myVid, fileName, srcNode, destNode)
