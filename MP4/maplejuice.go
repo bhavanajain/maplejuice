@@ -232,6 +232,8 @@ func listenFileTransferPort() {
                 fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
 
                 log.Printf("[ME %d] Incoming filesize %d\n", myVid, fileSize)
+                fmt.Printf("[ME %d] Incoming filesize %d\n", myVid, fileSize)
+
 
                 // append sender to the tempFilePath to distinguish conflicting writes from multiple senders
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
@@ -262,6 +264,7 @@ func listenFileTransferPort() {
 
                 // send ACK to sender
                 fmt.Fprintf(conn, "done\n")
+                fmt.Printf("recvd file\n")
 
                 f.Close()
 
@@ -270,7 +273,7 @@ func listenFileTransferPort() {
                 } else {
                     log.Printf("[ME %d] Couldn't receive the file %s from %d\n", myVid, sdfsFilename, sender)
                 }
-            
+
             case "deletefile":
                 /*
                     "deletefile sdfsFilename"
