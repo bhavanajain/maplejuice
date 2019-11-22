@@ -1116,6 +1116,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         localFilename := split_command[1]
         sdfsFilename := "sdfs_" + localFilename
+
+        fmt.Printf("files %s %s\n", localFilename, sdfsFilename)
         // numMaples := split_command[2]
 
         // s1: put the maple_exe in sdfs
@@ -1128,6 +1130,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
         for nodeId := range memberMap {
             allNodes = append(allNodes, nodeId)
         }
+
+        fmt.Printf("%v\n", allNodes)
 
         for nodeId := range memberMap {
             go sendFile(nodeId, localFilename, sdfsFilename, &wg, allNodes)
