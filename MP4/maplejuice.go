@@ -1137,7 +1137,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         reply, err := reader.ReadString('\n')
         if err!= nil{
             fmt.Println(err)
-        }else{
+        } else{
             fmt.Printf("%s",reply)
         }
 
@@ -1148,8 +1148,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         localFilename := split_command[1]
         sdfsFilename := "sdfs_" + localFilename
-        numMaples := split_command[2]
-        fmt.Printf("num of maples%d\n", numMaples)
+        numMaples, _ := strconv.Atoi(split_command[2])
+        fmt.Printf("num of maples %d\n", numMaples)
         sdfsInterPrefix := split_command[3]
         sdfsSrcPrefix := split_command[4]
 
@@ -1185,6 +1185,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
                 mapleFiles = append(mapleFiles, file)
             }
         }
+        
+        
+
         var mapleId = 0
         var idx = 0
         for _, inputFile := range mapleFiles {
