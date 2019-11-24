@@ -14,6 +14,7 @@ import (
     "io/ioutil"
     "math/rand"
     "errors"
+    "os/exec"
     // "math"
 )
 
@@ -98,6 +99,35 @@ func list2String(list []int) (string) {
     return list_str
 }
 
+func ExecuteCommand(run_cmd string, outputfile string, mapleId int) {
+    
+    cmd := exec.Command("sh","-c", run_cmd)
+    outfile, err := os.Create(outputfile)
+    if err != nil {
+        panic(err)
+    }
+    defer outfile.Close()
+
+    stdoutPipe, err := cmd.StdoutPipe()
+    if err != nil {
+        panic(err)
+    }
+
+    writer := bufio.NewWriter(outfile)
+    defer writer.Flush()
+
+    err = cmd.Start()
+    if err != nil {
+        panic(err)
+    }
+
+    go io.Copy(writer, stdoutPipe)
+    cmd.Wait()
+
+    // send an ack to the master saying this mapleId task is completed
+    // rejoin here
+    // ack_message := fmt.Sprintf("ack %s %s\n", )
+}
 
 
 func listenFileTransferPort() {
@@ -130,29 +160,28 @@ func listenFileTransferPort() {
         switch message_type {
         case "runmaple":
             /*
-            runmap mapleId sdfsMapleExe inputFile sdfsInterPrefix
+            runmaple mapleId sdfsMapleExe inputFile sdfsInterPrefix
             */
-            // s1. get inputFile
-            fmt.Printf("%s\n", message)
-            
+                        
             mapleId, _ := strconv.Atoi(split_message[1])
             sdfsMapleExe := split_message[2]
-            localMapleExe := "local_maple.exe"
+            localMapleExe := "local_" + sdfsMapleExe
             getFileWrapper(sdfsMapleExe, localMapleExe)
 
             fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
-            localFilename := "local_" + inputFile
-            getFileWrapper(inputFile, localFilename)
-            fmt.Printf("I got the file %s %s\n", inputFile, localFilename)
+            localInputFilename := "local_" + inputFile
+            getFileWrapper(inputFile, localInputFilename)
+            fmt.Printf("I got the file %s %s\n", inputFile, localInputFilename)
 
-            sdfsInterPrefix := split_message[4]
-            fmt.Printf("%s\n", sdfsInterPrefix)
+            // sdfsInterPrefix := split_message[4]
+            // fmt.Printf("%s\n", sdfsInterPrefix)
 
             // s2. run the command
-            fmt.Printf("hey! I am running the maple task # %d\n", mapleId)
-
+            run_cmd := fmt.Sprintf("%s -inputfile %s", localMapleExe, localInputFilename)
+            outputFilePath := fmt.Sprintf("local/output_%d.out", mapleId)
+            go ExecuteCommand(run_cmd, outputFilePath, mapleId)
 
             case "movefile":
                 /*
@@ -1616,6 +1645,9 @@ func LeaderHandler( subject int, newPort int) {
     }(subject)
     return
 }
+
+
+
 
 
 
