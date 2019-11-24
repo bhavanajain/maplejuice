@@ -32,24 +32,24 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     defer conn.Close()
 
     message := fmt.Sprintf("runmaple %d %s %s %s", mapleId, sdfsMapleExe, inputFile, sdfsInterPrefix)
-    fmt.Printf(message)
+    fmt.Printf("%s\n", message)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 }
 
 func getFileWrapper(sdfsFilename string, localFilename string) {
+    fmt.Printf("Inside get file wrapper\n")
     initTime := time.Now()
     // sdfsFilename := split_command[1]
     // localFilename := split_command[2]
     // Create a connection to main to ask for the file
 	timeout := 20 * time.Second
-    
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         return
     }
-    // defer conn.Close() // Don't defer
+    
     master_command := fmt.Sprintf("get %s\n", sdfsFilename)
     fmt.Fprintf(conn, master_command) // get the running 
 
@@ -65,7 +65,6 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
     split_reply := strings.Split(reply, " ")
 
     if len(split_reply[2]) == 0 {
-        // fmt.Printf("invalid file name\n")
         log.Printf("invalid file name\n")
         fmt.Printf("invalid file name\n")
         return // with some error msgs
