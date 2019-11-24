@@ -1071,6 +1071,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Fprintf(conn, master_command)
 
         reader := bufio.NewReader(conn)
+        reply, err := reader.ReadString('\n')
+        if err != nil {
             log.Printf("[ME %d] Could not read reply from master (for ls %s)\n", myVid, sdfsFilename)
         }
         reply = reply[:len(reply)-1]

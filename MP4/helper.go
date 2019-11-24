@@ -132,9 +132,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
         return // free up the user request
     }
     reply = reply[:len(reply)-1]
-    fmt.Printf("Mast
-        reply, err := reader.ReadString('\n')
-        if err != nil {er reply for put: %s\n", reply)
+    fmt.Printf("Master reply for put: %s\n", reply)
     split_reply := strings.Split(reply, " ")
     // Check if it is putreply
 
