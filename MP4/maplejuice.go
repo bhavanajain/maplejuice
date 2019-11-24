@@ -99,12 +99,17 @@ func list2String(list []int) (string) {
     return list_str
 }
 
-func ExecuteCommand(run_cmd string, outputfile string, mapleId int) {
+func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string, mapleId int) {
     // run_cmd = "./" + run_cmd
+    err := os.Chmod(exeFile, 0777)
+    if err != nil {
+        fmt.Printf("%v\n", err)
+    }
+    run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
     fmt.Printf("Trying to run %s\n", run_cmd)
 
     cmd := exec.Command("sh","-c", run_cmd)
-    outfile, err := os.Create(outputfile)
+    outfile, err := os.Create(outputFilePath)
     if err != nil {
         fmt.Printf("%v\n", err)
         panic(err)
@@ -177,17 +182,19 @@ func listenFileTransferPort() {
             fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
-            localInputFilename := "local_" + inputFile
-            getFileWrapper(inputFile, localInputFilename)
-            fmt.Printf("I got the file %s %s\n", inputFile, localInputFilename)
+            localInputFile := "local_" + inputFile
+            getFileWrapper(inputFile, localInputFile)
+            fmt.Printf("I got the file %s %s\n", inputFile, localInputFile)
 
             // sdfsInterPrefix := split_message[4]
             // fmt.Printf("%s\n", sdfsInterPrefix)
 
             // s2. run the command
-            run_cmd := fmt.Sprintf("./local/%s -inputfile local/%s", localMapleExe, localInputFilename)
+            // run_cmd := fmt.Sprintf("./local/%s -inputfile local/%s", localMapleExe, localInputFilename)
+            exeFile := fmt.Sprintf("./local/%s", localMapleExe)
+            inputFilePath := fmt.Sprintf("local/%s", localInputFile)
             outputFilePath := fmt.Sprintf("local/output_%d.out", mapleId)
-            ExecuteCommand(run_cmd, outputFilePath, mapleId)
+            ExecuteCommand(exeFile, inputFilePath, outputFilePath, mapleId)
 
             case "movefile":
                 /*
