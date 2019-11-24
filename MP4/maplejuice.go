@@ -114,7 +114,6 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         fmt.Printf("%v\n", err)
         panic(err)
     }
-    // defer outfile.Close()
 
     stdoutPipe, err := cmd.StdoutPipe()
     if err != nil {
@@ -122,7 +121,6 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     }
 
     writer := bufio.NewWriter(outfile)
-    defer writer.Flush()
 
     err = cmd.Start()
     if err != nil {
@@ -132,13 +130,15 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
     go io.Copy(writer, stdoutPipe)
     cmd.Wait()
+
+    writer.Flush()
     outfile.Close()
 
     fmt.Printf("Maple processing done\n")
 
-    run_cmd = fmt.Sprintf("cat %s", outputFilePath)
-    out, err := exec.Command("sh","-c", run_cmd).Output()
-    fmt.Println(out)
+    // run_cmd = fmt.Sprintf("cat %s", outputFilePath)
+    // out, err := exec.Command("sh","-c", run_cmd).Output()
+    // fmt.Println(out)
 
     f, err := os.Open(outputFilePath)
     if err != nil {
