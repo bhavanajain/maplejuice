@@ -526,6 +526,8 @@ func listenMasterRequests() {
                     if the file does not exist (in the shared file system)
                     it replies with an empty list.
                 */
+
+                fmt.Printf("Received a get request %s\n", message)
                 sdfsFilename := split_message[1]
                 _, ok := fileMap[sdfsFilename]
                 var nodes_str = ""
@@ -540,6 +542,7 @@ func listenMasterRequests() {
                 }
                 reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
                 fmt.Fprintf(conn, reply)
+                fmt.Printf("Sent a reply %s\n", reply)
 
             case "delete":
                 /*

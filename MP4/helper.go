@@ -49,9 +49,13 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         return
     }
-    
+
+
     master_command := fmt.Sprintf("get %s\n", sdfsFilename)
     fmt.Fprintf(conn, master_command) // get the running 
+
+    fmt.Printf("sent a get request %s to the master\n", master_command) 
+
 
     reader := bufio.NewReader(conn)
     reply, err := reader.ReadString('\n')
@@ -67,7 +71,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
     if len(split_reply[2]) == 0 {
         log.Printf("invalid file name\n")
         fmt.Printf("invalid file name\n")
-        return // with some error msgs
+        return
     }
 
     nodeIds_str := strings.Split(split_reply[2], ",")
