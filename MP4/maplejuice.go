@@ -1620,7 +1620,7 @@ func LeaderHandler( subject int, newPort int) {
 
 
 
-func ExecuteCommand(comd string, outputfile string) {
+func ExecuteCommand(comd string, outputfile string, wg *sync.WaitGroup) {
     // split_command := strings.Split(comd, " ")
 
 
@@ -1649,6 +1649,7 @@ func ExecuteCommand(comd string, outputfile string) {
 
     go io.Copy(writer, stdoutPipe)
     cmd.Wait()
+    wg.Done()
 }
 
 
