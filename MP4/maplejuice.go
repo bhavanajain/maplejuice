@@ -128,11 +128,13 @@ func listenFileTransferPort() {
         message_type := split_message[0]
 
         switch message_type {
-        case "runmap":
+        case "runmaple":
             /*
             runmap mapleId sdfsMapleExe inputFile sdfsInterPrefix
             */
             // s1. get inputFile
+            fmt.Printf(message)
+            // should work till here
             mapleId, _ := strconv.Atoi(split_message[1])
 
             sdfsMapleExe := split_message[2]
@@ -1137,7 +1139,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         reply, err := reader.ReadString('\n')
         if err!= nil{
             fmt.Println(err)
-        }else{
+        } else{
             fmt.Printf("%s",reply)
         }
 
@@ -1146,37 +1148,46 @@ func executeCommand(command string, userReader *bufio.Reader) {
         maple maple_exe num_maples sdfs_intermediate sdfs_input
         */
 
-        localFilename := split_command[1]
-        sdfsFilename := "sdfs_" + localFilename
-        numMaples := split_command[2]
-        fmt.Printf("num of maples%d\n", numMaples)
-        sdfsInterPrefix := split_command[3]
-        sdfsSrcPrefix := split_command[4]
-
-        fmt.Printf("files %s %s\n", localFilename, sdfsFilename)
-        // numMaples := split_command[2]
-
-        // s1: put the maple_exe in sdfs
-        var wg sync.WaitGroup
-        wg.Add(len(memberMap))
-
-        doneList = make([]int, 0, len(memberMap))
-
-        allNodes := []int{}
-        for nodeId := range memberMap {
-            allNodes = append(allNodes, nodeId)
+        if myIP != masterIP {
+            fmt.Printf("Run Maple command from master\n")
+            break
         }
 
-        fmt.Printf("%v\n", allNodes)
-
-        for nodeId := range memberMap {
-            go sendFile(nodeId, localFilename, sdfsFilename, &wg, allNodes)
+        mapleExeFile := split_command[1]
+        numMaples, err := strconv.Atoi(split_command[2])
+        if err != nil {
+            fmt.Printf("Could not convert numMaples %s to int\n", split_command[2])
         }
-        wg.Wait()
-        doneList_str := list2String(doneList)
-        // sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+        mapleInterPrefix := split_command[3]
+        mapleSrcPrefix := split_command[4]
 
-        fmt.Printf("Sent %s file to everyone %v\n", localFilename, doneList_str)
+        sdfsMapleExe := fmt.Sprintf("sdfs_%s", mapleExeFile)
+        PutFileWrapper(mapleExeFile, sdfsMapleExe)
+
+        fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
+
+        fmt.Printf("num of maples %d\n", numMaples)
+
+        // fmt.Printf("files %s %s\n", localFilename, sdfsFilename)
+        // // numMaples := split_command[2]
+
+        // // s1: put the maple_exe in sdfs
+        // var wg sync.WaitGroup
+        // wg.Add(len(memberMap))
+
+        // doneList = make([]int, 0, len(memberMap))
+
+        
+        // fmt.Printf("%v\n", allNodes)
+
+        // for nodeId := range memberMap {
+        //     go sendFile(nodeId, localFilename, sdfsFilename, &wg, allNodes)
+        // }
+        // wg.Wait()
+        // doneList_str := list2String(doneList)
+        // // sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+
+        // fmt.Printf("Sent %s file to everyone %v\n", localFilename, doneList_str)
         // calculate list of files
 
         mapleFiles := []string{}
@@ -1185,20 +1196,24 @@ func executeCommand(command string, userReader *bufio.Reader) {
                 mapleFiles = append(mapleFiles, file)
             }
         }
-        var mapleId = 0
-        var idx = 0
-        for _, inputFile := range mapleFiles {
-            // sdfsFilename is the maple exe that nodes have to run
-            mapleMap[mapleId] = allNodes[idx]
-            go sendMapleInfo(allNodes[idx], mapleId, sdfsFilename, inputFile, sdfsInterPrefix)
-            idx = (idx + 1) % len(allNodes)
-            mapleId = mapleId + 1
+        fmt.Printf("Maple files %v\n", mapleFiles)
+
+        allNodes := []int{}
+        for nodeId := range memberMap {
+            allNodes = append(allNodes, nodeId)
         }
 
+        var mapleIdx = 0
+        var nodeIdx = 0
+        for _, inputFile := range mapleFiles {
+            mapleMap[mapleIdx] = allNodes[nodeIdx]
+            go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, inputFile, sdfsInterPrefix)
+            nodeIdx = (nodeIdx + 1) % len(allNodes)
+            mapleIdx = mapleIdx + 1
+        }
+        fmt.Printf("Maple map %v\n", mapleMap)
 
-        
-
-
+        // send maple instructions to each node
 
     case "put":
         // please send your ID with the message, so put will be "put sdsFileName myVID"
@@ -1214,7 +1229,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         sdfsFilename := split_command[2]
 
-        master_command := fmt.Sprintf("put %s %d\n", sdfsFilename,myVid)
+        master_command := fmt.Sprintf("put %s %d\n", sdfsFilename, myVid)
         fmt.Printf("%s\n", master_command)
         fmt.Fprintf(conn, master_command) // Sent the request to master
 
