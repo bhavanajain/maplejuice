@@ -32,6 +32,7 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     defer conn.Close()
 
     message := fmt.Sprintf("runmaple %d %s %s %s", mapleId, sdfsMapleExe, inputFile, sdfsInterPrefix)
+    fmt.Printf(message)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 }
@@ -102,3 +103,96 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
     return
 
 }
+
+func PutFileWrapper(localFilename, sdfsFilename) {
+    _, err := os.Stat(local_dir + localFilename)
+    if os.IsNotExist(err) {
+        fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
+        log.Printf("[ME %d] Got a put for %s, but the file does not exist\n", myVid, localFilename)
+        break
+    }
+
+    timeout := 20 * time.Second
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    if err != nil {
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        return
+    }
+    master_command := fmt.Sprintf("put %s %d\n", sdfsFilename, myVid)
+    fmt.Fprintf(conn, master_command)
+
+    reader := bufio.NewReader(conn) // Master response
+    reply, err := reader.ReadString('\n')
+    if err != nil{
+        log.Printf(" Can't move forward with put reqest")
+        break // free up the user request
+    }
+    reply = reply[:len(reply)-1]
+    fmt.Printf("Master reply for put: %s\n", reply)
+    split_reply := strings.Split(reply, " ")
+    // Check if it is putreply
+    if split_reply[0] == "conflict" {
+        // Wait for user input
+        // user_reader := bufio.NewReader(os.Stdin)
+        // confResp, _ := userReader.ReadString('\n')
+        confResp, err := ReadWithTimeout(userReader, 30 * time.Second)
+        if err != nil {
+            fmt.Printf("%s Please press enter to proceed\n", err)
+            break
+        }
+        // fmt.Printf("This is the confResp: %s", confResp)
+
+        _, err = fmt.Fprintf(conn, confResp)
+        if err != nil{
+            // Issue with the master
+        }
+        confResp = confResp[:len(confResp)-1]
+
+        if confResp != "yes" {
+            break
+        }
+        // read the new input from the master
+        reply, err := reader.ReadString('\n')
+        if err != nil{
+            log.Printf(" Can't move forward with put reqest")
+            break // Free up the user command
+        }
+        reply = reply[:len(reply)-1]
+        fmt.Printf("%s\n", reply)
+        split_reply = strings.Split(reply, " ")
+    }
+
+    conn.Close()
+
+    nodeIds_str := strings.Split(split_reply[2], ",")
+    nodeIds := []int{}
+    for _, node_str := range nodeIds_str {
+        node, err := strconv.Atoi(node_str)
+        if err != nil {
+            panic(err)
+            // break // Free up the user 
+        }
+        nodeIds = append(nodeIds, node)
+    }
+
+    var wg sync.WaitGroup
+    wg.Add(4)
+
+    doneList = make([]int, 0, 4)
+
+    for _, node := range nodeIds {
+        go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
+    }
+
+    wg.Wait()
+
+    doneList_str := list2String(doneList)
+    sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+
+    elapsed := time.Since(initTime)
+
+    fmt.Printf("Time taken for put %s\n",elapsed)
+}
+
+
+
