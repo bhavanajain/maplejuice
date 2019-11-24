@@ -100,7 +100,7 @@ func list2String(list []int) (string) {
 }
 
 func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string, mapleId int) {
-    // run_cmd = "./" + run_cmd
+
     err := os.Chmod(exeFile, 0777)
     if err != nil {
         fmt.Printf("%v\n", err)
@@ -132,16 +132,20 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
     go io.Copy(writer, stdoutPipe)
     cmd.Wait()
+    outfile.Close()
 
     fmt.Printf("Maple processing done\n")
 
-    outfile.Close()
+    run_cmd = fmt.Sprintf("cat %s", outputFilePath)
+    out, err := exec.Command("sh","-c", run_cmd).Output()
+    fmt.Println(out)
 
     f, err := os.Open(outputFilePath)
     if err != nil {
         fmt.Printf("Cannot open %s for reading\n", outputFilePath)
     }
-    defer f.Close()
+    fmt.Printf("opened generated output file for key separation\n")
+    // defer f.Close()
 
     keyFileHandleMap := make(map[string]*os.File)
     // for large output, process in block of 1024 lines
@@ -150,6 +154,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     fileEnd := false
     for {
         line, err := fileReader.ReadString('\n')
+        fmt.Printf("curr line: %s", line)
         if err != nil {
             if err != io.EOF {
                 fmt.Printf("Unknown error encountered while reading file\n")
@@ -171,6 +176,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
                     fmt.Printf("Could not create the file %s\n", tempFilePath)
                     panic(err)
                 }
+                fmt.Printf("created new file handler for %s\n", tempFilePath)
                 keyFileHandleMap[key] = tempFile
                 tempFile.WriteString(line)
             }
@@ -179,6 +185,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             for _, fhandle := range(keyFileHandleMap) {
                 fhandle.Close()
             }
+            f.Close()
             break
         }
     }
