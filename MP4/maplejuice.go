@@ -179,7 +179,7 @@ func listenFileTransferPort() {
             // fmt.Printf("%s\n", sdfsInterPrefix)
 
             // s2. run the command
-            run_cmd := fmt.Sprintf("./%s -inputfile %s", localMapleExe, localInputFilename)
+            run_cmd := fmt.Sprintf("./local/%s -inputfile local/%s", localMapleExe, localInputFilename)
             outputFilePath := fmt.Sprintf("local/output_%d.out", mapleId)
             go ExecuteCommand(run_cmd, outputFilePath, mapleId)
 
