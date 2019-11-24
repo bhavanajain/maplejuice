@@ -114,7 +114,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         fmt.Printf("%v\n", err)
         panic(err)
     }
-    defer outfile.Close()
+    // defer outfile.Close()
 
     stdoutPipe, err := cmd.StdoutPipe()
     if err != nil {
@@ -134,6 +134,62 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     cmd.Wait()
 
     fmt.Printf("Maple processing done\n")
+
+    outfile.Close()
+
+    f, err := os.Open(outputFilePath)
+    if err != nil {
+        fmt.Printf("Cannot open %s for reading\n", outputFilePath)
+    }
+    defer f.Close()
+
+    keyFileHandleMap := make(map[string]*os.File)
+    // for large output, process in block of 1024 lines
+
+    fileReader := bufio.NewReader(f)
+    fileEnd := false
+    for {
+        line, err := fileReader.ReadString('\n')
+        if err != nil {
+            if err != io.EOF {
+                fmt.Printf("Unknown error encountered while reading file\n")
+                break
+            }
+            fileEnd = true
+        }
+        if len(line) > 0 {
+            splitLine := strings.Split(line, " ")
+            key := splitLine[0]
+            _, ok := keyFileHandleMap[key]
+            if ok {
+                temp := keyFileHandleMap[key]
+                temp.WriteString(line)
+            } else {
+                tempFilePath := fmt.Sprintf("local/output_%d_%s.out", mapleId, key)
+                tempFile, err := os.Create(tempFilePath)
+                if err != nil {
+                    fmt.Printf("Could not create the file %s\n", tempFilePath)
+                    panic(err)
+                }
+                keyFileHandleMap[key] = tempFile
+                tempFile.WriteString(line)
+            }
+        }
+        if fileEnd {
+            for _, fhandle := range(keyFileHandleMap) {
+                fhandle.Close()
+            }
+            break
+        }
+    }
+
+    // send ack to master
+
+
+
+
+    // divide it key-wise
+
 
     // send an ack to the master saying this mapleId task is completed
     // rejoin here
