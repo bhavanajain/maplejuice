@@ -100,7 +100,7 @@ func list2String(list []int) (string) {
 }
 
 func ExecuteCommand(run_cmd string, outputfile string, mapleId int) {
-    
+    // run_cmd = "./" + run_cmd
     cmd := exec.Command("sh","-c", run_cmd)
     outfile, err := os.Create(outputfile)
     if err != nil {
@@ -179,7 +179,7 @@ func listenFileTransferPort() {
             // fmt.Printf("%s\n", sdfsInterPrefix)
 
             // s2. run the command
-            run_cmd := fmt.Sprintf("%s -inputfile %s", localMapleExe, localInputFilename)
+            run_cmd := fmt.Sprintf("./%s -inputfile %s", localMapleExe, localInputFilename)
             outputFilePath := fmt.Sprintf("local/output_%d.out", mapleId)
             go ExecuteCommand(run_cmd, outputFilePath, mapleId)
 
