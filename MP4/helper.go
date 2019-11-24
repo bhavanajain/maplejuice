@@ -105,6 +105,8 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
 }
 
 func PutFileWrapper(localFilename string, sdfsFilename string) {
+    fmt.Printf("Inside put file wrapper\n")
+
     _, err := os.Stat(local_dir + localFilename)
     if os.IsNotExist(err) {
         fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
@@ -120,6 +122,8 @@ func PutFileWrapper(localFilename string, sdfsFilename string) {
     }
     master_command := fmt.Sprintf("put %s %d\n", sdfsFilename, myVid)
     fmt.Fprintf(conn, master_command)
+
+    fmt.Printf("Sent the put request to master\n")
 
     reader := bufio.NewReader(conn) // Master response
     reply, err := reader.ReadString('\n')
@@ -150,6 +154,8 @@ func PutFileWrapper(localFilename string, sdfsFilename string) {
 
     doneList = make([]int, 0, 4)
 
+    fmt.Printf("Sending file to %v\n", nodeIds)
+
     for _, node := range nodeIds {
         go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
     }
@@ -157,6 +163,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string) {
     wg.Wait()
 
     doneList_str := list2String(doneList)
+    fmt.Printf("Send ack to master")
     sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
 
     // elapsed := time.Since(initTime)
