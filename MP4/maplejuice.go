@@ -106,7 +106,7 @@ func ExecuteCommand(run_cmd string, outputfile string, mapleId int) {
     cmd := exec.Command("sh","-c", run_cmd)
     outfile, err := os.Create(outputfile)
     if err != nil {
-        fmt.Printf(err)
+        fmt.Printf("%v\n", err)
         panic(err)
     }
     defer outfile.Close()
@@ -121,7 +121,7 @@ func ExecuteCommand(run_cmd string, outputfile string, mapleId int) {
 
     err = cmd.Start()
     if err != nil {
-        fmt.Printf(err)
+        fmt.Printf("%v\n", err)
         panic(err)
     }
 
