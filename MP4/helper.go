@@ -2,16 +2,16 @@ package main
 
 
 import (
-    // "os"
     "net"
     "strings"
     "strconv"
     "log"
-    // "sync"
+    "sync"
     "bufio"
     // "io"
     "fmt"
     "time"
+    "os"
     // "io/ioutil"
     // "math/rand"
     // "errors"
@@ -104,12 +104,12 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
 
 }
 
-func PutFileWrapper(localFilename, sdfsFilename) {
+func PutFileWrapper(localFilename string, sdfsFilename string) {
     _, err := os.Stat(local_dir + localFilename)
     if os.IsNotExist(err) {
         fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
         log.Printf("[ME %d] Got a put for %s, but the file does not exist\n", myVid, localFilename)
-        break
+        return
     }
 
     timeout := 20 * time.Second
@@ -125,42 +125,12 @@ func PutFileWrapper(localFilename, sdfsFilename) {
     reply, err := reader.ReadString('\n')
     if err != nil{
         log.Printf(" Can't move forward with put reqest")
-        break // free up the user request
+        return // free up the user request
     }
     reply = reply[:len(reply)-1]
     fmt.Printf("Master reply for put: %s\n", reply)
     split_reply := strings.Split(reply, " ")
     // Check if it is putreply
-    if split_reply[0] == "conflict" {
-        // Wait for user input
-        // user_reader := bufio.NewReader(os.Stdin)
-        // confResp, _ := userReader.ReadString('\n')
-        confResp, err := ReadWithTimeout(userReader, 30 * time.Second)
-        if err != nil {
-            fmt.Printf("%s Please press enter to proceed\n", err)
-            break
-        }
-        // fmt.Printf("This is the confResp: %s", confResp)
-
-        _, err = fmt.Fprintf(conn, confResp)
-        if err != nil{
-            // Issue with the master
-        }
-        confResp = confResp[:len(confResp)-1]
-
-        if confResp != "yes" {
-            break
-        }
-        // read the new input from the master
-        reply, err := reader.ReadString('\n')
-        if err != nil{
-            log.Printf(" Can't move forward with put reqest")
-            break // Free up the user command
-        }
-        reply = reply[:len(reply)-1]
-        fmt.Printf("%s\n", reply)
-        split_reply = strings.Split(reply, " ")
-    }
 
     conn.Close()
 
@@ -189,9 +159,9 @@ func PutFileWrapper(localFilename, sdfsFilename) {
     doneList_str := list2String(doneList)
     sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
 
-    elapsed := time.Since(initTime)
+    // elapsed := time.Since(initTime)
 
-    fmt.Printf("Time taken for put %s\n",elapsed)
+    // fmt.Printf("Time taken for put %s\n",elapsed)
 }
 
 

@@ -1192,7 +1192,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         mapleFiles := []string{}
         for file := range fileMap {
-            if strings.Contains(file, sdfsSrcPrefix) {
+            if strings.Contains(file, mapleSrcPrefix) {
                 mapleFiles = append(mapleFiles, file)
             }
         }
@@ -1207,7 +1207,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         var nodeIdx = 0
         for _, inputFile := range mapleFiles {
             mapleMap[mapleIdx] = allNodes[nodeIdx]
-            go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, inputFile, sdfsInterPrefix)
+            go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, inputFile, mapleInterPrefix)
             nodeIdx = (nodeIdx + 1) % len(allNodes)
             mapleIdx = mapleIdx + 1
         }
