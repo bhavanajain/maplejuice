@@ -173,7 +173,7 @@ func listenFileTransferPort() {
             inputFile := split_message[3]
             localInputFilename := "local_" + inputFile
             getFileWrapper(inputFile, localInputFilename)
-            fmt.Printf("I got the file %s %s\n", inputFile, localFilename)
+            fmt.Printf("I got the file %s %s\n", inputFile, localInputFilename)
 
             // sdfsInterPrefix := split_message[4]
             // fmt.Printf("%s\n", sdfsInterPrefix)
