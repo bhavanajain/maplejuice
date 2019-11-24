@@ -101,9 +101,12 @@ func list2String(list []int) (string) {
 
 func ExecuteCommand(run_cmd string, outputfile string, mapleId int) {
     // run_cmd = "./" + run_cmd
+    fmt.Printf("Trying to run %s\n", run_cmd)
+
     cmd := exec.Command("sh","-c", run_cmd)
     outfile, err := os.Create(outputfile)
     if err != nil {
+        fmt.Printf(err)
         panic(err)
     }
     defer outfile.Close()
@@ -118,11 +121,14 @@ func ExecuteCommand(run_cmd string, outputfile string, mapleId int) {
 
     err = cmd.Start()
     if err != nil {
+        fmt.Printf(err)
         panic(err)
     }
 
     go io.Copy(writer, stdoutPipe)
     cmd.Wait()
+
+    fmt.Printf("Maple processing done\n")
 
     // send an ack to the master saying this mapleId task is completed
     // rejoin here
@@ -181,7 +187,7 @@ func listenFileTransferPort() {
             // s2. run the command
             run_cmd := fmt.Sprintf("./local/%s -inputfile local/%s", localMapleExe, localInputFilename)
             outputFilePath := fmt.Sprintf("local/output_%d.out", mapleId)
-            go ExecuteCommand(run_cmd, outputFilePath, mapleId)
+            ExecuteCommand(run_cmd, outputFilePath, mapleId)
 
             case "movefile":
                 /*
