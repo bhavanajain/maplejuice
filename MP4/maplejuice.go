@@ -133,19 +133,21 @@ func listenFileTransferPort() {
             runmap mapleId sdfsMapleExe inputFile sdfsInterPrefix
             */
             // s1. get inputFile
-            fmt.Printf(message)
-            // should work till here
+            fmt.Printf("%s\n", message)
+            
             mapleId, _ := strconv.Atoi(split_message[1])
-
             sdfsMapleExe := split_message[2]
-            sdfsMapleExe = "shared/" + sdfsMapleExe
+            localMapleExe := "local_maple.exe"
+            getFileWrapper(sdfsMapleExe, localMapleExe)
+
+            fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
             localFilename := "local_" + inputFile
             getFileWrapper(inputFile, localFilename)
-            fmt.Printf("i got the file %s %s\n", inputFile, localFilename)
-            sdfsInterPrefix := split_message[4]
+            fmt.Printf("I got the file %s %s\n", inputFile, localFilename)
 
+            sdfsInterPrefix := split_message[4]
             fmt.Printf("%s\n", sdfsInterPrefix)
 
             // s2. run the command
