@@ -104,7 +104,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
 
 }
 
-func PutFileWrapper(localFilename string, sdfsFilename string) {
+func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     fmt.Printf("Inside put file wrapper\n")
 
     _, err := os.Stat(local_dir + localFilename)
@@ -114,12 +114,12 @@ func PutFileWrapper(localFilename string, sdfsFilename string) {
         return
     }
 
-    timeout := 20 * time.Second
-    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
-    if err != nil {
-        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        return
-    }
+    // timeout := 20 * time.Second
+    // conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    // if err != nil {
+    //     log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+    //     return
+    // }
     master_command := fmt.Sprintf("put %s %d\n", sdfsFilename, myVid)
     fmt.Fprintf(conn, master_command)
 
@@ -132,11 +132,13 @@ func PutFileWrapper(localFilename string, sdfsFilename string) {
         return // free up the user request
     }
     reply = reply[:len(reply)-1]
-    fmt.Printf("Master reply for put: %s\n", reply)
+    fmt.Printf("Mast
+        reply, err := reader.ReadString('\n')
+        if err != nil {er reply for put: %s\n", reply)
     split_reply := strings.Split(reply, " ")
     // Check if it is putreply
 
-    conn.Close()
+    // conn.Close()
 
     nodeIds_str := strings.Split(split_reply[2], ",")
     nodeIds := []int{}

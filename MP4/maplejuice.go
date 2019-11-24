@@ -1071,8 +1071,6 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Fprintf(conn, master_command)
 
         reader := bufio.NewReader(conn)
-        reply, err := reader.ReadString('\n')
-        if err != nil {
             log.Printf("[ME %d] Could not read reply from master (for ls %s)\n", myVid, sdfsFilename)
         }
         reply = reply[:len(reply)-1]
@@ -1173,7 +1171,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("%v\n", split_command)
 
         sdfsMapleExe := fmt.Sprintf("sdfs_%s", mapleExeFile)
-        PutFileWrapper(mapleExeFile, sdfsMapleExe)
+        PutFileWrapper(mapleExeFile, sdfsMapleExe, conn)
 
         fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
 
