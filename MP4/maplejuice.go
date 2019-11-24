@@ -425,11 +425,14 @@ func listenMasterRequests() {
                     Uses conflictMap to store last executed put for sdfsFilename.
                 */
 
+                fmt.Printf("Received a put request %s\n", message)
+
                 sdfsFilename := split_message[1]
                 sender, _ := strconv.Atoi(split_message[2])
 
                 _, ok := conflictMap[sdfsFilename]
                 if ok {
+                    fmt.Printf("file already in conflictMap\n")
                     // if the current put is within 60 seconds of the last executed put raise conflict 
                     if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
                         
@@ -466,6 +469,7 @@ func listenMasterRequests() {
                     }
 
                 } else{
+                    fmt.Printf("file not in conflictMap\n")
                     // sdfsFilename not in conflictMap 
                     var newConflict conflictData
                     newConflict.id = sender
@@ -480,6 +484,7 @@ func listenMasterRequests() {
 
                 _, ok = fileMap[sdfsFilename]
                 if ok {
+                    fmt.Printf("file already exists, sending old nodes\n")
                     var nodes_str = ""
                     for _, node := range(fileMap[sdfsFilename].nodeIds) {
                         nodes_str = nodes_str + strconv.Itoa(node) + ","
@@ -492,6 +497,7 @@ func listenMasterRequests() {
                     fmt.Fprintf(conn, reply)
 
                 } else {
+                    fmt.Printf("file new, send new nodes\n");
                     var excludelist = []int{sender}
                     // get three random nodes other than the sender itself
                     nodes := getRandomNodes(excludelist, 3)
@@ -506,6 +512,7 @@ func listenMasterRequests() {
                     }
 
                     reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
+                    fmt.Printf("Sending this reply for the put request %s\n", reply)
                     fmt.Fprintf(conn, reply)
                 }
 
