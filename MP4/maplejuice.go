@@ -1051,6 +1051,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
     }
     defer conn.Close()
 
+    fmt.Printf("%s\n", command)
+
     split_command := strings.Split(command, " ")
     command_type := split_command[0]
 
@@ -1160,7 +1162,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
         }
         mapleInterPrefix := split_command[3]
         mapleSrcPrefix := split_command[4]
-        fmt.Printf("%v", split_command)
+
+        fmt.Printf("%v\n", split_command)
+
         sdfsMapleExe := fmt.Sprintf("sdfs_%s", mapleExeFile)
         PutFileWrapper(mapleExeFile, sdfsMapleExe)
 
