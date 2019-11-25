@@ -771,8 +771,8 @@ func listenMasterRequests() {
                         panic(err)
                     }
 
-                    fmt.Printf("Received an ack from %s for maple id %s\n", sender, mapleId)
-                    
+                    fmt.Printf("Received an ack from %d for maple id %d\n", sender, mapleId)
+
 
                     mapleCompMap[mapleId] = true
 
@@ -1347,15 +1347,29 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         var mapleIdx = 0
         var nodeIdx = 0
-        for _, inputFile := range mapleFiles {
+
+        for {
             if allNodes[nodeIdx] != 0 {
                 mapleMap[mapleIdx] = allNodes[nodeIdx]
                 mapleCompMap[mapleIdx] = false
-                go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, inputFile, mapleInterPrefix)
+                go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, mapleFiles[mapleIdx], mapleInterPrefix)
                 mapleIdx = mapleIdx + 1
+                if mapleIdx == len(mapleFiles) {
+                    break
+                }
             }
             nodeIdx = (nodeIdx + 1) % len(allNodes)
         }
+
+        // for _, inputFile := range mapleFiles {
+        //     if allNodes[nodeIdx] != 0 {
+        //         mapleMap[mapleIdx] = allNodes[nodeIdx]
+        //         mapleCompMap[mapleIdx] = false
+        //         go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, inputFile, mapleInterPrefix)
+        //         mapleIdx = mapleIdx + 1
+        //     }
+        //     nodeIdx = (nodeIdx + 1) % len(allNodes)
+        // }
         fmt.Printf("Maple map %v\n", mapleMap)
 
 
