@@ -140,7 +140,7 @@ func listenFileTransferPort() {
             }
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
-            nodeInfoList := nodeInfoList[:len(nodeInfoList)-1]
+            nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
 
             go KeyAggregation(key, nodeInfoList)
 
