@@ -106,7 +106,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     if err != nil {
         fmt.Printf("%v\n", err)
     }
-    
+
     run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
     fmt.Printf("Trying to run %s\n", run_cmd)
 
@@ -219,9 +219,10 @@ func AssembleKeyFiles() {
         content := string(contentBytes)
         keys := strings.Split(content, "$$$$")
         keys = keys[:len(keys)-1]
-        fmt.Printf("Keys for %d maple id: %v\n", mapleId, keys)
+        fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
         mapleIdKeysMap[mapleId] = keys
     }
+    fmt.Printf("%v\n", mapleIdKeysMap)
 }
 
 func listenFileTransferPort() {
