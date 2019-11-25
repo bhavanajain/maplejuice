@@ -32,7 +32,9 @@ func main() {
 			fileEnd = true
 		}
 		if len(line) > 0 {
-			line = line[:len(line)-1]
+			if line[len(line)-1] == '\n' {
+				line = line[:len(line)-1]
+			}
 			lineWords := strings.Split(line, " ")
 			for _, word := range lineWords {
 				_, ok := wordCount[word]
