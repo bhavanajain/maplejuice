@@ -100,131 +100,6 @@ func list2String(list []int) (string) {
     return list_str
 }
 
-func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string, mapleId int) {
-
-    err := os.Chmod(exeFile, 0777)
-    if err != nil {
-        fmt.Printf("%v\n", err)
-    }
-
-    run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
-    fmt.Printf("Trying to run %s\n", run_cmd)
-
-    cmd := exec.Command("sh","-c", run_cmd)
-    outfile, err := os.Create(outputFilePath)
-    if err != nil {
-        fmt.Printf("%v\n", err)
-        panic(err)
-    }
-
-    stdoutPipe, err := cmd.StdoutPipe()
-    if err != nil {
-        panic(err)
-    }
-
-    writer := bufio.NewWriter(outfile)
-
-    err = cmd.Start()
-    if err != nil {
-        fmt.Printf("%v\n", err)
-        panic(err)
-    }
-
-    go io.Copy(writer, stdoutPipe)
-    cmd.Wait()
-
-    writer.Flush()
-    outfile.Close()
-
-    fmt.Printf("Maple processing done\n")
-
-    // run_cmd = fmt.Sprintf("cat %s", outputFilePath)
-    // out, err := exec.Command("sh","-c", run_cmd).Output()
-    // fmt.Println(out)
-
-    f, err := os.Open(outputFilePath)
-    if err != nil {
-        fmt.Printf("Cannot open %s for reading\n", outputFilePath)
-    }
-    fmt.Printf("opened generated output file for key separation\n")
-    // defer f.Close()
-
-    keyFileHandleMap := make(map[string]*os.File)
-    // for large output, process in block of 1024 lines
-
-    fileReader := bufio.NewReader(f)
-    fileEnd := false
-    for {
-        line, err := fileReader.ReadString('\n')
-        if err != nil {
-            if err != io.EOF {
-                fmt.Printf("Unknown error encountered while reading file\n")
-                break
-            }
-            fileEnd = true
-        }
-        if len(line) > 0 {
-            fmt.Printf("curr line: %s", line)
-            splitLine := strings.Split(line, " ")
-            key := splitLine[0]
-            _, ok := keyFileHandleMap[key]
-            if ok {
-                temp := keyFileHandleMap[key]
-                temp.WriteString(line)
-            } else {
-                tempFilePath := fmt.Sprintf("local/output_%d_%s.out", mapleId, key)
-                tempFile, err := os.Create(tempFilePath)
-                if err != nil {
-                    fmt.Printf("Could not create the file %s\n", tempFilePath)
-                    panic(err)
-                }
-                fmt.Printf("created new file handler for %s\n", tempFilePath)
-                keyFileHandleMap[key] = tempFile
-                tempFile.WriteString(line)
-            }
-        }
-        if fileEnd {
-            for _, fhandle := range(keyFileHandleMap) {
-                fhandle.Close()
-            }
-            f.Close()
-            break
-        }
-    }
-    
-    keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
-    keysFileHandle, err := os.Create(keysFilename)
-    if err != nil {
-        fmt.Printf("Could not create %s\n", keysFilename)
-        panic(err)
-    }
-
-    for key := range(keyFileHandleMap) {
-        keysFileHandle.WriteString(key + "$$$$")
-    }
-    keysFileHandle.Close()
-
-    sendKeyFile("maple", myVid, mapleId, keysFilename)
-}
-
-func AssembleKeyFiles() {
-    mapleIdKeysMap := make(map[int][]string)
-    for mapleId := range mapleMap {
-        keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
-        contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
-        if err != nil {
-            fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
-            panic(err)
-        }
-        content := string(contentBytes)
-        keys := strings.Split(content, "$$$$")
-        keys = keys[:len(keys)-1]
-        fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
-        mapleIdKeysMap[mapleId] = keys
-    }
-    fmt.Printf("%v\n", mapleIdKeysMap)
-}
-
 func listenFileTransferPort() {
     /*
         This func is run as a go routine that listens on the `fileTransferPort` 
@@ -253,6 +128,22 @@ func listenFileTransferPort() {
         message_type := split_message[0]
 
         switch message_type {
+        case "keyaggr":
+            key := split_message[1]
+            nodeInfoFile := simpleRecvFile(conn)
+
+            fmt.Printf("Received the key file for processing %s\n", key)
+
+            contentBytes, err := ioutil.ReadFile(maple_dir + nodeInfoFile)
+            if err != nil {
+                fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
+                panic(err)
+            }
+            content := string(contentBytes)
+            nodeInfoList := strings.Split(content, "$$$$")
+
+            go KeyAggregation(key, nodeInfoList)
+
         case "keyfile":
             action := split_message[1]
             if action == "maple" {
@@ -336,6 +227,71 @@ func listenFileTransferPort() {
                 fileTimeMap[sdfsFilename] = time.Now().Unix()
 
                 log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
+
+            case "getfile2":
+                /* 
+                    "getfile2 destFilePath"
+
+                    sends `destFilePath` over the `conn`
+                */
+
+                filePath := split_message[1]
+                // filePath := fmt.Sprintf("%s%s", shared_dir, sdfsFilename)
+
+                _, err := os.Stat(filePath)
+
+                if os.IsNotExist(err) {
+                    // fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
+                    log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
+                    break
+                }
+
+                f1_race, err := os.Open(filePath)
+                if err != nil {
+                    log.Printf("[ME %d] file open error: %s\n", err)
+                    log.Printf("[ME %d] Can't open file %s\n", myVid, filePath)
+                    break
+                }
+
+                fileInfo, err := f1_race.Stat()
+                if err != nil {
+                    log.Printf("[ME %d] Can't access file stats for %s\n", myVid, filePath)
+                    break
+                }
+
+                fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
+                log.Printf("[ME %d] Outgoing filesize %s", myVid, fileSize)
+                conn.Write([]byte(fileSize))
+
+                sendBuffer := make([]byte, BUFFERSIZE)
+
+                success := true
+                for {
+                    _, err = f1_race.Read(sendBuffer)
+                    if err != nil {
+                        if err == io.EOF {
+                            break
+                        } else {
+                            success = false
+                            log.Printf("[ME %d] Error while reading file %s\n", myVid, filePath)
+                            break
+                        }
+                    }
+                    
+                    _, err := conn.Write(sendBuffer)
+                    if err != nil {
+                        success = false
+                        log.Printf("[ME %d] Error while sending file %s\n", myVid, filePath)
+                        break
+                    }
+                }
+                if success {
+                    log.Printf("[ME %d] Successfully sent the complete file %s\n", myVid, filePath)
+                } else {
+                    log.Printf("[ME %d] Could not send the complete file %s\n", myVid, sdfsFilename)
+                }
+
+                f1_race.Close()    
 
             case "getfile":
                 /* 
@@ -1326,11 +1282,6 @@ func executeCommand(command string, userReader *bufio.Reader) {
             fmt.Printf("Run Maple command from master\n")
             break
         }
-
-        // create an empty maple_dir
-        os.RemoveAll(maple_dir)
-        os.MkdirAll(maple_dir, 0777)
-
         // clear all the maple related maps
 
         mapleExeFile := split_command[1]
