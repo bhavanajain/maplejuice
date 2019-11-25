@@ -206,6 +206,23 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     sendKeyFile("maple", myVid, mapleId, keysFilename)
 }
 
+func AssembleKeyFiles() {
+    mapleIdKeysMap := make(map[int][]string)
+    for mapleId := range mapleMap {
+        keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
+        contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
+        if err != nil {
+            fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
+            panic(err)
+        }
+        content := string(contentBytes)
+        keys := strings.Split(content, "$$$$")
+        keys = keys[:len(keys)-1]
+        fmt.Printf("Keys for %d maple id: %v\n", mapleId, keys)
+        mapleIdKeysMap[mapleId] = keys
+    }
+}
+
 func listenFileTransferPort() {
     /*
         This func is run as a go routine that listens on the `fileTransferPort` 
@@ -262,9 +279,9 @@ func listenFileTransferPort() {
                     }
                 }
                 if success {
-                    // elapsed := time.Now()
                     fmt.Printf("Maple all workers finished\n")
                 }
+                
             }
         case "runmaple":
             /*

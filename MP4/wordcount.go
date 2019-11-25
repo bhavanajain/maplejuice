@@ -37,6 +37,9 @@ func main() {
 			}
 			lineWords := strings.Split(line, " ")
 			for _, word := range lineWords {
+				if len(word) == 0 {
+					continue
+				}
 				_, ok := wordCount[word]
 				if ok {
 					wordCount[word] += 1
