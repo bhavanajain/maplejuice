@@ -447,7 +447,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 
     timeout := time.Duration(20) * time.Second
 
-    nodeIP := memberMap[nodeId].ip
+    nodeIP := memberMap[respNode].ip
     conn, err := net.DialTimeout("tcp", nodeIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
