@@ -468,7 +468,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         mapleId_str := splitNodeInfo[0]
         nodeId_str := splitNodeInfo[1]
         nodeId, _ := strconv.Atoi(nodeId_str)
-        dataFilename := fmt.Sprintf("output_%s_%s.out", mapleId_str, nodeId_str)
+        dataFilename := fmt.Sprintf("output_%s_%s.out", mapleId_str, key)
         go getDirFile(nodeId, maple_dir + dataFilename, maple_dir + dataFilename, &wg)
     }
     wg.Wait()
