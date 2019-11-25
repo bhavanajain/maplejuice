@@ -466,21 +466,56 @@ func KeyAggregation(key string, nodeInfoList []string) {
     var wg sync.WaitGroup
     wg.Add(len(nodeInfoList))
 
+    dataFileList := []string{}
     for _, nodeInfo := range(nodeInfoList) {
          
         splitNodeInfo:= strings.Split(nodeInfo, ":")
         mapleId_str := splitNodeInfo[0]
         nodeId_str := splitNodeInfo[1]
         nodeId, _ := strconv.Atoi(nodeId_str)
-        dataFilename := fmt.Sprintf("output_%s_%s.out", mapleId_str, key)
-        go getDirFile(nodeId, maple_dir + dataFilename, maple_dir + dataFilename, &wg)
+        dataFilePath := fmt.Sprintf("%soutput_%s_%s.out", maple_dir, mapleId_str, key)
+        dataFileList = append(dataFileList, dataFilePath)
+        go getDirFile(nodeId, dataFilePath, dataFilePath, &wg)
     }
     wg.Wait()
 
     fmt.Printf("Got all files for key %s aggregation\n", key)
-    // APPEND ALL RECVD files into one
-    // when everybody is done, aggregate into one file
 
+    outFilePath := fmt.Sprintf("%s%s_inter.info", maple_dir, key)
+    AppendFiles(dataFileList, outFilePath)
+
+    fmt.Printf("Appended the file for %s key\n", key)
+    
+    // put the appended file into sdfs and notify master
+
+
+
+}
+
+func AppendFiles(inputFilePaths []string, outFilePath string) {
+    outfile, err := os.Create(outFilePath)
+    if err != nil {
+        fmt.Printf("Could not open %s file for appending\n", outFilePath)
+        panic(err)
+    }
+
+    for _, inputfile := range inputFilePaths {
+        fIn, err := os.Open(inputfile)
+        if err != nil {
+            fmt.Printf("Could not open %s file for appending\n", inputfile)
+            panic(err)
+        } 
+
+        _, err = io.Copy(outfile, fIn)
+        if err != nil {
+            fmt.Printf("Could not copy the file from %s to %s\n", inputfile, outFilePath)
+        }
+        fIn.Close()
+    }
+
+    outfile.Close()
+
+    fmt.Printf("Merged all files %v\n", inputFilePaths)
 }
 
 
