@@ -280,6 +280,7 @@ func listenFileTransferPort() {
                 }
                 if success {
                     fmt.Printf("Maple all workers finished\n")
+                    go AssembleKeyFiles()
                 }
                 
             }
