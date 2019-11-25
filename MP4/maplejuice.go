@@ -913,6 +913,8 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 }
 
 func copyFile(srcFile string, destFile string) (bool){
+
+    // [TODO] should use io.Copy instead of ioutil readfile writefile 
     input, err := ioutil.ReadFile(srcFile)
     if err != nil {
         log.Printf("[ME %d] Cannot read file from %s", srcFile)
