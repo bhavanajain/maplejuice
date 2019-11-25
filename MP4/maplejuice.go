@@ -106,6 +106,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     if err != nil {
         fmt.Printf("%v\n", err)
     }
+    
     run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
     fmt.Printf("Trying to run %s\n", run_cmd)
 
