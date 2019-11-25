@@ -382,7 +382,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 }
 
 func AssembleKeyFiles() {
-    mapleIdKeysMap := make(map[int][]string)
+    // mapleIdKeysMap := make(map[int][]string)
     keyMapleIdMap := make(map[string][]int)
     for mapleId := range mapleMap {
         keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
@@ -403,38 +403,42 @@ func AssembleKeyFiles() {
             }
         }
         fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
-        mapleIdKeysMap[mapleId] = keys
+        // mapleIdKeysMap[mapleId] = keys
     }
-    fmt.Printf("%v\n", mapleIdKeysMap)
+    // fmt.Printf("%v\n", mapleIdKeysMap)
     fmt.Printf("%v\n", keyMapleIdMap)
 
     // assign key processing to one node
     allNodes := []int{}
     for nodeId := range memberMap {
-        if nodeId == 0 {
+        if (nodeId == 0 || !memberMap[nodeId].alive) {
             continue
         }
         allNodes = append(allNodes, nodeId)
     }
 
-    keyNodeIdMap := make(map[string]int)
+    // keyNodeIdMap := make(map[string]int)
 
     nodeIdx := 0
     for key := range keyMapleIdMap {
-        keyNodeIdMap[key] = allNodes[nodeIdx]
-        go ProcessKey(key, allNodes[nodeIdx], keyMapleIdMap[key])
+        // keyNodeIdMap[key] = allNodes[nodeIdx]
+
+        respNode := allNodes[nodeIdx]
+        go ProcessKey(key, respNode, keyMapleIdMap[key])
         nodeIdx = (nodeIdx + 1) % len(allNodes)
     }
 }
 
-func ProcessKey(key string, nodeId int, mapleIds []int) {
+func ProcessKey(key string, respNode int, mapleIds []int) {
+    fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
+
     keysFilename := fmt.Sprintf("%s_node.info", key)
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
         panic(err)
     }
-    for mapleId := range mapleIds {
+    for _, mapleId := range mapleIds {
         // each record is mapleId:nodeId
         line := fmt.Sprintf("%d:%d", mapleId, mapleMap[mapleId])
         keyfile.WriteString(line + "$$$$")
