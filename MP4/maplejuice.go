@@ -14,7 +14,6 @@ import (
     "io/ioutil"
     "math/rand"
     "errors"
-    "os/exec"
     // "math"
 )
 
@@ -136,7 +135,7 @@ func listenFileTransferPort() {
 
             contentBytes, err := ioutil.ReadFile(maple_dir + nodeInfoFile)
             if err != nil {
-                fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
+                fmt.Printf("Could not read file %s corresponding to %s key\n", nodeInfoFile, key)
                 panic(err)
             }
             content := string(contentBytes)
@@ -242,7 +241,7 @@ func listenFileTransferPort() {
 
                 if os.IsNotExist(err) {
                     // fmt.Printf("Got a get for %s, but the file does not exist\n", sdfsFilename)
-                    log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
+                    log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, filePath)
                     break
                 }
 
@@ -288,7 +287,7 @@ func listenFileTransferPort() {
                 if success {
                     log.Printf("[ME %d] Successfully sent the complete file %s\n", myVid, filePath)
                 } else {
-                    log.Printf("[ME %d] Could not send the complete file %s\n", myVid, sdfsFilename)
+                    log.Printf("[ME %d] Could not send the complete file %s\n", myVid, filePath)
                 }
 
                 f1_race.Close()    

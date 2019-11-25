@@ -12,7 +12,8 @@ import (
     "time"
     "os"
     "io"
-    // "io/ioutil"
+    "os/exec"
+    "io/ioutil"
     // "math/rand"
     // "errors"
     // "math"
@@ -393,7 +394,7 @@ func AssembleKeyFiles() {
         content := string(contentBytes)
         keys := strings.Split(content, "$$$$")
         keys = keys[:len(keys)-1]
-        for key := keys {
+        for _, key := range keys {
             _, ok := keyMapleIdMap[key]
             if ok {
                 keyMapleIdMap[key] = append(keyMapleIdMap[key], mapleId)
@@ -408,32 +409,32 @@ func AssembleKeyFiles() {
     fmt.Printf("%v\n", keyMapleIdMap)
 
     // assign key processing to one node
-    allNodes = []int{}
-    for nodeId := memberMap {
+    allNodes := []int{}
+    for nodeId := range memberMap {
         if nodeId == 0 {
             continue
         }
         allNodes = append(allNodes, nodeId)
     }
 
-    keyNodeIdMap = make(map[string]int)
+    keyNodeIdMap := make(map[string]int)
 
     nodeIdx := 0
-    for key := keyMapleIdMap {
+    for key := range keyMapleIdMap {
         keyNodeIdMap[key] = allNodes[nodeIdx]
-        go ProcessKey(key, allNodes[nodeIdx])
+        go ProcessKey(key, allNodes[nodeIdx], keyMapleIdMap[key])
         nodeIdx = (nodeIdx + 1) % len(allNodes)
     }
 }
 
-func ProcessKey(key string, nodeId int) {
-    keyFilename := fmt.Sprintf("%s_node.info", key)
+func ProcessKey(key string, nodeId int, mapleIds []int) {
+    keysFilename := fmt.Sprintf("%s_node.info", key)
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
         panic(err)
     }
-    for mapleId := keyMapleIdMap[key] {
+    for mapleId := range mapleIds {
         // each record is mapleId:nodeId
         line := fmt.Sprintf("%d:%d", mapleId, mapleMap[mapleId])
         keyfile.WriteString(line + "$$$$")
@@ -453,19 +454,22 @@ func ProcessKey(key string, nodeId int) {
     padded_message := fillString(message, messageLength)
 
     conn.Write([]byte(padded_message))
-    simpleSendFile(conn, keyFilename)
+    simpleSendFile(conn, keysFilename)
 }
 
 
 func KeyAggregation(key string, nodeInfoList []string) {
     var wg sync.WaitGroup
-    wg.add(len(nodeInfoList))
+    wg.Add(len(nodeInfoList))
 
     for _, nodeInfo := range(nodeInfoList) {
-        mapleId_str, nodeId_str = strings.Split(nodeInfo, ":")
+         
+        splitNodeInfo:= strings.Split(nodeInfo, ":")
+        mapleId_str := splitNodeInfo[0]
+        nodeId_str := splitNodeInfo[1]
         nodeId, _ := strconv.Atoi(nodeId_str)
         dataFilename := fmt.Sprintf("output_%s_%s.out", mapleId_str, nodeId_str)
-        go getDirFile(nodeId, maple_dir + dataFilename,  &wg)
+        go getDirFile(nodeId, maple_dir + dataFilename, maple_dir + dataFilename, &wg)
     }
     wg.Wait()
 
@@ -485,7 +489,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, wg *s
 
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
-        log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, nodeId, sdfsFilename)
+        log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
         return false
     }
     defer conn.Close()
@@ -524,7 +528,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, wg *s
             bytesW, err := io.CopyN(file, conn, (fileSize - receivedBytes))
             receivedBytes += bytesW
             if err != nil {
-                log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, nodeId)
+                log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, destNodeId)
                 break
             }
             // fmt.Printf("%s %s -> filesize = %d,  total bytes received = %d\n", sdfsFilename, localFilename, fileSize, receivedBytes)
@@ -533,16 +537,15 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, wg *s
         }
         _, err = io.CopyN(file, conn, BUFFERSIZE)
         if err != nil {
-            log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, nodeId)
+            log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, destNodeId)
             break
         }
         receivedBytes += BUFFERSIZE
     }
 
     if success {
-        log.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
-        fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
-
+        log.Printf("[ME %d] Successfully received file %s from %d\n", myVid, destFilePath, destNodeId)
+        fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, destFilePath, destNodeId)
         wg.Done()
         // fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
     }
