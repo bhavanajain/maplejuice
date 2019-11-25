@@ -265,6 +265,8 @@ func listenFileTransferPort() {
                     // elapsed := time.Now()
                     fmt.Printf("Maple all workers finished\n")
                 }
+
+                // rejoin here -- now ask nodes to handle a key
             }
         case "runmaple":
             /*
