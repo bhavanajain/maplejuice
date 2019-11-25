@@ -8,10 +8,10 @@ import (
     "log"
     "sync"
     "bufio"
-    // "io"
     "fmt"
     "time"
     "os"
+    "io"
     // "io/ioutil"
     // "math/rand"
     // "errors"
@@ -172,6 +172,103 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     // elapsed := time.Since(initTime)
 
     // fmt.Printf("Time taken for put %s\n",elapsed)
+}
+
+func sendMapleJuiceAck(action string, srcNode int, taskId int, keysFilename string) {
+    ackMessage := fmt.Sprintf("ack %s %d %d\n", action, srcNode, taskId)
+
+    timeout := time.Duration(20) * time.Second
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    if err != nil {
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        return
+    }
+    defer conn.Close()
+
+    fmt.Fprintf(conn, ackMessage)
+    simpleSendFile(conn, keysFilename)
+    fmt.Printf("Sent all the keys to the master\n")
+    conn.Close()
+}
+
+func simpleSendFile(conn net.Conn, filename string) {
+    f, err := os.Open(filename)
+    if err != nil {
+        fmt.Printf("Cannot open %s\n", filename)
+        return
+    }
+
+    fileInfo, err := f.Stat()
+    if err != nil {
+        fmt.Printf("Can't access file stats for %s\n", filename)
+        return
+    }
+
+    fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
+    fileName := fillString(fileInfo.Name(), 64)
+
+    fmt.Printf("filesize %s filename %s", fileSize, fileName)
+
+    conn.Write([]byte(fileSize))
+    conn.Write([]byte(fileName))
+
+    sendBuffer := make([]byte, BUFFERSIZE)
+
+    for {
+        _, err = f.Read(sendBuffer)
+        if err == io.EOF {
+            break
+        }
+        conn.Write(sendBuffer)
+    }
+    fmt.Printf("Completed sending the file %s\n", filename)
+    return
+}
+
+func simpleRecvFile(conn net.Conn) string {
+    bufferFileSize := make([]byte, 10)
+    bufferFileName := make([]byte, 64)
+
+    conn.Read(bufferFileSize)
+    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+
+    conn.Read(bufferFileName)
+    fileName := strings.Trim(string(bufferFileName), ":")
+
+    log.Printf("[ME %d] Incoming filesize %d filename %s\n", myVid, fileSize, fileName)
+
+    mapleFilePath := maple_dir + fileName
+    f, err := os.Create(mapleFilePath)
+    if err != nil {
+        log.Printf("Cannot create file %s\n", mapleFilePath) 
+    }
+
+    var receivedBytes int64
+    success := true
+    for {
+        if (fileSize - receivedBytes) < BUFFERSIZE {
+            _, err = io.CopyN(f, conn, (fileSize - receivedBytes))
+            if err != nil {
+                log.Printf("[ME %d] Cannot read file bytes from connection\n", myVid)
+                success = false
+            }
+            break
+        }
+
+        _, err = io.CopyN(f, conn, BUFFERSIZE)
+        if err != nil {
+            log.Printf("[ME %d] Cannot read file bytes from connection\n", myVid)
+            success = false
+        }
+        receivedBytes += BUFFERSIZE
+    }
+    f.Close()
+
+    if success {
+        fmt.Printf("received file %s\n", fileName)
+    }
+
+    return fileName
 }
 
 

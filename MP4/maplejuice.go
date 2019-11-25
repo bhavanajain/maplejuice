@@ -37,6 +37,7 @@ type conflictData struct{
 var local_dir = "local/"
 var shared_dir = "shared/"
 var temp_dir = "temp/"
+var maple_dir = "maple/"
 
 var replicatePeriod = 30
 
@@ -154,7 +155,6 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     fileEnd := false
     for {
         line, err := fileReader.ReadString('\n')
-        fmt.Printf("curr line: %s", line)
         if err != nil {
             if err != io.EOF {
                 fmt.Printf("Unknown error encountered while reading file\n")
@@ -163,6 +163,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             fileEnd = true
         }
         if len(line) > 0 {
+            fmt.Printf("curr line: %s", line)
             splitLine := strings.Split(line, " ")
             key := splitLine[0]
             _, ok := keyFileHandleMap[key]
@@ -189,20 +190,21 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             break
         }
     }
+    
+    keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
+    keysFileHandle, err := os.Create(keysFilename)
+    if err != nil {
+        fmt.Printf("Could not create %s\n", keysFilename)
+        panic(err)
+    }
 
-    // send ack to master
+    for key := range(keyFileHandleMap) {
+        keysFileHandle.WriteString(key + "$$$$")
+    }
+    keysFileHandle.Close()
 
-
-
-
-    // divide it key-wise
-
-
-    // send an ack to the master saying this mapleId task is completed
-    // rejoin here
-    // ack_message := fmt.Sprintf("ack %s %s\n", )
+    sendMapleJuiceAck("maple", myVid, mapleId, keysFilename)
 }
-
 
 func listenFileTransferPort() {
     /*
@@ -755,6 +757,40 @@ func listenMasterRequests() {
                     fmt.Printf("replicate %s complete, time now = %d\n", sdfsFilename, time.Now().UnixNano())                   
                 }
 
+            case "mjAck":
+                action := split_message[1]
+                if action == "maple" {
+                    keysFilename := simpleRecvFile(conn)
+
+                    sender, err := strconv.Atoi(split_message[2])
+                    if err != nil {
+                        panic(err)
+                    }
+                    mapleId, err := strconv.Atoi(split_message[3])
+                    if err != nil {
+                        panic(err)
+                    }
+
+                    fmt.Printf("Received an ack from %s for maple id %s\n", sender, mapleId)
+                    
+
+                    mapleCompMap[mapleId] = true
+
+                    fmt.Printf("Received %s file corresponding to %d mapleId\n", keysFilename, mapleId)
+
+                    success := true
+                    for mapleId := range(mapleCompMap) {
+                        if !mapleCompMap[mapleId] {
+                            success = false
+                            break
+                        }
+                    }
+                    if success {
+                        // elapsed := time.Now()
+                        fmt.Printf("Maple all workers finished\n")
+                    }
+                }
+
             case "replace":
                 /*
                     "replace oldnode sdfsFilename excludeList"
@@ -1156,6 +1192,7 @@ func ReadWithTimeout(reader *bufio.Reader, timeout time.Duration) (string, error
 
 
 var mapleMap = make(map[int]int)
+var mapleCompMap = make(map[int]bool)
 
 func executeCommand(command string, userReader *bufio.Reader) {
 
@@ -1272,6 +1309,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
             break
         }
 
+        // create an empty maple_dir
+        os.RemoveAll(maple_dir)
+        os.MkdirAll(maple_dir, 0777)
+
+        // clear all the maple related maps
+
         mapleExeFile := split_command[1]
         numMaples, err := strconv.Atoi(split_command[2])
         if err != nil {
@@ -1288,28 +1331,6 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
 
         fmt.Printf("num of maples %d\n", numMaples)
-
-        // fmt.Printf("files %s %s\n", localFilename, sdfsFilename)
-        // // numMaples := split_command[2]
-
-        // // s1: put the maple_exe in sdfs
-        // var wg sync.WaitGroup
-        // wg.Add(len(memberMap))
-
-        // doneList = make([]int, 0, len(memberMap))
-
-        
-        // fmt.Printf("%v\n", allNodes)
-
-        // for nodeId := range memberMap {
-        //     go sendFile(nodeId, localFilename, sdfsFilename, &wg, allNodes)
-        // }
-        // wg.Wait()
-        // doneList_str := list2String(doneList)
-        // // sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
-
-        // fmt.Printf("Sent %s file to everyone %v\n", localFilename, doneList_str)
-        // calculate list of files
 
         mapleFiles := []string{}
         for file := range fileMap {
@@ -1329,6 +1350,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         for _, inputFile := range mapleFiles {
             if allNodes[nodeIdx] != 0 {
                 mapleMap[mapleIdx] = allNodes[nodeIdx]
+                mapleCompMap[mapleIdx] = false
                 go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, inputFile, mapleInterPrefix)
                 mapleIdx = mapleIdx + 1
             }
@@ -1336,7 +1358,6 @@ func executeCommand(command string, userReader *bufio.Reader) {
         }
         fmt.Printf("Maple map %v\n", mapleMap)
 
-        // send maple instructions to each node
 
     case "put":
         // please send your ID with the message, so put will be "put sdsFileName myVID"
