@@ -183,7 +183,7 @@ func sendMapleJuiceAck(action string, srcNode int, taskId int, keysFilename stri
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         return
     }
-    defer conn.Close()
+    // defer conn.Close()
 
     fmt.Fprintf(conn, ackMessage)
     simpleSendFile(conn, keysFilename)
@@ -197,6 +197,7 @@ func simpleSendFile(conn net.Conn, filename string) {
         fmt.Printf("Cannot open %s\n", filename)
         return
     }
+    defer f.Close()
 
     fileInfo, err := f.Stat()
     if err != nil {
@@ -207,7 +208,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
     fileName := fillString(fileInfo.Name(), 64)
 
-    fmt.Printf("filesize %s filename %s", fileSize, fileName)
+    fmt.Printf("filesize %s\n filename %s\n", fileSize, fileName)
 
     conn.Write([]byte(fileSize))
     conn.Write([]byte(fileName))
@@ -221,6 +222,7 @@ func simpleSendFile(conn net.Conn, filename string) {
         }
         conn.Write(sendBuffer)
     }
+
     fmt.Printf("Completed sending the file %s\n", filename)
     return
 }
@@ -235,12 +237,12 @@ func simpleRecvFile(conn net.Conn) string {
     conn.Read(bufferFileName)
     fileName := strings.Trim(string(bufferFileName), ":")
 
-    log.Printf("[ME %d] Incoming filesize %d filename %s\n", myVid, fileSize, fileName)
+    fmt.Printf("Incoming filesize %d filename %s\n", fileSize, fileName)
 
     mapleFilePath := maple_dir + fileName
     f, err := os.Create(mapleFilePath)
     if err != nil {
-        log.Printf("Cannot create file %s\n", mapleFilePath) 
+        fmt.Printf("Cannot create file %s\n", mapleFilePath) 
     }
 
     var receivedBytes int64
