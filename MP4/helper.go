@@ -175,7 +175,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
 }
 
 func sendMapleJuiceAck(action string, srcNode int, taskId int, keysFilename string) {
-    ackMessage := fmt.Sprintf("ack %s %d %d\n", action, srcNode, taskId)
+    ackMessage := fmt.Sprintf("mjAck %s %d %d\n", action, srcNode, taskId)
 
     timeout := time.Duration(20) * time.Second
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
