@@ -174,18 +174,18 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     // fmt.Printf("Time taken for put %s\n",elapsed)
 }
 
-func sendMapleJuiceAck(action string, srcNode int, taskId int, keysFilename string) {
-    ackMessage := fmt.Sprintf("mjAck %s %d %d\n", action, srcNode, taskId)
+func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
+    message := fmt.Sprintf("keyfile %s %d %d", action, srcNode, taskId)
+    padded_message := fillString(message, messageLength)
 
     timeout := time.Duration(20) * time.Second
-    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         return
     }
-    // defer conn.Close()
-
-    fmt.Fprintf(conn, ackMessage)
+    
+    conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
     fmt.Printf("Sent all the keys to the master\n")
     conn.Close()

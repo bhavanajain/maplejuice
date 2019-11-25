@@ -203,7 +203,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     }
     keysFileHandle.Close()
 
-    sendMapleJuiceAck("maple", myVid, mapleId, keysFilename)
+    sendKeyFile("maple", myVid, mapleId, keysFilename)
 }
 
 func listenFileTransferPort() {
@@ -234,6 +234,38 @@ func listenFileTransferPort() {
         message_type := split_message[0]
 
         switch message_type {
+        case "keyfile":
+            action := split_message[1]
+            if action == "maple" {
+                sender, err := strconv.Atoi(split_message[2])
+                if err != nil {
+                    panic(err)
+                }
+                mapleId, err := strconv.Atoi(split_message[3])
+                if err != nil {
+                    panic(err)
+                }
+
+                keysFilename := simpleRecvFile(conn)
+
+                fmt.Printf("Received an ack from %d for maple id %d\n", sender, mapleId)
+
+                mapleCompMap[mapleId] = true
+
+                fmt.Printf("Received %s file corresponding to %d mapleId\n", keysFilename, mapleId)
+
+                success := true
+                for mapleId := range(mapleCompMap) {
+                    if !mapleCompMap[mapleId] {
+                        success = false
+                        break
+                    }
+                }
+                if success {
+                    // elapsed := time.Now()
+                    fmt.Printf("Maple all workers finished\n")
+                }
+            }
         case "runmaple":
             /*
             runmaple mapleId sdfsMapleExe inputFile sdfsInterPrefix
@@ -755,40 +787,6 @@ func listenMasterRequests() {
                     } 
 
                     fmt.Printf("replicate %s complete, time now = %d\n", sdfsFilename, time.Now().UnixNano())                   
-                }
-
-            case "mjAck":
-                action := split_message[1]
-                if action == "maple" {
-                    keysFilename := simpleRecvFile(conn)
-
-                    sender, err := strconv.Atoi(split_message[2])
-                    if err != nil {
-                        panic(err)
-                    }
-                    mapleId, err := strconv.Atoi(split_message[3])
-                    if err != nil {
-                        panic(err)
-                    }
-
-                    fmt.Printf("Received an ack from %d for maple id %d\n", sender, mapleId)
-
-
-                    mapleCompMap[mapleId] = true
-
-                    fmt.Printf("Received %s file corresponding to %d mapleId\n", keysFilename, mapleId)
-
-                    success := true
-                    for mapleId := range(mapleCompMap) {
-                        if !mapleCompMap[mapleId] {
-                            success = false
-                            break
-                        }
-                    }
-                    if success {
-                        // elapsed := time.Now()
-                        fmt.Printf("Maple all workers finished\n")
-                    }
                 }
 
             case "replace":
