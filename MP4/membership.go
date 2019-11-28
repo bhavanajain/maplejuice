@@ -162,6 +162,11 @@ func checkChildren() {
 
 func checkSuspicion(vid int) {
 	// To check suspicion, query its neighbors
+
+
+	message := fmt.Sprintf("PING,%d", vid)
+	sendMessage(vid, message, num_tries)
+
 	pred := getPredecessor(vid)
 	succ1 := getSuccessor(vid)
 	succ2 := getSuccessor2(vid)
@@ -178,7 +183,7 @@ func checkSuspicion(vid int) {
 	}
 
 	// after 1 second, if the vid is still in suspects, declare it CRASHed
-	time.Sleep(time.Duration(1) * time.Second) 
+	time.Sleep(time.Duration(3) * time.Second) 
 
 	suspect_idx := -1
 	for i, suspect := range(suspects) {
@@ -850,6 +855,8 @@ func listenOtherPort() (err error) {
 					// Check the files belonging to the dead node and redistribute the files
 					if myIP == masterIP {
 						go replicateFiles(subject)
+						// if map task is ongoing, rerun stuff
+						go handleMapleFailure(subject)
 					}
 
 					if memberMap[subject].ip == masterIP {
@@ -889,6 +896,10 @@ func listenOtherPort() (err error) {
 			} else {
 				log.Printf("[ME %d] Processed a suspect message for %d, sent NOT ALIVE", myVid, subject)
 			}
+
+		case "PING":
+			message = fmt.Sprintf("STATUS,%d,1", myVid)
+			sendMessageAddr(addr.IP.String(), message, num_tries)
 		
 		case "STATUS":
 			status, _ := strconv.Atoi(split_message[2])

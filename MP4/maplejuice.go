@@ -17,6 +17,13 @@ import (
     // "math"
 )
 
+// type status int
+const (
+    FAILED int = 0
+    ONGOING int = 1
+    DONE int = 2
+)
+
 const BUFFERSIZE = 1024
 
 type fileData struct {
@@ -61,12 +68,18 @@ var conflictMap = make(map[string]*conflictData)
 var fileTimeMap = make(map[string]int64)
 
 // maple related
+// master
 var mapleId2Node = make(map[int]int)
 var mapleCompMap = make(map[int]bool)
 var node2mapleJob = make(map[int]*mapleJob)
-var keyProcessed = make(map[string]bool)
+var keyStatus = make(map[string]int)
 var workerNodes []int
-var mapleBarrier bool
+var mapleBarrier = false
+var mapleRunning = false
+var sdfsMapleExe string
+var mapleFiles []string
+var keyMapleIdMap = make(map[string][]int)
+// master + others
 var sdfsInterPrefix string
 
 var messageLength = 256
@@ -700,9 +713,24 @@ func listenMasterRequests() {
 
             case "keyack":
                 key := split_message[1]
-                keyProcessed[key] = true
+                keyStatus[key] = DONE
 
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
+
+                success := true
+                for tempKey := range keyStatus {
+                    if keyStatus[tempKey] != DONE {
+                        success = false
+                        break
+                    }
+                }
+
+                if success {
+                    mapleRunning = false
+                    // clear all the data structures, maple, delete misc temp files
+
+
+                }
 
             case "ack": 
                 /*
@@ -1298,6 +1326,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             break
         }
         // clear all the maple related maps
+        mapleRunning = true
 
         mapleExeFile := split_command[1]    // mapleExe should be in local
         numMaples, err := strconv.Atoi(split_command[2])
@@ -1311,11 +1340,11 @@ func executeCommand(command string, userReader *bufio.Reader) {
         sdfsInterPrefix = split_command[3]
         mapleSrcPrefix := split_command[4]
 
-        sdfsMapleExe := mapleExeFile
+        sdfsMapleExe = mapleExeFile
         PutFileWrapper(mapleExeFile, sdfsMapleExe, conn)
         fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
 
-        mapleFiles := []string{}
+        mapleFiles = []string{}
         for file := range fileMap {
             if strings.Contains(file, mapleSrcPrefix) {
                 mapleFiles = append(mapleFiles, file)
