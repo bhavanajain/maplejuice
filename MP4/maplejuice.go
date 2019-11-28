@@ -1012,6 +1012,8 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
 
     fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
     log.Printf("[ME %d] Sending file %s of size %s to %d\n", myVid, sdfsFilename, fileSize, nodeId)
+    fmt.Printf("[ME %d] Sending file %s of size %s to %d\n", myVid, sdfsFilename, fileSize, nodeId)
+
     conn.Write([]byte(fileSize))
 
     sendBuffer := make([]byte, BUFFERSIZE)
@@ -1035,6 +1037,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
 
     }
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
+    fmt.Printf("[ME %s] Successfully sent the file %s to %d, waiting for done\n", myVid, sdfsFilename, nodeId)
 
     conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))
 
@@ -1044,9 +1047,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         log.Printf("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
         return false
     }
+    fmt.Printf("ack %s---------\n", ack)
     ack = ack[:len(ack)-1]
+    fmt.Printf("ack %s--------\n", ack)
 
     if ack == "done" {
+        fmt.Printf("Received done, sending replicate ack to master\n")
         destNode := []int{nodeId}
         sendAcktoMaster("replicate", myVid, list2String(destNode), sdfsFilename)
         return true
