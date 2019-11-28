@@ -431,7 +431,7 @@ func listenFileTransferPort() {
 
                 // send ACK to sender
                 fmt.Fprintf(conn, "done\n")
-                fmt.Printf("recvd file\n")
+                fmt.Printf("recvd file %s sender %s\n", sdfsFilename, sender)
 
                 f.Close()
 
@@ -1610,17 +1610,37 @@ func replicateFiles(subjectNode int) {
     delete(nodeMap, subjectNode)
 }
 
+func LeaderHandleFileReplication() {
+    if myIP == masterIP {
+        // Run the code
+        for fileName, _ := range(fileMap){
+            filenodes := fileMap[fileName].nodeIds
+            if len(filenodes) < 4 { 
+                fmt.Printf("[ME %d] Handling file Replication for %s\n",myVid,fileName)
+                newnodes := getRandomNodes(filenodes, 4 - len(filenodes))
+                fmt.Printf("Init vector %v , Added nodes %v\n",filenodes, newnodes)
+                for _, newnode := range(newnodes) {
+                    go initiateReplica(fileName, filenodes[0], newnode)
+                }
+            }
+        }
+    } 
+}
+
 // this function needs work more 
 func HandleFileReplication() {
     for{
-        time.Sleep(time.Duration(int(0.2*float64(replicatePeriod*1000))) * time.Millisecond)
+        time.Sleep(time.Duration(replicatePeriod) * time.Second)
+
         if myIP == masterIP {
             // Run the code
 
             for fileName, _ := range(fileMap){
                 filenodes := fileMap[fileName].nodeIds
                 if len(filenodes) < 4 { 
+                    fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
                     fmt.Printf("[ME %d] Handling file Replication for %s\n",myVid,fileName)
+                    fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
                     newnodes := getRandomNodes(filenodes, 4 - len(filenodes))
                     fmt.Printf("Init vector %v , Added nodes %v\n",filenodes, newnodes)
                     for _, newnode := range(newnodes) {
@@ -1630,9 +1650,6 @@ func HandleFileReplication() {
             }
 
         }
-        time.Sleep(time.Duration(int(0.8*float64(replicatePeriod*1000))) * time.Millisecond)
-
-        
     }
 }
 
@@ -1700,6 +1717,7 @@ func LeaderElection() {
         
 
         time.Sleep(1*time.Second)
+        go LeaderHandleFileReplication()
         go HandleFileReplication()
     }
 
