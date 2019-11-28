@@ -19,7 +19,7 @@ import (
     // "math"
 )
 
-func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile string, sdfsInterPrefix string) {
+func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile string) {
 	timeout := 20 * time.Second
 
     ip := memberMap[nodeId].ip
@@ -32,7 +32,7 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     }
     defer conn.Close()
 
-    message := fmt.Sprintf("runmaple %d %s %s %s", mapleId, sdfsMapleExe, inputFile, sdfsInterPrefix)
+    message := fmt.Sprintf("runmaple %d %s %s", mapleId, sdfsMapleExe, inputFile)
     fmt.Printf("%s\n", message)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
@@ -228,6 +228,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     return
 }
 
+// fectches to the maple dir!!
 func simpleRecvFile(conn net.Conn) string {
     bufferFileSize := make([]byte, 10)
     bufferFileName := make([]byte, 64)
@@ -310,21 +311,18 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     writer.Flush()
     outfile.Close()
 
-    fmt.Printf("Maple processing done\n")
+    fmt.Printf("Maple execution done\n")
 
-    // run_cmd = fmt.Sprintf("cat %s", outputFilePath)
-    // out, err := exec.Command("sh","-c", run_cmd).Output()
-    // fmt.Println(out)
-
+    // separate output into key specific files
+    // todo: extend to more than 1024 keys!!
     f, err := os.Open(outputFilePath)
     if err != nil {
         fmt.Printf("Cannot open %s for reading\n", outputFilePath)
     }
     fmt.Printf("opened generated output file for key separation\n")
-    // defer f.Close()
 
     keyFileHandleMap := make(map[string]*os.File)
-    // for large output, process in block of 1024 lines
+    keySet := make(map[string]bool)
 
     fileReader := bufio.NewReader(f)
     fileEnd := false
@@ -341,18 +339,29 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             fmt.Printf("curr line: %s", line)
             splitLine := strings.Split(line, " ")
             key := splitLine[0]
+            keySet[key] = true
             _, ok := keyFileHandleMap[key]
             if ok {
                 temp := keyFileHandleMap[key]
                 temp.WriteString(line)
             } else {
                 tempFilePath := fmt.Sprintf(maple_dir + "output_%d_%s.out", mapleId, key)
-                tempFile, err := os.Create(tempFilePath)
+
+                if len(keyFileHandleMap) > 1000 {
+                    var randomkey string
+                    for randomkey = range keyFileHandleMap {
+                        break
+                    }
+                    keyFileHandleMap[randomkey].Close()
+                    delete(keyFileHandleMap, randomkey)
+                }
+
+                tempFile, err := os.OpenFile(tempFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
                 if err != nil {
-                    fmt.Printf("Could not create the file %s\n", tempFilePath)
+                    fmt.Printf("Could not append/create the file %s\n", tempFilePath)
                     panic(err)
                 } 
-                fmt.Printf("created new file handler for %s\n", tempFilePath)
+                // fmt.Printf("created new file handler for %s\n", tempFilePath)
                 keyFileHandleMap[key] = tempFile
                 tempFile.WriteString(line)
             }
@@ -373,7 +382,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         panic(err)
     }
 
-    for key := range(keyFileHandleMap) {
+    for key := range(keySet) {
         keysFileHandle.WriteString(key + "$$$$")
     }
     keysFileHandle.Close()
@@ -381,10 +390,10 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     sendKeyFile("maple", myVid, mapleId, keysFilename)
 }
 
+// this is suboptimal as in case of failures, we will read all the mapleId key files
 func AssembleKeyFiles() {
-    // mapleIdKeysMap := make(map[int][]string)
     keyMapleIdMap := make(map[string][]int)
-    for mapleId := range mapleMap {
+    for mapleId := range mapleId2Node {
         keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
         contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
         if err != nil {
@@ -394,6 +403,10 @@ func AssembleKeyFiles() {
         content := string(contentBytes)
         keys := strings.Split(content, "$$$$")
         keys = keys[:len(keys)-1]
+
+        currNode := mapleId2Node[mapleId]
+        node2mapleJob[currNode].keysGenerate = keys
+
         for _, key := range keys {
             _, ok := keyMapleIdMap[key]
             if ok {
@@ -403,29 +416,22 @@ func AssembleKeyFiles() {
             }
         }
         fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
-        // mapleIdKeysMap[mapleId] = keys
     }
-    // fmt.Printf("%v\n", mapleIdKeysMap)
     fmt.Printf("%v\n", keyMapleIdMap)
 
-    // assign key processing to one node
-    allNodes := []int{}
-    for nodeId := range memberMap {
-        if (nodeId == 0 || !memberMap[nodeId].alive) {
-            continue
-        }
-        allNodes = append(allNodes, nodeId)
-    }
-
-    // keyNodeIdMap := make(map[string]int)
-
+    // assign key processing to worker nodes
+    // do range or hash partitioning
     nodeIdx := 0
     for key := range keyMapleIdMap {
-        // keyNodeIdMap[key] = allNodes[nodeIdx]
-
-        respNode := allNodes[nodeIdx]
-        go ProcessKey(key, respNode, keyMapleIdMap[key])
-        nodeIdx = (nodeIdx + 1) % len(allNodes)
+        _, ok := keyProcessed[key]
+        if ok && keyProcessed[key] == true {
+            continue
+        }
+        currNode := workerNodes[nodeIdx]
+        node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
+        keyProcessed[key] = false
+        go ProcessKey(key, currNode, keyMapleIdMap[key])
+        nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
 }
 
@@ -440,7 +446,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     }
     for _, mapleId := range mapleIds {
         // each record is mapleId:nodeId
-        line := fmt.Sprintf("%d:%d", mapleId, mapleMap[mapleId])
+        line := fmt.Sprintf("%d:%d", mapleId, mapleId2Node[mapleId])
         keyfile.WriteString(line + "$$$$")
     } 
     keyfile.Close()
@@ -454,7 +460,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         return
     }
 
-    message := fmt.Sprintf("keyaggr %s", key)
+    message := fmt.Sprintf("keyaggr %s %s", key, sdfsInterPrefix)
     padded_message := fillString(message, messageLength)
 
     conn.Write([]byte(padded_message))
@@ -463,8 +469,9 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 
 
 func KeyAggregation(key string, nodeInfoList []string) {
-    var wg sync.WaitGroup
-    wg.Add(len(nodeInfoList))
+    // var wg sync.WaitGroup
+    // wg.Add(len(nodeInfoList))
+    ch := make(chan bool, len(nodeInfoList))
 
     dataFileList := []string{}
     for _, nodeInfo := range(nodeInfoList) {
@@ -475,21 +482,110 @@ func KeyAggregation(key string, nodeInfoList []string) {
         nodeId, _ := strconv.Atoi(nodeId_str)
         dataFilePath := fmt.Sprintf("%soutput_%s_%s.out", maple_dir, mapleId_str, key)
         dataFileList = append(dataFileList, dataFilePath)
-        go getDirFile(nodeId, dataFilePath, dataFilePath, &wg)
+        go getDirFile(nodeId, dataFilePath, dataFilePath, ch)
     }
-    wg.Wait()
+    
+    for i := 0; i < len(nodeInfoList); i++ {
+        success := <- ch
+        if !success {
+            return
+        }
+    }
 
     fmt.Printf("Got all files for key %s aggregation\n", key)
 
-    outFilePath := fmt.Sprintf("%s%s_inter.info", maple_dir, key)
+    outFilename := fmt.Sprintf("%s_inter.info", key)
+    outFilePath := fmt.Sprintf("%s%s", local_dir, outFilename)
     AppendFiles(dataFileList, outFilePath)
+
+    timeout := 20 * time.Second
+
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    if err != nil {
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        return
+    }
+
+    PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
+    // send an ack to the master
+    message := fmt.Sprintf("keyack %s\n", key)
+    fmt.Fprintf(conn, message)
+    conn.Close()
 
     fmt.Printf("Appended the file for %s key\n", key)
     
     // put the appended file into sdfs and notify master
+}
 
+func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch chan<- bool) {
+    // get file 
+    timeout := time.Duration(20) * time.Second
 
+    ip := memberMap[destNodeId].ip
+    port := fileTransferPort
 
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
+    if err != nil {
+        log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
+        ch <- false
+        return
+    }
+    defer conn.Close()
+
+    message := fmt.Sprintf("getfile2 %s", destFilePath)
+    padded_message := fillString(message, messageLength)
+    conn.Write([]byte(padded_message))
+
+    bufferFileSize := make([]byte, 10)
+
+    _, err = conn.Read(bufferFileSize)
+    if err != nil {
+        fmt.Println(err) // what error are you getting?
+        log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
+        fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
+        ch <- false
+        return
+    }
+    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+
+    log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
+    // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
+
+    file, err := os.Create(localFilePath)
+    if err != nil {
+        log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilePath) 
+        ch <- false
+        return
+    }
+    defer file.Close()
+
+    var receivedBytes int64
+    success := false
+    for {
+        if (fileSize - receivedBytes) < BUFFERSIZE {
+            bytesW, err := io.CopyN(file, conn, (fileSize - receivedBytes))
+            receivedBytes += bytesW
+            if err != nil {
+                log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, destNodeId)
+                break
+            }
+            // fmt.Printf("%s %s -> filesize = %d,  total bytes received = %d\n", sdfsFilename, localFilename, fileSize, receivedBytes)
+            success = true
+            break
+        }
+        _, err = io.CopyN(file, conn, BUFFERSIZE)
+        if err != nil {
+            log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, destNodeId)
+            break
+        }
+        receivedBytes += BUFFERSIZE
+    }
+
+    if success {
+        fmt.Printf("Received file %s\n", destFilePath)
+    }
+    ch <- success
+    return    
 }
 
 func AppendFiles(inputFilePaths []string, outFilePath string) {
@@ -519,77 +615,22 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
 }
 
 
-func getDirFile(destNodeId int, destFilePath string, localFilePath string, wg *sync.WaitGroup) (bool) {
-    // get file 
-    timeout := time.Duration(20) * time.Second
-
-    ip := memberMap[destNodeId].ip
-    port := fileTransferPort
-
-    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
-    if err != nil {
-        log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
-        return false
-    }
-    defer conn.Close()
-
-    message := fmt.Sprintf("getfile2 %s", destFilePath)
-    padded_message := fillString(message, messageLength)
-    conn.Write([]byte(padded_message))
-
-    // fmt.Fprintf(conn, message)
-
-    bufferFileSize := make([]byte, 10)
-
-    _, err = conn.Read(bufferFileSize)
-    if err != nil {
-        fmt.Println(err) // what error are you getting?
-        log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
-        fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
-        return false
-    }
-    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
-
-    log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
-    // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
-
-    file, err := os.Create(localFilePath)
-    if err != nil {
-        log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilePath) 
-        return false
-    }
-    defer file.Close()
-
-    var receivedBytes int64
-    success := false
-    for {
-        if (fileSize - receivedBytes) < BUFFERSIZE {
-            bytesW, err := io.CopyN(file, conn, (fileSize - receivedBytes))
-            receivedBytes += bytesW
-            if err != nil {
-                log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, destNodeId)
-                break
-            }
-            // fmt.Printf("%s %s -> filesize = %d,  total bytes received = %d\n", sdfsFilename, localFilename, fileSize, receivedBytes)
-            success = true
-            break
+func getAliveNodeCount() int {
+    aliveNodeCount := 0
+    for node := range memberMap {
+        if memberMap[node].alive {
+            aliveNodeCount += 1
         }
-        _, err = io.CopyN(file, conn, BUFFERSIZE)
-        if err != nil {
-            log.Printf("[ME %d] Cannot read from the connection to %d\n", myVid, destNodeId)
-            break
-        }
-        receivedBytes += BUFFERSIZE
     }
+    return aliveNodeCount
+}
 
-    if success {
-        log.Printf("[ME %d] Successfully received file %s from %d\n", myVid, destFilePath, destNodeId)
-        fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, destFilePath, destNodeId)
-        wg.Done()
-        // fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
+func min(a int, b int) int {
+    if a < b {
+        return a
+    } else {
+        return b
     }
-    return success
-    
 }
 
 

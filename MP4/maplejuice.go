@@ -33,6 +33,12 @@ type conflictData struct{
     timestamp int64
 }
 
+type mapleJob struct {
+    assignedMapleIds []int
+    keysGenerate []string
+    keysAggregate []string
+}
+
 var local_dir = "local/"
 var shared_dir = "shared/"
 var temp_dir = "temp/"
@@ -48,9 +54,20 @@ var masterNodeId = 0
 var ongoingElection = false
 var electiondone = make(chan bool, 1)
 
+// sdfs related
 var fileMap = make(map[string]*fileData)
 var nodeMap = map[int]map[string]int64{}
 var conflictMap = make(map[string]*conflictData)
+var fileTimeMap = make(map[string]int64)
+
+// maple related
+var mapleId2Node = make(map[int]int)
+var mapleCompMap = make(map[int]bool)
+var node2mapleJob = make(map[int]*mapleJob)
+var keyProcessed = make(map[string]bool)
+var workerNodes []int
+var mapleBarrier bool
+var sdfsInterPrefix string
 
 var messageLength = 256
 
@@ -129,6 +146,7 @@ func listenFileTransferPort() {
         switch message_type {
         case "keyaggr":
             key := split_message[1]
+            sdfsInterPrefix = split_message[2]
             nodeInfoFile := simpleRecvFile(conn)
 
             fmt.Printf("Received the key file for processing %s\n", key)
@@ -157,11 +175,9 @@ func listenFileTransferPort() {
                 }
 
                 keysFilename := simpleRecvFile(conn)
-
-                fmt.Printf("Received an ack from %d for maple id %d\n", sender, mapleId)
+                fmt.Printf("%d node finished maple id %d execution\n", sender, mapleId)
 
                 mapleCompMap[mapleId] = true
-
                 fmt.Printf("Received %s file corresponding to %d mapleId\n", keysFilename, mapleId)
 
                 success := true
@@ -172,36 +188,31 @@ func listenFileTransferPort() {
                     }
                 }
                 if success {
-                    fmt.Printf("Maple all workers finished\n")
+                    fmt.Printf("all maple executions finished\n")
+                    mapleBarrier = true
                     go AssembleKeyFiles()
                 }
                 
             }
         case "runmaple":
             /*
-            runmaple mapleId sdfsMapleExe inputFile sdfsInterPrefix
+            runmaple mapleId sdfsMapleExe inputFile
             */
                         
             mapleId, _ := strconv.Atoi(split_message[1])
             sdfsMapleExe := split_message[2]
-            localMapleExe := "local_" + sdfsMapleExe
+            localMapleExe := sdfsMapleExe
             getFileWrapper(sdfsMapleExe, localMapleExe)
-
             fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
-            localInputFile := "local_" + inputFile
+            localInputFile := inputFile
             getFileWrapper(inputFile, localInputFile)
             fmt.Printf("I got the file %s %s\n", inputFile, localInputFile)
 
-            // sdfsInterPrefix := split_message[4]
-            // fmt.Printf("%s\n", sdfsInterPrefix)
-
-            // s2. run the command
-            // run_cmd := fmt.Sprintf("./local/%s -inputfile local/%s", localMapleExe, localInputFilename)
             exeFile := fmt.Sprintf("local/%s", localMapleExe)
             inputFilePath := fmt.Sprintf("local/%s", localInputFile)
-            outputFilePath := fmt.Sprintf("local/output_%d.out", mapleId)
+            outputFilePath := fmt.Sprintf("%soutput_%d.out", maple_dir, mapleId)
             ExecuteCommand(exeFile, inputFilePath, outputFilePath, mapleId)
 
             case "movefile":
@@ -687,6 +698,12 @@ func listenMasterRequests() {
                     fmt.Fprintf(conn, "file %s does not exist in the SDFS\n", sdfsFilename)
                 }
 
+            case "keyack":
+                key := split_message[1]
+                keyProcessed[key] = true
+
+                fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
+
             case "ack": 
                 /*
                     "ack action srcNode destNode(s) sdfsFilename"
@@ -1140,8 +1157,6 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
 
 }
 
-var fileTimeMap = make(map[string]int64)
-
 func ReadWithTimeout(reader *bufio.Reader, timeout time.Duration) (string, error) {
     s := make(chan string)
     e := make(chan error)
@@ -1167,8 +1182,6 @@ func ReadWithTimeout(reader *bufio.Reader, timeout time.Duration) (string, error
 }
 
 
-var mapleMap = make(map[int]int)
-var mapleCompMap = make(map[int]bool)
 
 func executeCommand(command string, userReader *bufio.Reader) {
 
@@ -1286,22 +1299,21 @@ func executeCommand(command string, userReader *bufio.Reader) {
         }
         // clear all the maple related maps
 
-        mapleExeFile := split_command[1]
+        mapleExeFile := split_command[1]    // mapleExe should be in local
         numMaples, err := strconv.Atoi(split_command[2])
         if err != nil {
             fmt.Printf("Could not convert numMaples %s to int\n", split_command[2])
         }
-        mapleInterPrefix := split_command[3]
+        aliveNodeCount := getAliveNodeCount()
+        numMaples = min(numMaples, aliveNodeCount - 1)
+        fmt.Printf("num of maples %d\n", numMaples)
+
+        sdfsInterPrefix = split_command[3]
         mapleSrcPrefix := split_command[4]
 
-        fmt.Printf("%v\n", split_command)
-
-        sdfsMapleExe := fmt.Sprintf("sdfs_%s", mapleExeFile)
+        sdfsMapleExe := mapleExeFile
         PutFileWrapper(mapleExeFile, sdfsMapleExe, conn)
-
         fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
-
-        fmt.Printf("num of maples %d\n", numMaples)
 
         mapleFiles := []string{}
         for file := range fileMap {
@@ -1311,37 +1323,37 @@ func executeCommand(command string, userReader *bufio.Reader) {
         }
         fmt.Printf("Maple files %v\n", mapleFiles)
 
-        allNodes := []int{}
-        for nodeId := range memberMap {
-            allNodes = append(allNodes, nodeId)
-        }
+        workerNodes = getRandomNodes([]int{0}, numMaples)
 
         var mapleIdx = 0
         var nodeIdx = 0
-
         for {
-            if allNodes[nodeIdx] != 0 {
-                mapleMap[mapleIdx] = allNodes[nodeIdx]
+            currNode := workerNodes[nodeIdx]
+            if currNode != 0 {
+                mapleId2Node[mapleIdx] = currNode
                 mapleCompMap[mapleIdx] = false
-                go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, mapleFiles[mapleIdx], mapleInterPrefix)
+
+                _, ok := node2mapleJob[currNode]
+                if ok {
+                    node2mapleJob[currNode].assignedMapleIds = append(node2mapleJob[currNode].assignedMapleIds, mapleIdx)
+                } else {
+                    var jobnode mapleJob
+                    jobnode.assignedMapleIds = []int{mapleIdx}
+                    jobnode.keysAggregate = []string{}
+                    jobnode.keysGenerate = []string{}
+
+                    node2mapleJob[currNode] = &jobnode
+                }
+                go sendMapleInfo(currNode, mapleIdx, sdfsMapleExe, mapleFiles[mapleIdx])
                 mapleIdx = mapleIdx + 1
                 if mapleIdx == len(mapleFiles) {
                     break
                 }
             }
-            nodeIdx = (nodeIdx + 1) % len(allNodes)
+            nodeIdx = (nodeIdx + 1) % len(workerNodes)
         }
 
-        // for _, inputFile := range mapleFiles {
-        //     if allNodes[nodeIdx] != 0 {
-        //         mapleMap[mapleIdx] = allNodes[nodeIdx]
-        //         mapleCompMap[mapleIdx] = false
-        //         go sendMapleInfo(allNodes[nodeIdx], mapleIdx, sdfsMapleExe, inputFile, mapleInterPrefix)
-        //         mapleIdx = mapleIdx + 1
-        //     }
-        //     nodeIdx = (nodeIdx + 1) % len(allNodes)
-        // }
-        fmt.Printf("Maple map %v\n", mapleMap)
+        fmt.Printf("Maple map %v\n", mapleId2Node)
 
 
     case "put":
