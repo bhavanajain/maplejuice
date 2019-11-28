@@ -392,50 +392,55 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
 // this is suboptimal as in case of failures, we will read all the mapleId key files
 func AssembleKeyFiles() {
-    keyMapleIdMap := make(map[string][]int)
-    for mapleId := range mapleId2Node {
-        keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
-        contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
-        if err != nil {
-            fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
-            panic(err)
-        }
-        content := string(contentBytes)
-        keys := strings.Split(content, "$$$$")
-        keys = keys[:len(keys)-1]
 
-        currNode := mapleId2Node[mapleId]
-        node2mapleJob[currNode].keysGenerate = keys
-
-        for _, key := range keys {
-            _, ok := keyMapleIdMap[key]
-            if ok {
-                keyMapleIdMap[key] = append(keyMapleIdMap[key], mapleId)
-            } else {
-                keyMapleIdMap[key] = []int{mapleId}
+    if len(keyMapleIdMap) == 0 {
+        for mapleId := range mapleId2Node {
+            keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
+            contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
+            if err != nil {
+                fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
+                panic(err)
             }
-        }
-        fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
-    }
-    fmt.Printf("%v\n", keyMapleIdMap)
+            content := string(contentBytes)
+            keys := strings.Split(content, "$$$$")
+            keys = keys[:len(keys)-1]
 
+            currNode := mapleId2Node[mapleId]
+            node2mapleJob[currNode].keysGenerate = keys
+
+
+
+            for _, key := range keys {
+                _, ok := keyMapleIdMap[key]
+                if ok {
+                    keyMapleIdMap[key] = append(keyMapleIdMap[key], mapleId)
+                } else {
+                    keyMapleIdMap[key] = []int{mapleId}
+                }
+            }
+            fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
+        }
+        fmt.Printf("%v\n", keyMapleIdMap)
+    }
+    
     // assign key processing to worker nodes
     // do range or hash partitioning
     nodeIdx := 0
     for key := range keyMapleIdMap {
-        _, ok := keyProcessed[key]
-        if ok && keyProcessed[key] == true {
+        _, ok := keyStatus[key]
+        if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
             continue
         }
         currNode := workerNodes[nodeIdx]
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
-        keyProcessed[key] = false
         go ProcessKey(key, currNode, keyMapleIdMap[key])
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
 }
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
+    keyStatus[key] = ONGOING
+
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
     keysFilename := fmt.Sprintf("%s_node.info", key)
@@ -631,6 +636,87 @@ func min(a int, b int) int {
     } else {
         return b
     }
+}
+
+func removeFromList(l []interface{}, target interface{}) {
+    targetidx := -1
+    for idx, elem := range l {
+        if elem == target {
+            targetidx = idx
+            break
+        }
+    }
+    if targetidx != -1 {
+        l[targetidx] = l[len(l)-1]
+        l = l[:len(l)-1]
+    }
+    
+}
+
+func handleMapleFailure(subject int) {
+    if mapleRunning {
+        _, isNodeMaple := node2mapleJob[subject]
+        if isNodeMaple {
+            // this node is running maple
+
+            // [TODO] what is the system does not have enough nodes to satisfy this req, handle that
+            replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            var jobnode mapleJob
+            jobnode.assignedMapleIds = node2mapleJob[subject].assignedMapleIds
+            jobnode.keysAggregate = node2mapleJob[subject].keysAggregate
+            jobnode.keysGenerate = node2mapleJob[subject].keysGenerate
+            node2mapleJob[replacement] = &jobnode
+
+            removeFromList(workerNodes, subject)
+            workerNodes := append(workerNodes, replacement)
+
+            if !mapleBarrier {
+                // re-run all the maple ids assigned to this node
+                assignedMapleIds := node2mapleJob[subject].assignedMapleIds
+                for _, mapleid := range(assignedMapleIds) {
+                    mapleId2Node[mapleid] = replacement
+                    mapleCompMap[mapleid] = false
+
+                    go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                }
+            } else {
+                mapleAgain := false
+                for _, keyGen := range node2mapleJob[subject].keysGenerate {
+                    if keyStatus[keyGen] != DONE {
+                        mapleAgain = true
+                        break
+                    }
+                }
+
+                if mapleAgain {
+                    for _, keyGen := range node2mapleJob[subject].keysGenerate {
+                        keyStatus[keyGen] = FAILED
+                    }
+                    for _, keyAggr := range node2mapleJob[subject].keysAggregate {
+                        keyStatus[keyGen] = FAILED
+                    }
+                    mappleBarrier = false
+                    assignedMapleIds := node2mapleJob[subject].assignedMapleIds
+                    for _, mapleid := range(assignedMapleIds) {
+                        go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                    }
+                } else{
+                    for _, keyAggr := range node2mapleJob[subject].keysAggregate {
+                        if keyStatus[keyAggr] != DONE {
+                            keyStatus[keyAggr] = FAILED
+                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                        }  
+                    } 
+                }
+            }
+        }
+    }
+}
+
+func deleteMap(m map[interface{}]interface{}) {
+    for k := range m {
+        delete(m, k)
+    } 
 }
 
 
