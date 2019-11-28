@@ -638,7 +638,7 @@ func min(a int, b int) int {
     }
 }
 
-func removeFromList(l []interface{}, target interface{}) {
+func removeFromList(l []int, target int) {
     targetidx := -1
     for idx, elem := range l {
         if elem == target {
@@ -668,7 +668,7 @@ func handleMapleFailure(subject int) {
             node2mapleJob[replacement] = &jobnode
 
             removeFromList(workerNodes, subject)
-            workerNodes := append(workerNodes, replacement)
+            workerNodes = append(workerNodes, replacement)
 
             if !mapleBarrier {
                 // re-run all the maple ids assigned to this node
@@ -693,9 +693,9 @@ func handleMapleFailure(subject int) {
                         keyStatus[keyGen] = FAILED
                     }
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
-                        keyStatus[keyGen] = FAILED
+                        keyStatus[keyAggr] = FAILED
                     }
-                    mappleBarrier = false
+                    mapleBarrier = false
                     assignedMapleIds := node2mapleJob[subject].assignedMapleIds
                     for _, mapleid := range(assignedMapleIds) {
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])

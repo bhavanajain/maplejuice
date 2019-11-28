@@ -17,11 +17,11 @@ import (
     // "math"
 )
 
-type status uint8
+// type status int
 const (
-    FAILED   status = 0
-    ONGOING status = 1
-    DONE status = 2
+    FAILED int = 0
+    ONGOING int = 1
+    DONE int = 2
 )
 
 const BUFFERSIZE = 1024
@@ -713,13 +713,13 @@ func listenMasterRequests() {
 
             case "keyack":
                 key := split_message[1]
-                keyProcessed[key] = true
+                keyStatus[key] = DONE
 
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
                 success := true
-                for tempKey := range keyProcessed {
-                    if !keyProcessed[tempKey] {
+                for tempKey := range keyStatus {
+                    if keyStatus[tempKey] != DONE {
                         success = false
                         break
                     }
@@ -728,6 +728,7 @@ func listenMasterRequests() {
                 if success {
                     mapleRunning = false
                     // clear all the data structures, maple, delete misc temp files
+
 
                 }
 
