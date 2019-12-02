@@ -733,6 +733,32 @@ func listenMasterRequests() {
                         fmt.Printf("%s ", tempKey)
                     }
                     fmt.Printf("\n")
+                    // Clean the data structure
+                    for k := range mapleId2Node {
+                        delete(mapleId2Node, k)
+                    }
+                    for k := range mapleCompMap{
+                        delete(mapleCompMap, k)
+                    }
+                    for k := range node2mapleJob {
+                        delete(node2mapleJob, k)
+                    }
+
+                    workerNodes = nil
+
+                    mapleBarrier = false
+
+                    for k := range(keyMapleIdMap){
+                        delete(keyMapleIdMap, k)
+                    }
+
+                    for k := range(keyStatus){
+                        delete(keyStatus, k)
+                    }
+
+
+
+
                 }
 
             case "ack": 
@@ -1094,8 +1120,9 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     timeout := 20 * time.Second
 
-    ip := memberMap[nodeId].ip
+    
     port := fileTransferPort
+    ip := memberMap[nodeId].ip
 
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {

@@ -393,6 +393,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 // this is suboptimal as in case of failures, we will read all the mapleId key files
 func AssembleKeyFiles() {
 
+    // This part is done by master
     if len(keyMapleIdMap) == 0 {
         for mapleId := range mapleId2Node {
             keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
@@ -654,9 +655,12 @@ func removeFromList(l []int, target int) {
 }
 
 func handleMapleFailure(subject int) {
+
+
     if mapleRunning {
         _, isNodeMaple := node2mapleJob[subject]
         if isNodeMaple {
+            fmt.Printf("Rerunning the maple task for failed nodes %d \n",subject)
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that

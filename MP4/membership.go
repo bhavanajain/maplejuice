@@ -862,9 +862,17 @@ func listenOtherPort() (err error) {
 					if memberMap[subject].ip == masterIP {
 						go LeaderElection()
 					}
+					// This is for MP4
+					// Check if the worker node is one of the affected node
+
 				}
 				printMembershipList()
-			}			
+			}
+
+			
+
+
+
 
 		case "SUSPECT":
 			var alive = false
