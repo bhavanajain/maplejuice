@@ -828,7 +828,11 @@ func listenMasterRequests() {
                                 _,ok := m[elem]
                                 if !ok{
                                     m[elem] = true
-                                    newListNodes = append(newListNodes,elem)
+                                    if len(newListNodes) == 0{
+                                        newListNodes = [elem]
+                                    }else{
+                                        newListNodes = append(newListNodes,elem)
+                                    }
                                 }
                             }
                         }
@@ -1788,6 +1792,7 @@ func LeaderElection() {
                 for _, elem := range fileMap[fileName].nodeIds{
                     if elem == myVid{
                         noAdd = false
+                        break
                     }
                 }
                 if !noAdd{
