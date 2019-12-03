@@ -1265,7 +1265,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
     split_command := strings.Split(command, " ")
     command_type := split_command[0]
 
-    switch command_type {    
+    switch command_type {
+
     case "ls":
         sdfsFilename := split_command[1]
 
@@ -1539,6 +1540,15 @@ func scanCommands() {
         case "store":
             for fileName := range(fileTimeMap) {
                 fmt.Printf("%s ", fileName)
+            }
+
+        case "keys":
+            for tempKey := range keyStatus {
+                if keyStatus[tempKey] != DONE {
+                    fmt.Printf("Key %s not done \n",tempKey)
+                    // success = false
+                    // break
+                }
             }
 
         case "ls", "get", "delete", "put", "maple":
