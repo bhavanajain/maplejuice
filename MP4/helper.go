@@ -234,9 +234,11 @@ func simpleRecvFile(conn net.Conn) string {
     bufferFileName := make([]byte, 64)
 
     conn.Read(bufferFileSize)
+    fmt.Printf("raw file size: %s\n", string(bufferFileSize))
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
     conn.Read(bufferFileName)
+    fmt.Printf("raw file name: %s\n", string(bufferFileName))
     fileName := strings.Trim(string(bufferFileName), filler)
 
     fmt.Printf("Incoming filesize %d filename %s\n", fileSize, fileName)
