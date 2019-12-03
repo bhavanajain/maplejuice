@@ -738,27 +738,27 @@ func listenMasterRequests() {
                     }
                     fmt.Printf("\n")
                     // Clean the data structure
-                    for k := range mapleId2Node {
-                        delete(mapleId2Node, k)
-                    }
-                    for k := range mapleCompMap{
-                        delete(mapleCompMap, k)
-                    }
-                    for k := range node2mapleJob {
-                        delete(node2mapleJob, k)
-                    }
+                    // for k := range mapleId2Node {
+                    //     delete(mapleId2Node, k)
+                    // }
+                    // for k := range mapleCompMap{
+                    //     delete(mapleCompMap, k)
+                    // }
+                    // for k := range node2mapleJob {
+                    //     delete(node2mapleJob, k)
+                    // }
 
-                    workerNodes = nil
+                    // workerNodes = nil
 
-                    mapleBarrier = false
+                    // mapleBarrier = false
 
-                    for k := range(keyMapleIdMap){
-                        delete(keyMapleIdMap, k)
-                    }
+                    // for k := range(keyMapleIdMap){
+                    //     delete(keyMapleIdMap, k)
+                    // }
 
-                    for k := range(keyStatus){
-                        delete(keyStatus, k)
-                    }
+                    // for k := range(keyStatus){
+                    //     delete(keyStatus, k)
+                    // }
 
                 }
 
