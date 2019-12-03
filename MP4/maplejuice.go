@@ -251,6 +251,7 @@ func listenFileTransferPort() {
                 fileTimeMap[sdfsFilename] = time.Now().Unix()
 
                 log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
+                fmt.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
 
             case "getfile2":
                 /* 
