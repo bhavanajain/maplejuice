@@ -1550,6 +1550,14 @@ func scanCommands() {
                     // break
                 }
             }
+        case "keysd":
+            for tempKey := range keyStatus {
+                if keyStatus[tempKey] == DONE {
+                    fmt.Printf("Key %s not done \n",tempKey)
+                    // success = false
+                    // break
+                }
+            }
 
         case "ls", "get", "delete", "put", "maple":
             if command_type == "get" {
