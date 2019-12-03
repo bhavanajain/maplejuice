@@ -824,7 +824,7 @@ func listenMasterRequests() {
                         newListNodes := []int{}
                         if len(destNodes) > 4 {
                             m := make(map[int]bool)
-                            for lidx,elem := range destNodes{
+                            for _,elem := range destNodes{
                                 _,ok := m[elem]
                                 if !ok{
                                     m[elem] = true
