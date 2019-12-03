@@ -447,6 +447,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
     keysFilename := fmt.Sprintf("%s_node.info", key)
+    
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
