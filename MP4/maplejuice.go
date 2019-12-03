@@ -1670,7 +1670,7 @@ func HandleFileReplication() {
             for fileName, _ := range(fileMap){
                 filenodes := fileMap[fileName].nodeIds
                 currTime := time.Now().Unix()
-                if (fileMap[fileName].timestamp + replicatePeriod) < currTime{
+                if (fileMap[fileName].timestamp + int64(replicatePeriod)) < currTime{
                     continue
                 }
                 if len(filenodes) < 4 { 
