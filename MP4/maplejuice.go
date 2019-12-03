@@ -539,6 +539,7 @@ func listenMasterRequests() {
                         
                         _, ok := fileMap[fileName]
                         if ok {
+                            fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
                             noAdd := true
                             for _,elem := range fileMap[fileName].nodeIds{
                                 if sender == elem{
@@ -555,7 +556,7 @@ func listenMasterRequests() {
                         } else{
                             var newfiledata fileData 
                             newfiledata.timestamp, _ = strconv.ParseInt(split_resp[3], 10, 64)
-                            FileList := string2List(split_resp[1])
+                            FileList := removeDuplicates(string2List(split_resp[1]))
                             if len(FileList) > 4{
                                 FileList = FileList[:4]
                             }
@@ -689,6 +690,7 @@ func listenMasterRequests() {
                 var nodes_str = ""
 
                 if ok {
+                    fileMap[sdfsFilename].nodeIds = removeDuplicates(fileMap[sdfsFilename].nodeIds)
                     for _, node := range(fileMap[sdfsFilename].nodeIds) {
                         nodes_str = nodes_str + strconv.Itoa(node) + ","
                     }
@@ -710,6 +712,7 @@ func listenMasterRequests() {
                 sdfsFilename := split_message[1]
                 _, ok := fileMap[sdfsFilename]
                 if ok {
+                    fileMap[sdfsFilename].nodeIds = removeDuplicates(fileMap[sdfsFilename].nodeIds)
                     for _, nodeId := range(fileMap[sdfsFilename].nodeIds) {
 
                         go deleteFile(nodeId, sdfsFilename)
@@ -813,7 +816,7 @@ func listenMasterRequests() {
 
                     if conflictMap[sdfsFilename].id == srcNode {
 
-                        destNodes := string2List(destNodes_str)
+                        destNodes := removeDuplicates(string2List(destNodes_str))
                         for _, node := range(destNodes) {
                             go sendConfirmation(node, sdfsFilename, srcNode)
                         }
@@ -821,17 +824,9 @@ func listenMasterRequests() {
                         updateTimestamp := time.Now().Unix()
                         var newfiledata fileData 
                         newfiledata.timestamp = updateTimestamp
-                        // newListNodes := []int{}
-                        // if len(destNodes) > 4 {
-                        //     m := make(map[int]bool)
-                        //     for _,elem := range destNodes{
-                        //         _,ok := m[elem]
-                        //         if !ok{
-                        //             m[elem] = true
-                        //             newListNodes = append(newListNodes,elem)
-                        //         }
-                        //     }
-                        // }
+                        if len(destNodes) > 4{
+                            destNodes = destNodes[:4]
+                        }
                         newfiledata.nodeIds = destNodes
                         fileMap[sdfsFilename] = &newfiledata
 
@@ -848,7 +843,7 @@ func listenMasterRequests() {
                         // ignore
                     }
                 } else if action == "replicate" {
-                    destNodes := string2List(destNodes_str)
+                    destNodes := removeDuplicates(string2List(destNodes_str))
                     destNode := destNodes[0]
                     
                     go sendConfirmation(destNode, sdfsFilename, srcNode)
@@ -935,6 +930,20 @@ func string2List(given_str string) ([]int) {
         nodes = append(nodes, node)
     }
     return nodes
+}
+
+func removeDuplicates( val []int) ([]int){
+    valList:= []int{}
+    mmap := make(map[int]bool)
+    for _, elem := range(val){
+        _,ok := mmap[elem]
+        if !ok{
+            mmap[elem] = true
+            valList = append(valList,elem)
+        }
+    }
+    return valList
+
 }
 
 func deleteFile(nodeId int, sdfsFilename string) {
@@ -1782,6 +1791,7 @@ func LeaderElection() {
         // Move your own things to fileMap and nodeMap
         for fileName := range(fileTimeMap){
             // Handling the fileName part
+            fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
             _,ok := fileMap[fileName]
             if ok{
                 noAdd := true
@@ -1801,7 +1811,7 @@ func LeaderElection() {
             }else{
                 var newfiledata fileData 
                 newfiledata.timestamp = fileTimeMap[fileName]
-                newfiledata.nodeIds = string2List(strconv.Itoa(myVid))
+                newfiledata.nodeIds =  removeDuplicates(string2List(strconv.Itoa(myVid)))
                 fileMap[fileName] = &newfiledata
             }
 
