@@ -206,8 +206,16 @@ func simpleSendFile(conn net.Conn, filename string) {
         return
     }
 
+
     fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
+    if fileSize == 0 {
+        fmt.Printf("=======********** DAMN, filesize = 0, %s\n", filename)
+    }
+    
     fileName := fillString(fileInfo.Name(), 64)
+
+    fmt.Printf("Original filename parameter %s, Filesize %d, Filename %s\n",  filename, fileSize, fileName)
+
 
     fmt.Printf("filesize %s\n filename %s\n", fileSize, fileName)
 
@@ -447,7 +455,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
     keysFilename := fmt.Sprintf("%s_node.info", key)
-    
+
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
