@@ -540,7 +540,7 @@ func listenMasterRequests() {
                         _, ok := fileMap[fileName]
                         if ok {
                             noAdd := true
-                            for _,elem := fileMap[fileName].nodeIds{
+                            for _,elem := range fileMap[fileName].nodeIds{
                                 if sender == elem{
                                     noAdd = false
                                     break
