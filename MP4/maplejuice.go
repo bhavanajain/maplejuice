@@ -83,13 +83,16 @@ var keyMapleIdMap = make(map[string][]int)
 var sdfsInterPrefix string
 
 var messageLength = 256
+var filler = "^"
 
 func fillString(givenString string, toLength int) string {
     // pads `givenString` with ':' to make it of `toLength` size
     for {
         lengthString := len(givenString)
         if lengthString < toLength {
-            givenString = givenString + ":"
+            // givenString = givenString + ":"
+            // use carat for delimiting
+            givenString = givenString + filler
             continue
         }
         break
@@ -149,7 +152,7 @@ func listenFileTransferPort() {
         bufferMessage := make([]byte, messageLength)
         
         conn.Read(bufferMessage)
-        message := strings.Trim(string(bufferMessage), ":")
+        message := strings.Trim(string(bufferMessage), filler)
         
         log.Printf("[ME %d] Received message %s on the file transfer port %d\n", myVid, message, fileTransferPort)
 
@@ -397,7 +400,7 @@ func listenFileTransferPort() {
 
                 bufferFileSize := make([]byte, 10)
                 conn.Read(bufferFileSize)
-                fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+                fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
                 log.Printf("[ME %d] Incoming filesize %d\n", myVid, fileSize)
                 fmt.Printf("[ME %d] Incoming filesize %d\n", myVid, fileSize)
@@ -996,7 +999,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
         return false
     }
-    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)

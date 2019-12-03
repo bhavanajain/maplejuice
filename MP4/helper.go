@@ -234,10 +234,10 @@ func simpleRecvFile(conn net.Conn) string {
     bufferFileName := make([]byte, 64)
 
     conn.Read(bufferFileSize)
-    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
     conn.Read(bufferFileName)
-    fileName := strings.Trim(string(bufferFileName), ":")
+    fileName := strings.Trim(string(bufferFileName), filler)
 
     fmt.Printf("Incoming filesize %d filename %s\n", fileSize, fileName)
 
@@ -336,7 +336,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             fileEnd = true
         }
         if len(line) > 0 {
-            fmt.Printf("curr line: %s", line)
+            // fmt.Printf("curr line: %s", line)
             splitLine := strings.Split(line, " ")
             key := splitLine[0]
             keySet[key] = true
@@ -561,7 +561,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         ch <- false
         return
     }
-    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), ":"), 10, 64)
+    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
