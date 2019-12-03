@@ -830,7 +830,7 @@ func listenMasterRequests() {
                     
                     updateTimestamp := time.Now().Unix()
                     if len(fileMap[sdfsFilename].nodeIds) < 4{
-                    fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
+                        fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
                     }
                     else{
                         break
