@@ -712,6 +712,7 @@ func listenMasterRequests() {
                 }
 
             case "keyack":
+                fmt.Printf("keyack RECVD\n")
                 key := split_message[1]
                 keyStatus[key] = DONE
 
@@ -720,6 +721,7 @@ func listenMasterRequests() {
                 success := true
                 for tempKey := range keyStatus {
                     if keyStatus[tempKey] != DONE {
+                        fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
                         success = false
                         break
                     }
@@ -755,9 +757,6 @@ func listenMasterRequests() {
                     for k := range(keyStatus){
                         delete(keyStatus, k)
                     }
-
-
-
 
                 }
 
