@@ -163,6 +163,7 @@ func listenFileTransferPort() {
         case "keyaggr":
             key := split_message[1]
             sdfsInterPrefix = split_message[2]
+            fmt.Printf("Inside keyaggr: I am going to receive the nodes ids for key %s %s\n", key, sdfsInterPrefix)
             nodeInfoFile := simpleRecvFile(conn)
 
             fmt.Printf("Received the key file for processing %s\n", key)
