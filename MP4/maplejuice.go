@@ -829,10 +829,9 @@ func listenMasterRequests() {
                     go sendConfirmation(destNode, sdfsFilename, srcNode)
                     
                     updateTimestamp := time.Now().Unix()
-                    if len(fileMap[sdfsFilename].nodeIds) < 4{
+                    if len(fileMap[sdfsFilename].nodeIds) < 4 {
                         fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
-                    }
-                    else{
+                    }else{
                         break
                     }
 
