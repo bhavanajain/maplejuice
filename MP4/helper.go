@@ -208,7 +208,7 @@ func simpleSendFile(conn net.Conn, filename string) {
 
 
     fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
-    if fileSize == 0 {
+    if fileInfo.Size() == 0 {
         fmt.Printf("=======********** DAMN, filesize = 0, %s\n", filename)
     }
     
