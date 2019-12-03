@@ -823,7 +823,7 @@ func listenMasterRequests() {
                         newfiledata.timestamp = updateTimestamp
                         newListNodes := []int{}
                         if len(destNodes) > 4 {
-                            m = make(map[int]bool)
+                            m := make(map[int]bool)
                             for lidx,elem := range destNodes{
                                 _,ok := m[elem]
                                 if !ok{
