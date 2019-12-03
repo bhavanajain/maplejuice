@@ -539,7 +539,9 @@ func listenMasterRequests() {
                         
                         _, ok := fileMap[fileName]
                         if ok {
-                            fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,sender) 
+                            if len(fileMap[fileName].nodeIds) < 4 {
+                                fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,sender) 
+                            }
                         } else{
                             var newfiledata fileData 
                             newfiledata.timestamp, _ = strconv.ParseInt(split_resp[3], 10, 64)
@@ -827,7 +829,12 @@ func listenMasterRequests() {
                     go sendConfirmation(destNode, sdfsFilename, srcNode)
                     
                     updateTimestamp := time.Now().Unix()
+                    if len(fileMap[sdfsFilename].nodeIds) < 4{
                     fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
+                    }
+                    else{
+                        break
+                    }
 
                     _, ok := nodeMap[destNode]
                     if ok {
