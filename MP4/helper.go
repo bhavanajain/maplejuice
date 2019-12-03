@@ -357,7 +357,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             } else {
                 tempFilePath := fmt.Sprintf(maple_dir + "output_%d_%s.out", mapleId, key)
 
-                if len(keyFileHandleMap) > 1000 {
+                if len(keyFileHandleMap) > 128 {
                     var randomkey string
                     for randomkey = range keyFileHandleMap {
                         break
