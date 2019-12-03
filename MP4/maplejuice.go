@@ -821,18 +821,18 @@ func listenMasterRequests() {
                         updateTimestamp := time.Now().Unix()
                         var newfiledata fileData 
                         newfiledata.timestamp = updateTimestamp
-                        newListNodes := []int{}
-                        if len(destNodes) > 4 {
-                            m := make(map[int]bool)
-                            for _,elem := range destNodes{
-                                _,ok := m[elem]
-                                if !ok{
-                                    m[elem] = true
-                                    newListNodes = append(newListNodes,elem)
-                                }
-                            }
-                        }
-                        newfiledata.nodeIds = newListNodes
+                        // newListNodes := []int{}
+                        // if len(destNodes) > 4 {
+                        //     m := make(map[int]bool)
+                        //     for _,elem := range destNodes{
+                        //         _,ok := m[elem]
+                        //         if !ok{
+                        //             m[elem] = true
+                        //             newListNodes = append(newListNodes,elem)
+                        //         }
+                        //     }
+                        // }
+                        newfiledata.nodeIds = destNodes
                         fileMap[sdfsFilename] = &newfiledata
 
                         for _, node := range(destNodes) {
