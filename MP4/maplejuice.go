@@ -539,6 +539,16 @@ func listenMasterRequests() {
                         
                         _, ok := fileMap[fileName]
                         if ok {
+                            noAdd := true
+                            for _,elem := fileMap[fileName].nodeIds{
+                                if sender == elem{
+                                    noAdd = false
+                                    break
+                                }
+                            }
+                            if !noAdd{
+                                continue
+                            }
                             if len(fileMap[fileName].nodeIds) < 4 {
                                 fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,sender) 
                             }
@@ -1756,6 +1766,15 @@ func LeaderElection() {
             // Handling the fileName part
             _,ok := fileMap[fileName]
             if ok{
+                noAdd := true
+                for _, elem := range fileMap[fileName].nodeIds{
+                    if elem == myVid{
+                        noAdd = false
+                    }
+                }
+                if !noAdd{
+                    continue
+                }
                 if len(fileMap[fileName].nodeIds) < 4{
                     fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,myVid) 
                     fileMap[fileName].timestamp = fileTimeMap[fileName]
