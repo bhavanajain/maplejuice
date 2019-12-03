@@ -1669,6 +1669,10 @@ func HandleFileReplication() {
 
             for fileName, _ := range(fileMap){
                 filenodes := fileMap[fileName].nodeIds
+                currTime := time.Now().Unix()
+                if (fileMap[fileName].timestamp + replicatePeriod) < currTime{
+                    continue
+                }
                 if len(filenodes) < 4 { 
                     fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
                     fmt.Printf("[ME %d] Handling file Replication for %s\n",myVid,fileName)
