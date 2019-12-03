@@ -714,9 +714,10 @@ func listenMasterRequests() {
 
             case "keyack":
                 fmt.Printf("keyack RECVD\n")
+
                 key := split_message[1]
                 keyStatus[key] = DONE
-
+                log.Printf("keyack RECVD %s\n",key)
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
                 success := true
