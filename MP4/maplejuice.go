@@ -726,7 +726,7 @@ func listenMasterRequests() {
                 }
 
                 if success {
-                    fmt.Printf("Maple task completed successfully\n")
+                    fmt.Printf("+++++++++++++++++++++++++++++++Maple task completed successfully\n")
                     mapleRunning = false
                     // clear all the data structures, maple, delete misc temp files
                     for tempKey := range(keyStatus) {
