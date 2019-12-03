@@ -1749,8 +1749,10 @@ func LeaderElection() {
             // Handling the fileName part
             _,ok := fileMap[fileName]
             if ok{
-                fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,myVid) 
-                fileMap[fileName].timestamp = fileTimeMap[fileName]
+                if len(fileMap[fileName].nodeIds) < 4{
+                    fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,myVid) 
+                    fileMap[fileName].timestamp = fileTimeMap[fileName]
+                }
             }else{
                 var newfiledata fileData 
                 newfiledata.timestamp = fileTimeMap[fileName]
