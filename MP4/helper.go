@@ -393,6 +393,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 // this is suboptimal as in case of failures, we will read all the mapleId key files
 func AssembleKeyFiles() {
 
+    // This part is done by master
     if len(keyMapleIdMap) == 0 {
         for mapleId := range mapleId2Node {
             keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
@@ -512,10 +513,19 @@ func KeyAggregation(key string, nodeInfoList []string) {
     }
 
     PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
+    conn.Close()
     // send an ack to the master
+    conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+      if err != nil {
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        return
+    }
     message := fmt.Sprintf("keyack %s\n", key)
+    fmt.Printf("Sending %s\n",message)
+    log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
     conn.Close()
+   
 
     fmt.Printf("Appended the file for %s key\n", key)
     
@@ -654,9 +664,12 @@ func removeFromList(l []int, target int) {
 }
 
 func handleMapleFailure(subject int) {
+
+
     if mapleRunning {
         _, isNodeMaple := node2mapleJob[subject]
         if isNodeMaple {
+            fmt.Printf("Rerunning the maple task for failed nodes %d \n",subject)
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that

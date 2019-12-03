@@ -862,9 +862,17 @@ func listenOtherPort() (err error) {
 					if memberMap[subject].ip == masterIP {
 						go LeaderElection()
 					}
+					// This is for MP4
+					// Check if the worker node is one of the affected node
+
 				}
 				printMembershipList()
-			}			
+			}
+
+			
+
+
+
 
 		case "SUSPECT":
 			var alive = false
@@ -898,6 +906,7 @@ func listenOtherPort() (err error) {
 			}
 
 		case "PING":
+			fmt.Printf("Received Ping message --------------------")
 			message = fmt.Sprintf("STATUS,%d,1", myVid)
 			sendMessageAddr(addr.IP.String(), message, num_tries)
 		

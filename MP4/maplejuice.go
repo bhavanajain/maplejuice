@@ -251,6 +251,7 @@ func listenFileTransferPort() {
                 fileTimeMap[sdfsFilename] = time.Now().Unix()
 
                 log.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
+                fmt.Printf("[ME %d] Successfully moved file from %s to %s\n", myVid, tempFilePath, sharedFilePath)
 
             case "getfile2":
                 /* 
@@ -538,11 +539,28 @@ func listenMasterRequests() {
                         
                         _, ok := fileMap[fileName]
                         if ok {
-                            fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,sender) 
+                            fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
+                            noAdd := true
+                            for _,elem := range fileMap[fileName].nodeIds{
+                                if sender == elem{
+                                    noAdd = false
+                                    break
+                                }
+                            }
+                            if !noAdd{
+                                continue
+                            }
+                            if len(fileMap[fileName].nodeIds) < 4 {
+                                fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,sender) 
+                            }
                         } else{
                             var newfiledata fileData 
                             newfiledata.timestamp, _ = strconv.ParseInt(split_resp[3], 10, 64)
-                            newfiledata.nodeIds = string2List(split_resp[1])
+                            FileList := removeDuplicates(string2List(split_resp[1]))
+                            if len(FileList) > 4{
+                                FileList = FileList[:4]
+                            }
+                            newfiledata.nodeIds = FileList
                             fileMap[fileName] = &newfiledata
                         }
                         
@@ -672,6 +690,7 @@ func listenMasterRequests() {
                 var nodes_str = ""
 
                 if ok {
+                    fileMap[sdfsFilename].nodeIds = removeDuplicates(fileMap[sdfsFilename].nodeIds)
                     for _, node := range(fileMap[sdfsFilename].nodeIds) {
                         nodes_str = nodes_str + strconv.Itoa(node) + ","
                     }
@@ -693,6 +712,7 @@ func listenMasterRequests() {
                 sdfsFilename := split_message[1]
                 _, ok := fileMap[sdfsFilename]
                 if ok {
+                    fileMap[sdfsFilename].nodeIds = removeDuplicates(fileMap[sdfsFilename].nodeIds)
                     for _, nodeId := range(fileMap[sdfsFilename].nodeIds) {
 
                         go deleteFile(nodeId, sdfsFilename)
@@ -712,27 +732,53 @@ func listenMasterRequests() {
                 }
 
             case "keyack":
+                fmt.Printf("keyack RECVD\n")
+
                 key := split_message[1]
                 keyStatus[key] = DONE
-
+                log.Printf("keyack RECVD %s\n",key)
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
                 success := true
                 for tempKey := range keyStatus {
                     if keyStatus[tempKey] != DONE {
+                        fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
                         success = false
                         break
                     }
                 }
 
                 if success {
-                    fmt.Printf("Maple task completed successfully\n")
+                    fmt.Printf("+++++++++++++++++++++++++++++++Maple task completed successfully\n")
                     mapleRunning = false
                     // clear all the data structures, maple, delete misc temp files
                     for tempKey := range(keyStatus) {
                         fmt.Printf("%s ", tempKey)
                     }
                     fmt.Printf("\n")
+                    //Clean the data structure
+                    for k := range mapleId2Node {
+                        delete(mapleId2Node, k)
+                    }
+                    for k := range mapleCompMap{
+                        delete(mapleCompMap, k)
+                    }
+                    for k := range node2mapleJob {
+                        delete(node2mapleJob, k)
+                    }
+
+                    workerNodes = nil
+
+                    mapleBarrier = false
+
+                    for k := range(keyMapleIdMap){
+                        delete(keyMapleIdMap, k)
+                    }
+
+                    for k := range(keyStatus){
+                        delete(keyStatus, k)
+                    }
+
                 }
 
             case "ack": 
@@ -770,7 +816,7 @@ func listenMasterRequests() {
 
                     if conflictMap[sdfsFilename].id == srcNode {
 
-                        destNodes := string2List(destNodes_str)
+                        destNodes := removeDuplicates(string2List(destNodes_str))
                         for _, node := range(destNodes) {
                             go sendConfirmation(node, sdfsFilename, srcNode)
                         }
@@ -778,6 +824,9 @@ func listenMasterRequests() {
                         updateTimestamp := time.Now().Unix()
                         var newfiledata fileData 
                         newfiledata.timestamp = updateTimestamp
+                        if len(destNodes) > 4{
+                            destNodes = destNodes[:4]
+                        }
                         newfiledata.nodeIds = destNodes
                         fileMap[sdfsFilename] = &newfiledata
 
@@ -794,13 +843,27 @@ func listenMasterRequests() {
                         // ignore
                     }
                 } else if action == "replicate" {
-                    destNodes := string2List(destNodes_str)
+                    destNodes := removeDuplicates(string2List(destNodes_str))
                     destNode := destNodes[0]
                     
                     go sendConfirmation(destNode, sdfsFilename, srcNode)
                     
                     updateTimestamp := time.Now().Unix()
-                    fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
+                    if len(fileMap[sdfsFilename].nodeIds) < 4 {
+                        toAdd := true
+                        for _,elem := range fileMap[sdfsFilename].nodeIds{
+                            if elem == destNode{
+                                toAdd = false
+                                break
+                            }
+                        }
+                        if !toAdd{
+                            break
+                        }
+                        fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
+                    }else{
+                        break
+                    }
 
                     _, ok := nodeMap[destNode]
                     if ok {
@@ -867,6 +930,20 @@ func string2List(given_str string) ([]int) {
         nodes = append(nodes, node)
     }
     return nodes
+}
+
+func removeDuplicates( val []int) ([]int){
+    valList:= []int{}
+    mmap := make(map[int]bool)
+    for _, elem := range(val){
+        _,ok := mmap[elem]
+        if !ok{
+            mmap[elem] = true
+            valList = append(valList,elem)
+        }
+    }
+    return valList
+
 }
 
 func deleteFile(nodeId int, sdfsFilename string) {
@@ -1094,8 +1171,10 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     timeout := 20 * time.Second
 
-    ip := memberMap[nodeId].ip
+    
     port := fileTransferPort
+    fmt.Printf("the nodeID is %d and IP is %s\n",nodeId,memberMap[nodeId].ip)
+    ip := memberMap[nodeId].ip
 
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
@@ -1236,7 +1315,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
     split_command := strings.Split(command, " ")
     command_type := split_command[0]
 
-    switch command_type {    
+    switch command_type {
+
     case "ls":
         sdfsFilename := split_command[1]
 
@@ -1512,6 +1592,23 @@ func scanCommands() {
                 fmt.Printf("%s ", fileName)
             }
 
+        case "keys":
+            for tempKey := range keyStatus {
+                if keyStatus[tempKey] != DONE {
+                    fmt.Printf("Key %s not done \n",tempKey)
+                    // success = false
+                    // break
+                }
+            }
+        case "keysd":
+            for tempKey := range keyStatus {
+                if keyStatus[tempKey] == DONE {
+                    fmt.Printf("Key %s done \n",tempKey)
+                    // success = false
+                    // break
+                }
+            }
+
         case "ls", "get", "delete", "put", "maple":
             if command_type == "get" {
                 if len(split_command) < 3 {
@@ -1643,6 +1740,10 @@ func HandleFileReplication() {
 
             for fileName, _ := range(fileMap){
                 filenodes := fileMap[fileName].nodeIds
+                currTime := time.Now().Unix()
+                if (fileMap[fileName].timestamp + int64(replicatePeriod)) < currTime{
+                    continue
+                }
                 if len(filenodes) < 4 { 
                     fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
                     fmt.Printf("[ME %d] Handling file Replication for %s\n",myVid,fileName)
@@ -1690,14 +1791,27 @@ func LeaderElection() {
         // Move your own things to fileMap and nodeMap
         for fileName := range(fileTimeMap){
             // Handling the fileName part
+            fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
             _,ok := fileMap[fileName]
             if ok{
-                fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,myVid) 
-                fileMap[fileName].timestamp = fileTimeMap[fileName]
+                noAdd := true
+                for _, elem := range fileMap[fileName].nodeIds{
+                    if elem == myVid{
+                        noAdd = false
+                        break
+                    }
+                }
+                if !noAdd{
+                    continue
+                }
+                if len(fileMap[fileName].nodeIds) < 4{
+                    fileMap[fileName].nodeIds = append(fileMap[fileName].nodeIds,myVid) 
+                    fileMap[fileName].timestamp = fileTimeMap[fileName]
+                }
             }else{
                 var newfiledata fileData 
                 newfiledata.timestamp = fileTimeMap[fileName]
-                newfiledata.nodeIds = string2List(strconv.Itoa(myVid))
+                newfiledata.nodeIds =  removeDuplicates(string2List(strconv.Itoa(myVid)))
                 fileMap[fileName] = &newfiledata
             }
 
