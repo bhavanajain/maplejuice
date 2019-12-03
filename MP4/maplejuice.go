@@ -545,7 +545,11 @@ func listenMasterRequests() {
                         } else{
                             var newfiledata fileData 
                             newfiledata.timestamp, _ = strconv.ParseInt(split_resp[3], 10, 64)
-                            newfiledata.nodeIds = string2List(split_resp[1])
+                            FileList := string2List(split_resp[1])
+                            if len(FileList) > 4{
+                                FileList = FileList[:4]
+                            }
+                            newfiledata.nodeIds = FileList
                             fileMap[fileName] = &newfiledata
                         }
                         
@@ -807,6 +811,9 @@ func listenMasterRequests() {
                         updateTimestamp := time.Now().Unix()
                         var newfiledata fileData 
                         newfiledata.timestamp = updateTimestamp
+                        if len(destNodes) > 4 {
+                            destNodes = destNodes[:4]
+                        }
                         newfiledata.nodeIds = destNodes
                         fileMap[sdfsFilename] = &newfiledata
 
