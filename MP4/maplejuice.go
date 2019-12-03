@@ -828,11 +828,7 @@ func listenMasterRequests() {
                                 _,ok := m[elem]
                                 if !ok{
                                     m[elem] = true
-                                    if len(newListNodes) == 0{
-                                        newListNodes = [elem]
-                                    }else{
-                                        newListNodes = append(newListNodes,elem)
-                                    }
+                                    newListNodes = append(newListNodes,elem)
                                 }
                             }
                         }
