@@ -515,6 +515,8 @@ func KeyAggregation(key string, nodeInfoList []string) {
     PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
     // send an ack to the master
     message := fmt.Sprintf("keyack %s\n", key)
+    fmt.Printf("Sending %s\n",message)
+    log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
     conn.Close()
 
