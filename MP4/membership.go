@@ -906,6 +906,7 @@ func listenOtherPort() (err error) {
 			}
 
 		case "PING":
+			fmt.Printf("Received Ping message --------------------")
 			message = fmt.Sprintf("STATUS,%d,1", myVid)
 			sendMessageAddr(addr.IP.String(), message, num_tries)
 		
