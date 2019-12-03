@@ -1122,6 +1122,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     
     port := fileTransferPort
+    fmt.Printf("the nodeID is %d and IP is %s\n",nodeId,memberMap[nodeId].ip)
     ip := memberMap[nodeId].ip
 
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
