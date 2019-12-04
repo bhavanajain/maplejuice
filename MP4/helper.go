@@ -397,6 +397,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         keysFileHandle.WriteString(key + "$$$$")
     }
     keysFileHandle.Close()
+    fmt.Printf("Key File : %s created\n",keysFilename)
 
     sendKeyFile("maple", myVid, mapleId, keysFilename)
 }

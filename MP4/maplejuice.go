@@ -229,7 +229,7 @@ func listenFileTransferPort() {
 
             exeFile := fmt.Sprintf("local/%s", localMapleExe)
             inputFilePath := fmt.Sprintf("local/%s", localInputFile)
-            outputFilePath := fmt.Sprintf("%soutput_%d.out", maple_dir, mapleId)
+            outputFilePath := fmt.Sprintf("%soutput_%d.tempout", maple_dir, mapleId)
             ExecuteCommand(exeFile, inputFilePath, outputFilePath, mapleId)
 
             case "movefile":
