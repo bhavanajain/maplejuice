@@ -374,7 +374,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             // fmt.Printf("created new file handler for %s\n", tempFilePath)
             // keyFileHandleMap[key] = tempFile
             tempFile.WriteString(line)
-            temp.Close()
+            tempFile.Close()
             // }
         }
         if fileEnd {
