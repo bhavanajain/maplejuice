@@ -1795,7 +1795,7 @@ func LeaderElection() {
         // Move your own things to fileMap and nodeMap
         for fileName := range(fileTimeMap){
             // Handling the fileName part
-            fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
+            // fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
             _,ok := fileMap[fileName]
             if ok{
                 noAdd := true

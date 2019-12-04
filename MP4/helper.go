@@ -331,7 +331,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     }
     fmt.Printf("opened generated output file for key separation\n")
 
-    keyFileHandleMap := make(map[string]*os.File)
+    // keyFileHandleMap := make(map[string]*os.File)
     keySet := make(map[string]bool)
 
     fileReader := bufio.NewReader(f)
@@ -350,36 +350,37 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             splitLine := strings.Split(line, " ")
             key := splitLine[0]
             keySet[key] = true
-            _, ok := keyFileHandleMap[key]
-            if ok {
-                temp := keyFileHandleMap[key]
-                temp.WriteString(line)
-            } else {
-                tempFilePath := fmt.Sprintf(maple_dir + "output_%d_%s.out", mapleId, key)
+            // _, ok := keyFileHandleMap[key]
+            // if ok {
+            //     temp := keyFileHandleMap[key]
+            //     temp.WriteString(line)
+            // } else {
+            tempFilePath := fmt.Sprintf(maple_dir + "output_%d_%s.out", mapleId, key)
 
-                if len(keyFileHandleMap) > 128 {
-                    var randomkey string
-                    for randomkey = range keyFileHandleMap {
-                        break
-                    }
-                    keyFileHandleMap[randomkey].Close()
-                    delete(keyFileHandleMap, randomkey)
-                }
+            // if len(keyFileHandleMap) > 128 {
+            //     var randomkey string
+            //     for randomkey = range keyFileHandleMap {
+            //         break
+            //     }
+            //     keyFileHandleMap[randomkey].Close()
+            //     delete(keyFileHandleMap, randomkey)
+            // }
 
-                tempFile, err := os.OpenFile(tempFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-                if err != nil {
-                    fmt.Printf("Could not append/create the file %s\n", tempFilePath)
-                    panic(err)
-                } 
-                // fmt.Printf("created new file handler for %s\n", tempFilePath)
-                keyFileHandleMap[key] = tempFile
-                tempFile.WriteString(line)
-            }
+            tempFile, err := os.OpenFile(tempFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+            if err != nil {
+                fmt.Printf("Could not append/create the file %s\n", tempFilePath)
+                panic(err)
+            } 
+            // fmt.Printf("created new file handler for %s\n", tempFilePath)
+            // keyFileHandleMap[key] = tempFile
+            tempFile.WriteString(line)
+            temp.Close()
+            // }
         }
         if fileEnd {
-            for _, fhandle := range(keyFileHandleMap) {
-                fhandle.Close()
-            }
+            // for _, fhandle := range(keyFileHandleMap) {
+            //     fhandle.Close()
+            // }
             f.Close()
             break
         }
