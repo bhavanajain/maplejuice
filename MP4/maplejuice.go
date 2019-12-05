@@ -1237,12 +1237,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         _, err = f.Read(sendBuffer)
         if err != nil {
             if err == io.EOF {
-                f.close()
-                <- newguard
+                // f.close()
+                // <- newguard
                 break
             } else {
-                f.close()
-                <- newguard
+                // f.close()
+                // <- newguard
                 log.Printf("[ME %d] Error while reading file %s", myVid, localFilename)
             }
         }
@@ -1252,13 +1252,15 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, localFilename, nodeId)
             // request another node to write this file from master
             newnode := replaceNode(nodeId, sdfsFilename, allNodes)
-            f.close()
+            f.Close()
             <- newguard
             go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
             return
         }
 
     }
+    f.Close()
+    <- newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
 
     conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))
