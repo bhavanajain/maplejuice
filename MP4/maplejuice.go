@@ -1718,7 +1718,7 @@ func replicateFiles(subjectNode int) {
         fileMap[fileName].nodeIds = filenodes
 
         newnode := getRandomNodes(filenodes, 1)
-        fmt.Printf("File Name %s srcNode : %d , destNode : %d \n",fileName,filenodes[0],newnode[0])
+        fmt.Printf("File Name %s srcNode : %v , destNode : %v \n",fileName,filenodes,newnode)
         go initiateReplica(fileName, filenodes[0], newnode[0])
     }
     delete(nodeMap, subjectNode)
