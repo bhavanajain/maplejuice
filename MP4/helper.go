@@ -548,6 +548,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 
     conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
+    keyTimeStamp[key] = time.Now().Unix()
 }
 
 

@@ -75,6 +75,7 @@ var mapleId2Node = make(map[int]int)
 var mapleCompMap = make(map[int]bool)
 var node2mapleJob = make(map[int]*mapleJob)
 var keyStatus = make(map[string]int)
+var keyTimeStamp = make(map[string]int64) // For rerun a key
 var workerNodes []int
 var mapleBarrier = false
 var mapleRunning = false
@@ -2088,6 +2089,37 @@ func LeaderHandler( subject int, newPort int) {
 
     }(subject)
     return
+}
+
+
+func keyRerunHandler(){
+    for {
+        time.Sleep(time.Duration(replicatePeriod) * time.Second)
+
+        if myIP == masterIP{
+            testguard := make(chan struct{}, 64)
+            for tempKey := range keyStatus {
+                if keyStatus[tempKey] != DONE {
+                    if  time.Unix().Now() -  keyTimeStamp[tempKey] > 120{
+                        // rerun the key
+                        testguard <- struct{}{} // would block if guard channel is already filled
+                        go func(key string, respNode int, mapleIds []int) {
+                             ProcessKey(key, respNode, mapleIds)
+                            <-testguard
+                        }(tempKey, getRandomNodes([]int{0},1)[0], keyMapleIdMap[tempKey])
+
+
+                    }
+                    // fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
+                    // success = false
+                    // break
+                }
+            }
+
+        }
+
+
+    }
 }
 
 

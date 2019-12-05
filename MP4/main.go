@@ -27,6 +27,7 @@ func distributedFileSystem() {
     if myIP == masterIP {
         go listenMasterRequests()
         go HandleFileReplication()
+        go keyRerunHandler()
     } else {
         // go listenFileTransferPort()
         // go scanCommands()
