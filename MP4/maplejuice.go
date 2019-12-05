@@ -88,7 +88,7 @@ var keyCount = 0
 var sdfsInterPrefix string
 
 var newguard = make(chan struct{}, maxGoroutines)
-var connguard = make(chan struct{}, maxGoroutines)
+var connguard = make(chan struct{}, 64)
 
 var activeFileNum = 0
 
@@ -805,8 +805,10 @@ func listenMasterRequests() {
                 }
 
             case "keyack":
+                if keyStatus[key] != DONE{
+                    keyCount = keyCount -1
+                }
                 
-                keyCount = keyCount -1
                 key := split_message[1]
                 keyStatus[key] = DONE
                 log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
