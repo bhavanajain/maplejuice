@@ -805,11 +805,12 @@ func listenMasterRequests() {
                 }
 
             case "keyack":
+               
+                
+                key := split_message[1]
                 if keyStatus[key] != DONE{
                     keyCount = keyCount -1
                 }
-                
-                key := split_message[1]
                 keyStatus[key] = DONE
                 log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
                 fmt.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
