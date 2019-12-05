@@ -849,6 +849,8 @@ func listenMasterRequests() {
                         delete(keyStatus, k)
                     }
 
+                    exit()
+
                 }
 
             case "ack": 

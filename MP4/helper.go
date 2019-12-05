@@ -79,6 +79,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     if len(split_reply[2]) == 0 {
         log.Printf("invalid file name\n")
         fmt.Printf("invalid file name\n")
+        // conn.Close()
         return false
     }
 
@@ -487,7 +488,7 @@ func AssembleKeyFiles() {
     // do range or hash partitioning
     nodeIdx := 0
     
-    testguard := make(chan struct{}, 20) // limitng the number
+    testguard := make(chan struct{}, 64) // limitng the number
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
@@ -623,6 +624,8 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
         ch <- false
         <-connguard
+        connguard <- struct{}{}
+        go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
     defer conn.Close()
@@ -659,6 +662,8 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         <-newguard 
         <-connguard
+        connguard <- struct{}{}
+        go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
     // defer file.Close()
@@ -821,7 +826,7 @@ func handleMapleFailure(subject int) {
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
-                    testguard := make(chan struct{}, 20)
+                    testguard := make(chan struct{}, 50)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
