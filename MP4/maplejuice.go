@@ -2100,7 +2100,7 @@ func keyRerunHandler(){
             testguard := make(chan struct{}, 64)
             for tempKey := range keyStatus {
                 if keyStatus[tempKey] != DONE {
-                    if  time.Unix().Now() -  keyTimeStamp[tempKey] > 120{
+                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120{
                         // rerun the key
                         testguard <- struct{}{} // would block if guard channel is already filled
                         go func(key string, respNode int, mapleIds []int) {
