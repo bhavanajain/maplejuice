@@ -1280,6 +1280,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     
     port := fileTransferPort
+    fmt.Printf("the node ID is %d\n",nodeId)
     fmt.Printf("the nodeID is %d and IP is %s\n",nodeId,memberMap[nodeId].ip)
     ip := memberMap[nodeId].ip
 
