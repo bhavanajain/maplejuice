@@ -247,23 +247,23 @@ func listenFileTransferPort() {
             mapleId, _ := strconv.Atoi(split_message[1])
             sdfsMapleExe := split_message[2]
             localMapleExe := sdfsMapleExe
-            for{
-                if getFileWrapper(sdfsMapleExe, localMapleExe){
-                    break
-                }
-            }
-            // getFileWrapper(sdfsMapleExe, localMapleExe)
+            // for{
+            //     if getFileWrapper(sdfsMapleExe, localMapleExe){
+            //         break
+            //     }
+            // }
+            fileOk:=getFileWrapper(sdfsMapleExe, localMapleExe)
             fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
             localInputFile := inputFile
-            for{
-                if getFileWrapper(inputFile, localInputFile){
-                    break
-                }
+            // for{
+            //     if getFileWrapper(inputFile, localInputFile){
+            //         break
+            //     }
 
-            }
-            // getFileWrapper(inputFile, localInputFile)
+            // }
+            fileOk =  getFileWrapper(inputFile, localInputFile)
             fmt.Printf("I got the file %s %s\n", inputFile, localInputFile)
 
             exeFile := fmt.Sprintf("local/%s", localMapleExe)

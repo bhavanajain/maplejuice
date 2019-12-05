@@ -50,7 +50,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        return false
+        return getFileWrapper(sdfsFilename,localFilename)
     }
 
 
@@ -64,12 +64,14 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     reply, err := reader.ReadString('\n')
     if err != nil || len(reply) == 0 {
         log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
+        conn.Close()
+        return getFileWrapper(sdfsFilename,localFilename)
     }
 
     conn.Close()    // [NEW]
     if len(reply) == 0{
         fmt.Printf("Empty reply received fot file %s\n",sdfsFilename)
-        return false
+        return getFileWrapper(sdfsFilename,localFilename)
     }
     reply = reply[:len(reply)-1]
     split_reply := strings.Split(reply, " ")
@@ -77,7 +79,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     if len(split_reply[2]) == 0 {
         log.Printf("invalid file name\n")
         fmt.Printf("invalid file name\n")
-        return false
+        return getFileWrapper(sdfsFilename,localFilename)
     }
 
     nodeIds_str := strings.Split(split_reply[2], ",")
@@ -106,10 +108,11 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     if !success {
         fmt.Printf("[ME %d] Could not fetch %s shared to %s local\n", myVid, sdfsFilename, localFilename)
+        // return false
     }
 
     fmt.Printf("Time taken for get %s\n", elapsed)
-    return true
+    return success
 
 }
 
