@@ -849,7 +849,7 @@ func listenMasterRequests() {
                         delete(keyStatus, k)
                     }
 
-                    os.Exit()
+                    os.Exit(1)
 
                 }
 
