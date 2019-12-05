@@ -332,7 +332,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     }
     fmt.Printf("opened generated output file for key separation\n")
 
-    // keyFileHandleMap := make(map[string]*os.File)
+    keyFileHandleMap := make(map[string]*os.File)
     keySet := make(map[string]bool)
 
     fileReader := bufio.NewReader(f)
