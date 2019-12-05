@@ -9,6 +9,15 @@ import (
 	"io"
 )
 
+const alpha = "abcdefghijklmnopqrstuvwxyz"
+func alphaOnly(s string) bool {
+   for _, char := range s {  
+      if !strings.Contains(alpha, strings.ToLower(string(char))) {
+         return false
+      }
+   }
+   return true
+}
 func main() {
 	inputFile := flag.String("inputfile", "", "path to the input file")
 	flag.Parse()
@@ -38,6 +47,9 @@ func main() {
 			lineWords := strings.Split(line, " ")
 			for _, word := range lineWords {
 				if len(word) == 0 {
+					continue
+				}
+				if !alphaOnly(word){
 					continue
 				}
 				_, ok := wordCount[word]
