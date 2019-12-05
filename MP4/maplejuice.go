@@ -1329,13 +1329,17 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     f, err := os.Open(local_dir + localFilename) 
     if err != nil {
         log.Printf("[ME %d] Cannot open local file %s\n", localFilename)
+        <- newguard
         <-connguard
+
         return
     }
 
     fileInfo, err := f.Stat()
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, localFilename)
+        f.Close()
+        <-newguard
         <-connguard
         return
     }
