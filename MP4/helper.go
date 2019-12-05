@@ -40,7 +40,7 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     <-connguard
 }
 
-func getFileWrapper(sdfsFilename string, localFilename string) {
+func getFileWrapper(sdfsFilename string, localFilename string) bool {
     fmt.Printf("Inside get file wrapper\n")
     initTime := time.Now()
     // sdfsFilename := split_command[1]
@@ -50,7 +50,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        return
+        return false
     }
 
 
@@ -69,7 +69,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
     conn.Close()    // [NEW]
     if len(reply) == 0{
         fmt.Printf("Empty reply received fot file %s\n",sdfsFilename)
-        return
+        return false
     }
     reply = reply[:len(reply)-1]
     split_reply := strings.Split(reply, " ")
@@ -77,7 +77,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
     if len(split_reply[2]) == 0 {
         log.Printf("invalid file name\n")
         fmt.Printf("invalid file name\n")
-        return
+        return false
     }
 
     nodeIds_str := strings.Split(split_reply[2], ",")
@@ -109,7 +109,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) {
     }
 
     fmt.Printf("Time taken for get %s\n", elapsed)
-    return
+    return true
 
 }
 
@@ -637,6 +637,8 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         ch <- false
         <-connguard
+        connguard <- struct{}{}
+        go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
