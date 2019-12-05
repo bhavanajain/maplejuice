@@ -194,9 +194,11 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
 }
 
 func simpleSendFile(conn net.Conn, filename string) {
+    newguard <- struct{}{}
     f, err := os.Open(filename)
     if err != nil {
         fmt.Printf("Cannot open %s\n", filename)
+        <- newguard
         return
     }
     defer f.Close()
@@ -204,6 +206,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     fileInfo, err := f.Stat()
     if err != nil {
         fmt.Printf("Can't access file stats for %s\n", filename)
+        <- newguard
         return
     }
 
@@ -234,6 +237,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     }
 
     fmt.Printf("Completed sending the file %s\n", filename)
+    <- newguard
     return
 }
 
@@ -253,6 +257,7 @@ func simpleRecvFile(conn net.Conn) string {
     fmt.Printf("Incoming filesize %d filename %s\n", fileSize, fileName)
 
     mapleFilePath := maple_dir + fileName
+    newguard <- struct{}{}
     f, err := os.Create(mapleFilePath)
     if err != nil {
         fmt.Printf("Cannot create file %s\n", mapleFilePath) 
@@ -278,7 +283,7 @@ func simpleRecvFile(conn net.Conn) string {
         receivedBytes += BUFFERSIZE
     }
     f.Close()
-
+    <- newguard
     if success {
         fmt.Printf("received file %s\n", fileName)
     }
@@ -326,6 +331,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
     // separate output into key specific files
     // todo: extend to more than 1024 keys!!
+    newguard <- struct{}{}
     f, err := os.Open(outputFilePath)
     if err != nil {
         fmt.Printf("Cannot open %s for reading\n", outputFilePath)
@@ -383,6 +389,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
                 fhandle.Close()
             }
             f.Close()
+            <- newguard 
             break
         }
     }
