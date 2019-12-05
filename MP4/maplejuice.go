@@ -1404,16 +1404,19 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         return -1
     }
-    defer conn.Close()
+    // defer conn.Close()
 
     master_command := fmt.Sprintf("replace %d %s %s", oldnode, sdfsFilename, list2String(excludeList))
     fmt.Fprintf(conn, master_command)
 
     reader := bufio.NewReader(conn)
     reply, err := reader.ReadString('\n')
-    if err != nil {
+    if err != nil || len(reply) == 0 {
         // Handle
+        conn.Close()
+        return replaceNode(oldnode,sdfsFilename,excludeList)
     }
+    conn.Close()
     newNode,_ := strconv.Atoi(reply[:len(reply)-1])
     return newNode
 
