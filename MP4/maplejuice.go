@@ -86,6 +86,8 @@ var sdfsInterPrefix string
 
 var newguard = make(chan struct{}, maxGoroutines)
 
+var activeFileNum = 0
+
 var messageLength = 256
 var filler = "^"
 
@@ -175,9 +177,13 @@ func listenFileTransferPort() {
             }
             fmt.Printf("Received the key file for processing %s\n", key)
             newguard <- struct{}{}
+            activeFileNum = activeFileNum+1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
             fileAgg, err := os.Open(maple_dir + nodeInfoFile)   
             if err != nil {
                 log.Panicf("failed reading file: %s", err)
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 <-newguard
                 panic(err)
             }
@@ -187,6 +193,8 @@ func listenFileTransferPort() {
                 panic(err)
             }
             fileAgg.Close()
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
             <-newguard
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
@@ -264,7 +272,11 @@ func listenFileTransferPort() {
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
                 sharedFilePath := shared_dir + sdfsFilename
                 newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 err := os.Rename(tempFilePath, sharedFilePath)
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 <-newguard
                 if err != nil {
                     log.Printf("[ME %d] Could not move file %s to %s\n", myVid, tempFilePath, sharedFilePath)
@@ -295,6 +307,8 @@ func listenFileTransferPort() {
                 }
 
                 newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -341,6 +355,8 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 <-newguard    
 
             case "getfile":
@@ -361,6 +377,8 @@ func listenFileTransferPort() {
                     break
                 }
                 newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -407,6 +425,8 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 <-newguard
 
 
@@ -432,6 +452,8 @@ func listenFileTransferPort() {
                 // append sender to the tempFilePath to distinguish conflicting writes from multiple senders
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
                 newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f, err := os.Create(tempFilePath)
                 if err != nil {
                     log.Printf("[ME %d] Cannot create file %s\n", myVid, sdfsFilename) 
@@ -462,6 +484,8 @@ func listenFileTransferPort() {
                 fmt.Printf("recvd file %s sender %s\n", sdfsFilename, sender)
 
                 f.Close()
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 <-newguard
 
                 if success {
@@ -1069,6 +1093,8 @@ func copyFile(srcFile string, destFile string) (bool){
 
     // [TODO] should use io.Copy instead of ioutil readfile writefile 
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     sfile, err := os.Open(srcFile)   
     if err != nil {
         log.Panicf("failed reading file: %s", err)
@@ -1076,6 +1102,8 @@ func copyFile(srcFile string, destFile string) (bool){
     }
     input, err := ioutil.ReadAll(sfile)
     sfile.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
     if err != nil {
         log.Printf("[ME %d] Cannot read file from %s", srcFile)
@@ -1085,7 +1113,11 @@ func copyFile(srcFile string, destFile string) (bool){
     }
 
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     err = ioutil.WriteFile(destFile, input, 0644)
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
     if err != nil {
         log.Printf("[ME %d] Cannot write file to %s", destFile)
@@ -1117,9 +1149,13 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
 
     // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(shared_dir + sdfsFilename)
     if err != nil {
         log.Printf("[ME %d] Cannot open shared file %s\n", sdfsFilename)
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
         <- newguard
         return false
     }
@@ -1127,6 +1163,9 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     fileInfo, err := f.Stat()
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, sdfsFilename)
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
+        f.Close()
         <-newguard
         return false
     }
@@ -1146,6 +1185,9 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
                 break
             } else {
                 log.Printf("[ME %d] Error while reading file %s\n", myVid, sdfsFilename)
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                f.Close()
                 <-newguard
                 return false
             }
@@ -1154,12 +1196,17 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         _, err = conn.Write(sendBuffer)
         if err != nil{
             log.Printf("[ME %d] Could not send %s file bytes to %d\n", myVid, sdfsFilename, nodeId)
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            f.Close()
             <-newguard
             return false
         }
 
     }
     f.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
     fmt.Printf("[ME %s] Successfully sent the file %s to %d, waiting for done\n", myVid, sdfsFilename, nodeId)
@@ -1237,6 +1284,8 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(local_dir + localFilename) 
     if err != nil {
         log.Printf("[ME %d] Cannot open local file %s\n", localFilename)
@@ -1275,6 +1324,8 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             // request another node to write this file from master
             newnode := replaceNode(nodeId, sdfsFilename, allNodes)
             f.Close()
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
             <-newguard
             go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
             return
@@ -1282,6 +1333,8 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     }
     f.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
 

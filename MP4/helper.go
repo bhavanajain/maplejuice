@@ -195,9 +195,13 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
 
 func simpleSendFile(conn net.Conn, filename string) {
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(filename)
     if err != nil {
         fmt.Printf("Cannot open %s\n", filename)
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
         <-newguard
         return
     }
@@ -206,6 +210,8 @@ func simpleSendFile(conn net.Conn, filename string) {
     fileInfo, err := f.Stat()
     if err != nil {
         fmt.Printf("Can't access file stats for %s\n", filename)
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
         <-newguard
         return
     }
@@ -237,6 +243,8 @@ func simpleSendFile(conn net.Conn, filename string) {
     }
 
     fmt.Printf("Completed sending the file %s\n", filename)
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
     return
 }
@@ -258,6 +266,8 @@ func simpleRecvFile(conn net.Conn) string {
 
     mapleFilePath := maple_dir + fileName
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Create(mapleFilePath)
     if err != nil {
         fmt.Printf("Cannot create file %s\n", mapleFilePath) 
@@ -283,6 +293,8 @@ func simpleRecvFile(conn net.Conn) string {
         receivedBytes += BUFFERSIZE
     }
     f.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
     if success {
         fmt.Printf("received file %s\n", fileName)
@@ -301,6 +313,8 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
     fmt.Printf("Trying to run %s\n", run_cmd)
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     outfile, err := os.Create(outputFilePath)
     cmd := exec.Command("sh","-c", run_cmd)
     // outfile, err := os.Create(outputFilePath)
@@ -327,6 +341,8 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
     writer.Flush()
     outfile.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard 
 
     fmt.Printf("Maple execution done\n")
@@ -334,6 +350,8 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     // separate output into key specific files
     // todo: extend to more than 1024 keys!!
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(outputFilePath)
     if err != nil {
         fmt.Printf("Cannot open %s for reading\n", outputFilePath)
@@ -391,6 +409,8 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
                 fhandle.Close()
             }
             f.Close()
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
             <-newguard 
             break
         }
@@ -420,7 +440,11 @@ func AssembleKeyFiles() {
         for mapleId := range mapleId2Node {
             keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
             newguard <- struct{}{}
+            activeFileNum = activeFileNum+1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
             contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
             <-newguard
             if err != nil {
                 fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
@@ -480,6 +504,8 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     keysFilename := fmt.Sprintf("%s_node.info", key)
     
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
@@ -491,6 +517,8 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         keyfile.WriteString(line + "$$$$")
     } 
     keyfile.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
     timeout := time.Duration(20) * time.Second
 
@@ -601,14 +629,18 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     file, err := os.Create(localFilePath)
     if err != nil {
         log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilePath) 
         ch <- false
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
         <-newguard 
         return
     }
-    defer file.Close()
+    // defer file.Close()
 
     var receivedBytes int64
     success := false
@@ -636,12 +668,17 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         fmt.Printf("Received file %s\n", destFilePath)
     }
     ch <- success
+    file.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard 
     return    
 }
 
 func AppendFiles(inputFilePaths []string, outFilePath string) {
     newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     outfile, err := os.Create(outFilePath)
     if err != nil {
         fmt.Printf("Could not open %s file for appending\n", outFilePath)
@@ -650,6 +687,8 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
 
     for _, inputfile := range inputFilePaths {
         newguard <- struct{}{}
+        activeFileNum = activeFileNum+1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
         fIn, err := os.Open(inputfile)
         if err != nil {
             fmt.Printf("Could not open %s file for appending\n", inputfile)
@@ -661,10 +700,14 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
             fmt.Printf("Could not copy the file from %s to %s\n", inputfile, outFilePath)
         }
         fIn.Close()
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
         <-newguard
     }
 
     outfile.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard
 
     fmt.Printf("Merged all files %v\n", inputFilePaths)
