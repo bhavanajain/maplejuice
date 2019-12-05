@@ -1857,6 +1857,9 @@ func HandleFileReplication() {
                     continue
                 }
                 if len(filenodes) < 4 { 
+                    if len(filenodes) == 0{
+                        continue
+                    }
                     fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
                     fmt.Printf("[ME %d] Handling file Replication for %s\n",myVid,fileName)
                     fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")

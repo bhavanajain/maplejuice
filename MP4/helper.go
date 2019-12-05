@@ -271,6 +271,8 @@ func simpleRecvFile(conn net.Conn) string {
     f, err := os.Create(mapleFilePath)
     if err != nil {
         fmt.Printf("Cannot create file %s\n", mapleFilePath) 
+        // If this happens
+        fmt.Println(err)
     }
 
     var receivedBytes int64
