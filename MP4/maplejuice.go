@@ -1289,7 +1289,7 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
 var doneList = make([]int, 0, 4)
 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int) {
-    fmt.Printf("In the sendFile sending file %s to node %d\n",localFilename,nodeID)
+    fmt.Printf("In the sendFile sending file %s to node %d\n",localFilename,nodeId)
     if nodeId == myVid {
         success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename + "." + strconv.Itoa(nodeId))
 
