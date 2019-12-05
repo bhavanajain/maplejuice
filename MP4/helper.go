@@ -19,6 +19,7 @@ import (
     // "math"
 )
 
+
 func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile string) {
 	timeout := 20 * time.Second
 
@@ -350,37 +351,37 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             splitLine := strings.Split(line, " ")
             key := splitLine[0]
             keySet[key] = true
-            // _, ok := keyFileHandleMap[key]
-            // if ok {
-            //     temp := keyFileHandleMap[key]
-            //     temp.WriteString(line)
-            // } else {
-            tempFilePath := fmt.Sprintf(maple_dir + "output_%d_%s.out", mapleId, key)
+            _, ok := keyFileHandleMap[key]
+            if ok {
+                temp := keyFileHandleMap[key]
+                temp.WriteString(line)
+            } else {
+                tempFilePath := fmt.Sprintf(maple_dir + "output_%d_%s.out", mapleId, key)
 
-            // if len(keyFileHandleMap) > 128 {
-            //     var randomkey string
-            //     for randomkey = range keyFileHandleMap {
-            //         break
-            //     }
-            //     keyFileHandleMap[randomkey].Close()
-            //     delete(keyFileHandleMap, randomkey)
-            // }
+                if len(keyFileHandleMap) > 128 {
+                    var randomkey string
+                    for randomkey = range keyFileHandleMap {
+                        break
+                    }
+                    keyFileHandleMap[randomkey].Close()
+                    delete(keyFileHandleMap, randomkey)
+                }
 
-            tempFile, err := os.OpenFile(tempFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-            if err != nil {
-                fmt.Printf("Could not append/create the file %s\n", tempFilePath)
-                panic(err)
-            } 
+                tempFile, err := os.OpenFile(tempFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+                if err != nil {
+                    fmt.Printf("Could not append/create the file %s\n", tempFilePath)
+                    panic(err)
+                } 
             // fmt.Printf("created new file handler for %s\n", tempFilePath)
-            // keyFileHandleMap[key] = tempFile
-            tempFile.WriteString(line)
-            tempFile.Close()
-            // }
+                keyFileHandleMap[key] = tempFile
+                tempFile.WriteString(line)
+                tempFile.Close()
+            }
         }
         if fileEnd {
-            // for _, fhandle := range(keyFileHandleMap) {
-            //     fhandle.Close()
-            // }
+            for _, fhandle := range(keyFileHandleMap) {
+                fhandle.Close()
+            }
             f.Close()
             break
         }
@@ -392,7 +393,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         fmt.Printf("Could not create %s\n", keysFilename)
         panic(err)
     }
-
+    // may Add a dummy key 
     for key := range(keySet) {
         keysFileHandle.WriteString(key + "$$$$")
     }
@@ -439,6 +440,8 @@ func AssembleKeyFiles() {
     // assign key processing to worker nodes
     // do range or hash partitioning
     nodeIdx := 0
+    
+    guard := make(chan bool, maxGoroutines)
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
@@ -446,12 +449,13 @@ func AssembleKeyFiles() {
         }
         currNode := workerNodes[nodeIdx]
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
-        go ProcessKey(key, currNode, keyMapleIdMap[key])
+        guard <- true
+        go ProcessKey(key, currNode, keyMapleIdMap[key], guard)
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
 }
 
-func ProcessKey(key string, respNode int, mapleIds []int) {
+func ProcessKey(key string, respNode int, mapleIds []int, c chan bool) {
     keyStatus[key] = ONGOING
 
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
@@ -484,6 +488,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 
     conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
+    <- c
 }
 
 
@@ -727,10 +732,12 @@ func handleMapleFailure(subject int) {
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
+                    guard := make(chan bool, maxGoroutines)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            guard <- true // blocking
+                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr], guard)
                         }  
                     } 
                 }

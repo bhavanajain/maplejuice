@@ -58,6 +58,8 @@ var masterPort = 8085
 var fileTransferPort = 8084
 var masterNodeId = 0
 
+var maxGoroutines = 512
+
 var ongoingElection = false
 var electiondone = make(chan bool, 1)
 
