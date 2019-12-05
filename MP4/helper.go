@@ -582,9 +582,9 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
     outFilename := fmt.Sprintf("%s_inter.info", key)
     outFilePath := fmt.Sprintf("%s%s", local_dir, outFilename)
-    newguard <- struct{}{}
+    
     AppendFiles(dataFileList, outFilePath)
-    <-newguard
+
 
 
     timeout := 20 * time.Second
@@ -714,7 +714,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 }
 
 func AppendFiles(inputFilePaths []string, outFilePath string) {
-    
+    newguard <- struct{}{}
     activeFileNum = activeFileNum+1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     outfile, err := os.Create(outFilePath)
@@ -740,15 +740,16 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
         fIn.Close()
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
-        // <-newguard
+        <-newguard
     }
 
     outfile.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     
-
+     <-newguard
     fmt.Printf("Merged all files %v\n", inputFilePaths)
+   
 }
 
 
