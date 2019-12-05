@@ -37,6 +37,7 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     fmt.Printf("%s\n", message)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
+    <-connguard
 }
 
 func getFileWrapper(sdfsFilename string, localFilename string) {
@@ -162,6 +163,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     fmt.Printf("Sending file to %v\n", nodeIds)
 
     for _, node := range nodeIds {
+        connguard <- struct{}{}
         go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
     }
 
@@ -479,7 +481,7 @@ func AssembleKeyFiles() {
     // do range or hash partitioning
     nodeIdx := 0
     
-    testguard := make(chan struct{}, maxGoroutines)
+    testguard := make(chan struct{}, 20) // limitng the number
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
@@ -496,6 +498,8 @@ func AssembleKeyFiles() {
     
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
+
+    <-connguard
 }
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
@@ -553,12 +557,14 @@ func KeyAggregation(key string, nodeInfoList []string) {
         nodeId, _ := strconv.Atoi(nodeId_str)
         dataFilePath := fmt.Sprintf("%soutput_%s_%s.out", maple_dir, mapleId_str, key)
         dataFileList = append(dataFileList, dataFilePath)
+        connguard <- struct{}{}
         go getDirFile(nodeId, dataFilePath, dataFilePath, ch)
     }
     
     for i := 0; i < len(nodeInfoList); i++ {
         success := <- ch
         if !success {
+            <-connguard 
             return
         }
     }
@@ -574,6 +580,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        <-connguard 
         return
     }
 
@@ -583,6 +590,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
     conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
       if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        <-connguard 
         return
     }
     message := fmt.Sprintf("keyack %s\n", key)
@@ -590,7 +598,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
     conn.Close()
-   
+    <-connguard 
 
     fmt.Printf("Appended the file for %s key\n", key)
     
@@ -608,6 +616,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
         ch <- false
+        <-connguard
         return
     }
     defer conn.Close()
@@ -624,6 +633,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         ch <- false
+        <-connguard
         return
     }
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
@@ -640,6 +650,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         <-newguard 
+        <-connguard
         return
     }
     // defer file.Close()
@@ -674,6 +685,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     <-newguard 
+    <-connguard
     return    
 }
 
@@ -775,7 +787,7 @@ func handleMapleFailure(subject int) {
                 for _, mapleid := range(assignedMapleIds) {
                     mapleId2Node[mapleid] = replacement
                     mapleCompMap[mapleid] = false
-
+                    connguard <- struct{}{}
                     go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                 }
             } else {
@@ -797,10 +809,11 @@ func handleMapleFailure(subject int) {
                     mapleBarrier = false
                     assignedMapleIds := node2mapleJob[subject].assignedMapleIds
                     for _, mapleid := range(assignedMapleIds) {
+                        connguard <- struct{}{}
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
-                    testguard := make(chan struct{}, maxGoroutines)
+                    testguard := make(chan struct{}, 20)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
