@@ -441,7 +441,7 @@ func AssembleKeyFiles() {
     // do range or hash partitioning
     nodeIdx := 0
     
-    guard := make(chan bool, maxGoroutines)
+    guard := make(chan struct{}, maxGoroutines)
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
@@ -449,13 +449,18 @@ func AssembleKeyFiles() {
         }
         currNode := workerNodes[nodeIdx]
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
-        guard <- true
-        go ProcessKey(key, currNode, keyMapleIdMap[key], guard)
+
+        guard <- struct{}{} // would block if guard channel is already filled
+        go func(key string, respNode int, mapleIds []int) {
+            ProcessKey(key, respNode, mapleIds)
+            <-guard
+        }(key, currNode, keyMapleIdMap[key])
+    
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
 }
 
-func ProcessKey(key string, respNode int, mapleIds []int, c chan bool) {
+func ProcessKey(key string, respNode int, mapleIds []int) {
     keyStatus[key] = ONGOING
 
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
@@ -488,7 +493,6 @@ func ProcessKey(key string, respNode int, mapleIds []int, c chan bool) {
 
     conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
-    <- c
 }
 
 
@@ -732,12 +736,16 @@ func handleMapleFailure(subject int) {
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
-                    guard := make(chan bool, maxGoroutines)
+                    guard := make(chan struct{}, maxGoroutines)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            guard <- true // blocking
-                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr], guard)
+                            guard <- struct{}{}
+                            go func(key string, respNode int, mapleIds []int) {
+                                ProcessKey(key, respNode, mapleIds)
+                                <-guard
+                            }(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            // go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
                         }  
                     } 
                 }
