@@ -252,7 +252,7 @@ func listenFileTransferPort() {
             //         break
             //     }
             // }
-            fileOk:=getFileWrapper(sdfsMapleExe, localMapleExe)
+            getFileWrapper(sdfsMapleExe, localMapleExe)
             fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
@@ -263,7 +263,7 @@ func listenFileTransferPort() {
             //     }
 
             // }
-            fileOk =  getFileWrapper(inputFile, localInputFile)
+            getFileWrapper(inputFile, localInputFile)
             fmt.Printf("I got the file %s %s\n", inputFile, localInputFile)
 
             exeFile := fmt.Sprintf("local/%s", localMapleExe)
