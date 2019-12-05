@@ -1338,11 +1338,20 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         if err != nil{
             log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, localFilename, nodeId)
             // request another node to write this file from master
-            newnode := replaceNode(nodeId, sdfsFilename, allNodes)
             f.Close()
+            <-newguard
+            newnode := replaceNode(nodeId, sdfsFilename, allNodes)
+            for{
+                if newnode!= -1{
+                    break
+                }else{
+                    newnode = replaceNode(nodeId, sdfsFilename, allNodes)
+                }
+            }
+            
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            <-newguard
+            
             <-connguard
             connguard <- struct{}{}
             go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
@@ -1363,6 +1372,13 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     if err != nil {
         log.Printf("[ME %d] Error while reading ACK from %d for %s file\n", myVid, nodeId, sdfsFilename)
         newnode := replaceNode(nodeId, sdfsFilename, allNodes)
+        for{
+            if newnode != -1{
+                break
+            }else{
+                newnode = replaceNode(nodeId, sdfsFilename, allNodes)
+            }
+        }
         allNodes = append(allNodes, newnode)
         <-connguard
         connguard <- struct{}{}
