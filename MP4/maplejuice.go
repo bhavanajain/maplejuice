@@ -165,14 +165,16 @@ func listenFileTransferPort() {
 
         switch message_type {
         case "keyaggr":
-            cguard <- struct{}{}
+            
             key := split_message[1]
             sdfsInterPrefix = split_message[2]
             fmt.Printf("Inside keyaggr: I am going to receive the nodes ids for key %s %s\n", key, sdfsInterPrefix)
             nodeInfoFile := simpleRecvFile(conn)
-
+            if len(nodeInfoFile) == 0{
+                break
+            }
             fmt.Printf("Received the key file for processing %s\n", key)
-
+            cguard <- struct{}{}
             contentBytes, err := ioutil.ReadFile(maple_dir + nodeInfoFile)
             if err != nil {
                 fmt.Printf("Could not read file %s corresponding to %s key\n", nodeInfoFile, key)
@@ -282,7 +284,7 @@ func listenFileTransferPort() {
                     break
                 }
 
-                newguard <- struct{}{}
+                cguard <- struct{}{}
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -329,7 +331,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                <-newguard    
+                <-cguard    
 
             case "getfile":
                 /* 
@@ -348,7 +350,7 @@ func listenFileTransferPort() {
                     log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
                     break
                 }
-                newguard <- struct{}{}
+                cguard <- struct{}{}
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -395,7 +397,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                <-newguard
+                <-cguard
 
 
             case "putfile":
@@ -419,7 +421,7 @@ func listenFileTransferPort() {
 
                 // append sender to the tempFilePath to distinguish conflicting writes from multiple senders
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
-                newguard <- struct{}{}
+                cguard <- struct{}{}
                 f, err := os.Create(tempFilePath)
                 if err != nil {
                     log.Printf("[ME %d] Cannot create file %s\n", myVid, sdfsFilename) 
@@ -450,7 +452,7 @@ func listenFileTransferPort() {
                 fmt.Printf("recvd file %s sender %s\n", sdfsFilename, sender)
 
                 f.Close()
-                <-newguard
+                <-cguard
 
                 if success {
                     log.Printf("[ME %d] Successfully received %s file from %s\n", myVid, sdfsFilename, sender)

@@ -300,9 +300,10 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
     run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
     fmt.Printf("Trying to run %s\n", run_cmd)
-
-    cmd := exec.Command("sh","-c", run_cmd)
+    newguard <- struct{}{}
     outfile, err := os.Create(outputFilePath)
+    cmd := exec.Command("sh","-c", run_cmd)
+    // outfile, err := os.Create(outputFilePath)
     if err != nil {
         fmt.Printf("%v\n", err)
         panic(err)
@@ -326,6 +327,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
     writer.Flush()
     outfile.Close()
+    <-newguard 
 
     fmt.Printf("Maple execution done\n")
 
@@ -417,7 +419,7 @@ func AssembleKeyFiles() {
     if len(keyMapleIdMap) == 0 {
         for mapleId := range mapleId2Node {
             keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
-            // newguard <- struct{}{}
+            newguard <- struct{}{}
             contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
             if err != nil {
                 fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
@@ -441,7 +443,7 @@ func AssembleKeyFiles() {
                 }
             }
             fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
-            // <-newguard
+            <-newguard
         }
         fmt.Printf("%v\n", keyMapleIdMap)
     }
@@ -476,7 +478,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 
     keysFilename := fmt.Sprintf("%s_node.info", key)
     
-    
+    newguard <- struct{}{}
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
@@ -488,7 +490,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         keyfile.WriteString(line + "$$$$")
     } 
     keyfile.Close()
-    // <-newguard
+    <-newguard
     timeout := time.Duration(20) * time.Second
 
     nodeIP := memberMap[respNode].ip
@@ -597,11 +599,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
-
+    newguard <- struct{}{}
     file, err := os.Create(localFilePath)
     if err != nil {
         log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilePath) 
         ch <- false
+        <-newguard 
         return
     }
     defer file.Close()
@@ -632,6 +635,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         fmt.Printf("Received file %s\n", destFilePath)
     }
     ch <- success
+    <-newguard 
     return    
 }
 
