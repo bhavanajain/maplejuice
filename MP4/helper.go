@@ -417,6 +417,7 @@ func AssembleKeyFiles() {
     if len(keyMapleIdMap) == 0 {
         for mapleId := range mapleId2Node {
             keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
+            // newguard <- struct{}{}
             contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
             if err != nil {
                 fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
@@ -440,6 +441,7 @@ func AssembleKeyFiles() {
                 }
             }
             fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
+            // <-newguard
         }
         fmt.Printf("%v\n", keyMapleIdMap)
     }
@@ -457,11 +459,11 @@ func AssembleKeyFiles() {
         currNode := workerNodes[nodeIdx]
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
 
-        newguard <- struct{}{} // would block if guard channel is already filled
-        go func(key string, respNode int, mapleIds []int) {
-            ProcessKey(key, respNode, mapleIds)
-            <-newguard
-        }(key, currNode, keyMapleIdMap[key])
+        // newguard <- struct{}{} // would block if guard channel is already filled
+        // go func(key string, respNode int, mapleIds []int) {
+        go ProcessKey(key, currNode, keyMapleIdMap[key])
+            // <-newguard
+        // }(key, currNode, keyMapleIdMap[key])
     
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
@@ -469,11 +471,12 @@ func AssembleKeyFiles() {
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
     keyStatus[key] = ONGOING
-
+    newguard <- struct{}{}
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
     keysFilename := fmt.Sprintf("%s_node.info", key)
-
+    
+    
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
@@ -485,7 +488,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         keyfile.WriteString(line + "$$$$")
     } 
     keyfile.Close()
-
+    <-newguard
     timeout := time.Duration(20) * time.Second
 
     nodeIP := memberMap[respNode].ip
@@ -747,12 +750,7 @@ func handleMapleFailure(subject int) {
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            newguard <- struct{}{}
-                            go func(key string, respNode int, mapleIds []int) {
-                                ProcessKey(key, respNode, mapleIds)
-                                <-newguard
-                            }(keyAggr, replacement, keyMapleIdMap[keyAggr])
-                            // go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
                         }  
                     } 
                 }
