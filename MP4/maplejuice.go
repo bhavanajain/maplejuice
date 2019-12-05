@@ -1427,7 +1427,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     }else{
         <-connguard
         connguard <- struct{}{}
-        go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
+        go sendFile(nodeId, localFilename, sdfsFilename, wg, allNodes)
         return
     }  
 }
