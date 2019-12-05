@@ -58,7 +58,7 @@ var masterPort = 8085
 var fileTransferPort = 8084
 var masterNodeId = 0
 
-var maxGoroutines = 256
+var maxGoroutines = 128
 
 var ongoingElection = false
 var electiondone = make(chan bool, 1)
@@ -329,7 +329,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                <- newguard    
+                <-newguard    
 
             case "getfile":
                 /* 
@@ -395,7 +395,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                <- newguard
+                <-newguard
 
 
             case "putfile":
@@ -450,7 +450,7 @@ func listenFileTransferPort() {
                 fmt.Printf("recvd file %s sender %s\n", sdfsFilename, sender)
 
                 f.Close()
-                <- newguard
+                <-newguard
 
                 if success {
                     log.Printf("[ME %d] Successfully received %s file from %s\n", myVid, sdfsFilename, sender)
@@ -1060,17 +1060,17 @@ func copyFile(srcFile string, destFile string) (bool){
     input, err := ioutil.ReadFile(srcFile)
     if err != nil {
         log.Printf("[ME %d] Cannot read file from %s", srcFile)
-        <- newguard
+        <-newguard
         return false
     }
 
     err = ioutil.WriteFile(destFile, input, 0644)
     if err != nil {
         log.Printf("[ME %d] Cannot write file to %s", destFile)
-        <- newguard
+        <-newguard
         return false
     }
-    <- newguard
+    <-newguard
     return true
 }
 
@@ -1105,7 +1105,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     fileInfo, err := f.Stat()
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, sdfsFilename)
-        <- newguard
+        <-newguard
         return false
     }
 
@@ -1124,7 +1124,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
                 break
             } else {
                 log.Printf("[ME %d] Error while reading file %s\n", myVid, sdfsFilename)
-                <- newguard
+                <-newguard
                 return false
             }
         }
@@ -1132,13 +1132,13 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         _, err = conn.Write(sendBuffer)
         if err != nil{
             log.Printf("[ME %d] Could not send %s file bytes to %d\n", myVid, sdfsFilename, nodeId)
-            <- newguard
+            <-newguard
             return false
         }
 
     }
     f.Close()
-    <- newguard
+    <-newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
     fmt.Printf("[ME %s] Successfully sent the file %s to %d, waiting for done\n", myVid, sdfsFilename, nodeId)
 
@@ -1253,14 +1253,14 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             // request another node to write this file from master
             newnode := replaceNode(nodeId, sdfsFilename, allNodes)
             f.Close()
-            <- newguard
+            <-newguard
             go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
             return
         }
 
     }
     f.Close()
-    <- newguard
+    <-newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
 
     conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))

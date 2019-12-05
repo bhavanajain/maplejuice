@@ -198,7 +198,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     f, err := os.Open(filename)
     if err != nil {
         fmt.Printf("Cannot open %s\n", filename)
-        <- newguard
+        <-newguard
         return
     }
     defer f.Close()
@@ -206,7 +206,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     fileInfo, err := f.Stat()
     if err != nil {
         fmt.Printf("Can't access file stats for %s\n", filename)
-        <- newguard
+        <-newguard
         return
     }
 
@@ -237,7 +237,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     }
 
     fmt.Printf("Completed sending the file %s\n", filename)
-    <- newguard
+    <-newguard
     return
 }
 
@@ -283,7 +283,7 @@ func simpleRecvFile(conn net.Conn) string {
         receivedBytes += BUFFERSIZE
     }
     f.Close()
-    <- newguard
+    <-newguard
     if success {
         fmt.Printf("received file %s\n", fileName)
     }
@@ -381,7 +381,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             // fmt.Printf("created new file handler for %s\n", tempFilePath)
                 keyFileHandleMap[key] = tempFile
                 tempFile.WriteString(line)
-                tempFile.Close()
+                // tempFile.Close()
             }
         }
         if fileEnd {
@@ -389,7 +389,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
                 fhandle.Close()
             }
             f.Close()
-            <- newguard 
+            <-newguard 
             break
         }
     }
@@ -450,7 +450,7 @@ func AssembleKeyFiles() {
     // do range or hash partitioning
     nodeIdx := 0
     
-    // guard := make(chan struct{}, maxGoroutines)
+    testguard := make(chan struct{}, maxGoroutines)
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
@@ -459,11 +459,11 @@ func AssembleKeyFiles() {
         currNode := workerNodes[nodeIdx]
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
 
-        // newguard <- struct{}{} // would block if guard channel is already filled
-        // go func(key string, respNode int, mapleIds []int) {
-        go ProcessKey(key, currNode, keyMapleIdMap[key])
-            // <-newguard
-        // }(key, currNode, keyMapleIdMap[key])
+        testguard <- struct{}{} // would block if guard channel is already filled
+        go func(key string, respNode int, mapleIds []int) {
+             ProcessKey(key, respNode, mapleIds)
+            <-testguard
+        }(key, currNode, keyMapleIdMap[key])
     
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
@@ -471,7 +471,7 @@ func AssembleKeyFiles() {
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
     keyStatus[key] = ONGOING
-    newguard <- struct{}{}
+    // newguard <- struct{}{}
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
     keysFilename := fmt.Sprintf("%s_node.info", key)
@@ -488,7 +488,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         keyfile.WriteString(line + "$$$$")
     } 
     keyfile.Close()
-    <-newguard
+    // <-newguard
     timeout := time.Duration(20) * time.Second
 
     nodeIP := memberMap[respNode].ip
@@ -636,6 +636,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 }
 
 func AppendFiles(inputFilePaths []string, outFilePath string) {
+    newguard <- struct{}{}
     outfile, err := os.Create(outFilePath)
     if err != nil {
         fmt.Printf("Could not open %s file for appending\n", outFilePath)
@@ -643,6 +644,7 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
     }
 
     for _, inputfile := range inputFilePaths {
+        newguard <- struct{}{}
         fIn, err := os.Open(inputfile)
         if err != nil {
             fmt.Printf("Could not open %s file for appending\n", inputfile)
@@ -654,9 +656,11 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
             fmt.Printf("Could not copy the file from %s to %s\n", inputfile, outFilePath)
         }
         fIn.Close()
+        <-newguard
     }
 
     outfile.Close()
+    <-newguard
 
     fmt.Printf("Merged all files %v\n", inputFilePaths)
 }
@@ -746,11 +750,16 @@ func handleMapleFailure(subject int) {
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
-                    // guard := make(chan struct{}, maxGoroutines)
+                    testguard := make(chan struct{}, maxGoroutines)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            testguard <- struct{}{} // would block if guard channel is already filled
+                            go func(key string, respNode int, mapleIds []int) {
+                                 ProcessKey(key, respNode, mapleIds)
+                                <-testguard
+                            }(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            // go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
                         }  
                     } 
                 }
