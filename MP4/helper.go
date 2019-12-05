@@ -441,7 +441,7 @@ func AssembleKeyFiles() {
     // do range or hash partitioning
     nodeIdx := 0
     
-    guard := make(chan struct{}, maxGoroutines)
+    // guard := make(chan struct{}, maxGoroutines)
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
@@ -450,10 +450,10 @@ func AssembleKeyFiles() {
         currNode := workerNodes[nodeIdx]
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
 
-        guard <- struct{}{} // would block if guard channel is already filled
+        newguard <- struct{}{} // would block if guard channel is already filled
         go func(key string, respNode int, mapleIds []int) {
             ProcessKey(key, respNode, mapleIds)
-            <-guard
+            <-newguard
         }(key, currNode, keyMapleIdMap[key])
     
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
@@ -736,14 +736,14 @@ func handleMapleFailure(subject int) {
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
-                    guard := make(chan struct{}, maxGoroutines)
+                    // guard := make(chan struct{}, maxGoroutines)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            guard <- struct{}{}
+                            newguard <- struct{}{}
                             go func(key string, respNode int, mapleIds []int) {
                                 ProcessKey(key, respNode, mapleIds)
-                                <-guard
+                                <-newguard
                             }(keyAggr, replacement, keyMapleIdMap[keyAggr])
                             // go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
                         }  

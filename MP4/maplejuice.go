@@ -84,6 +84,8 @@ var keyMapleIdMap = make(map[string][]int)
 // master + others
 var sdfsInterPrefix string
 
+var newguard = make(chan struct{}, maxGoroutines)
+
 var messageLength = 256
 var filler = "^"
 
