@@ -421,6 +421,7 @@ func AssembleKeyFiles() {
             keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
             newguard <- struct{}{}
             contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
+            <-newguard
             if err != nil {
                 fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
                 panic(err)
@@ -443,7 +444,7 @@ func AssembleKeyFiles() {
                 }
             }
             fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
-            <-newguard
+            
         }
         fmt.Printf("%v\n", keyMapleIdMap)
     }

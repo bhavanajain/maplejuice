@@ -175,18 +175,26 @@ func listenFileTransferPort() {
             }
             fmt.Printf("Received the key file for processing %s\n", key)
             newguard <- struct{}{}
-            contentBytes, err := ioutil.ReadFile(maple_dir + nodeInfoFile)
+            fileAgg, err := os.Open(maple_dir + nodeInfoFile)   
+            if err != nil {
+                log.Panicf("failed reading file: %s", err)
+                <-newguard
+                panic(err)
+            }
+            contentBytes, err := ioutil.ReadAll(fileAgg)
             if err != nil {
                 fmt.Printf("Could not read file %s corresponding to %s key\n", nodeInfoFile, key)
                 panic(err)
             }
+            fileAgg.Close()
+            <-newguard
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
             
 
             go KeyAggregation(key, nodeInfoList)
-            <-newguard
+            // <-newguard
 
 
         case "keyfile":
@@ -255,8 +263,9 @@ func listenFileTransferPort() {
 
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
                 sharedFilePath := shared_dir + sdfsFilename
-
+                newguard <- struct{}{}
                 err := os.Rename(tempFilePath, sharedFilePath)
+                <-newguard
                 if err != nil {
                     log.Printf("[ME %d] Could not move file %s to %s\n", myVid, tempFilePath, sharedFilePath)
                     break
@@ -1060,20 +1069,30 @@ func copyFile(srcFile string, destFile string) (bool){
 
     // [TODO] should use io.Copy instead of ioutil readfile writefile 
     newguard <- struct{}{}
-    input, err := ioutil.ReadFile(srcFile)
+    sfile, err := os.Open(srcFile)   
+    if err != nil {
+        log.Panicf("failed reading file: %s", err)
+        <-newguard
+    }
+    input, err := ioutil.ReadAll(sfile)
+    sfile.Close()
+    <-newguard
     if err != nil {
         log.Printf("[ME %d] Cannot read file from %s", srcFile)
-        <-newguard
+        // sfile.Close()
+        // <-newguard
         return false
     }
 
+    newguard <- struct{}{}
     err = ioutil.WriteFile(destFile, input, 0644)
+    <-newguard
     if err != nil {
         log.Printf("[ME %d] Cannot write file to %s", destFile)
-        <-newguard
+        // <-newguard
         return false
     }
-    <-newguard
+    // <-newguard
     return true
 }
 
