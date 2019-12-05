@@ -140,7 +140,7 @@ func listenFileTransferPort() {
         and transfers file over the network to complete `get`, `put`, `replicate` requests.
         Also handles `delete` file.  
     */
-
+    guard := make(chan struct{}, maxGoroutines)
     ln, err := net.Listen("tcp", ":" + strconv.Itoa(fileTransferPort))
     if err != nil {
         log.Printf("[ME %d] Cannot listen on file transfer port %d\n", myVid, fileTransferPort)
@@ -163,6 +163,7 @@ func listenFileTransferPort() {
 
         switch message_type {
         case "keyaggr":
+            guard <- struct{}{}
             key := split_message[1]
             sdfsInterPrefix = split_message[2]
             fmt.Printf("Inside keyaggr: I am going to receive the nodes ids for key %s %s\n", key, sdfsInterPrefix)
@@ -178,8 +179,10 @@ func listenFileTransferPort() {
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
+            <-guard
 
             go KeyAggregation(key, nodeInfoList)
+
 
         case "keyfile":
             action := split_message[1]
@@ -1713,7 +1716,7 @@ func replicateFiles(subjectNode int) {
         fileMap[fileName].nodeIds = filenodes
 
         newnode := getRandomNodes(filenodes, 1)
-
+        fmt.Printf("File Name %s srcNode : %d , destNode : %d \n",fileName,filenodes[0],newnode[0])
         go initiateReplica(fileName, filenodes[0], newnode[0])
     }
     delete(nodeMap, subjectNode)
