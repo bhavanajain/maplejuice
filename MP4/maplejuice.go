@@ -142,7 +142,7 @@ func listenFileTransferPort() {
         and transfers file over the network to complete `get`, `put`, `replicate` requests.
         Also handles `delete` file.  
     */
-    cguard := make(chan struct{}, maxGoroutines)
+    // cguard := make(chan struct{}, maxGoroutines)
     ln, err := net.Listen("tcp", ":" + strconv.Itoa(fileTransferPort))
     if err != nil {
         log.Printf("[ME %d] Cannot listen on file transfer port %d\n", myVid, fileTransferPort)
@@ -174,7 +174,7 @@ func listenFileTransferPort() {
                 break
             }
             fmt.Printf("Received the key file for processing %s\n", key)
-            cguard <- struct{}{}
+            newguard <- struct{}{}
             contentBytes, err := ioutil.ReadFile(maple_dir + nodeInfoFile)
             if err != nil {
                 fmt.Printf("Could not read file %s corresponding to %s key\n", nodeInfoFile, key)
@@ -183,9 +183,10 @@ func listenFileTransferPort() {
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
-            <-cguard
+            
 
             go KeyAggregation(key, nodeInfoList)
+            <-newguard
 
 
         case "keyfile":
@@ -284,7 +285,7 @@ func listenFileTransferPort() {
                     break
                 }
 
-                cguard <- struct{}{}
+                newguard <- struct{}{}
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -331,7 +332,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                <-cguard    
+                <-newguard    
 
             case "getfile":
                 /* 
@@ -350,7 +351,7 @@ func listenFileTransferPort() {
                     log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
                     break
                 }
-                cguard <- struct{}{}
+                newguard <- struct{}{}
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -397,7 +398,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                <-cguard
+                <-newguard
 
 
             case "putfile":
@@ -421,7 +422,7 @@ func listenFileTransferPort() {
 
                 // append sender to the tempFilePath to distinguish conflicting writes from multiple senders
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
-                cguard <- struct{}{}
+                newguard <- struct{}{}
                 f, err := os.Create(tempFilePath)
                 if err != nil {
                     log.Printf("[ME %d] Cannot create file %s\n", myVid, sdfsFilename) 
@@ -452,7 +453,7 @@ func listenFileTransferPort() {
                 fmt.Printf("recvd file %s sender %s\n", sdfsFilename, sender)
 
                 f.Close()
-                <-cguard
+                <-newguard
 
                 if success {
                     log.Printf("[ME %d] Successfully received %s file from %s\n", myVid, sdfsFilename, sender)
