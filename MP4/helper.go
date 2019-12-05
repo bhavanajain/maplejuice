@@ -489,6 +489,7 @@ func AssembleKeyFiles() {
     nodeIdx := 0
     
     testguard := make(chan struct{}, 64) // limitng the number
+    keyCount = len(keyMapleIdMap)
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {

@@ -81,6 +81,8 @@ var mapleRunning = false
 var sdfsMapleExe string
 var mapleFiles []string
 var keyMapleIdMap = make(map[string][]int)
+
+var keyCount = 0
 // master + others
 var sdfsInterPrefix string
 
@@ -803,10 +805,10 @@ func listenMasterRequests() {
 
             case "keyack":
                 fmt.Printf("keyack RECVD\n")
-
+                keyCount = keyCount -1
                 key := split_message[1]
                 keyStatus[key] = DONE
-                log.Printf("keyack RECVD %s\n",key)
+                log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
                 success := true
