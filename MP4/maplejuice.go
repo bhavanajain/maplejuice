@@ -188,7 +188,12 @@ func listenFileTransferPort() {
                 log.Panicf("failed reading file: %s", err)
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
-                <-newguard
+                select {
+                    case msg := <-newguard:
+                        fmt.Println("End newguard message %v \n",msg)
+                    default:
+                        fmt.Println("moveove message received \n")
+                }
                 panic(err)
             }
             contentBytes, err := ioutil.ReadAll(fileAgg)
@@ -199,7 +204,12 @@ func listenFileTransferPort() {
             fileAgg.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            <-newguard
+            select {
+                case msg := <-newguard:
+                    fmt.Println("End newguard message %v \n",msg)
+                default:
+                    fmt.Println("moveove message received \n")
+            }
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
@@ -1127,13 +1137,24 @@ func copyFile(srcFile string, destFile string) (bool){
     sfile, err := os.Open(srcFile)   
     if err != nil {
         log.Panicf("failed reading file: %s", err)
-        <-newguard
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
+        return false
     }
     input, err := ioutil.ReadAll(sfile)
     sfile.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard
+    select {
+        case msg := <-newguard:
+            fmt.Println("End newguard message %v \n",msg)
+        default:
+            fmt.Println("moveove message received \n")
+    }
     if err != nil {
         log.Printf("[ME %d] Cannot read file from %s", srcFile)
         // sfile.Close()
@@ -1186,7 +1207,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         log.Printf("[ME %d] Cannot open shared file %s\n", sdfsFilename)
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
-        <-newguard
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
         <-connguard
         return false
     }
@@ -1197,7 +1223,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         f.Close()
-        <-newguard
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
         <-connguard
         return false
     }
@@ -1220,7 +1251,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f.Close()
-                <-newguard
+                select {
+                    case msg := <-newguard:
+                        fmt.Println("End newguard message %v \n",msg)
+                    default:
+                        fmt.Println("moveove message received \n")
+                }
                 <-connguard
                 return false
             }
@@ -1232,7 +1268,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
             f.Close()
-            <-newguard
+            select {
+                case msg := <-newguard:
+                    fmt.Println("End newguard message %v \n",msg)
+                default:
+                    fmt.Println("moveove message received \n")
+            }
             <-connguard
             return false
         }
@@ -1241,7 +1282,13 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     f.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard
+    select {
+        case msg := <-newguard:
+            fmt.Println("End newguard message %v \n",msg)
+        default:
+            fmt.Println("moveove message received \n")
+    }
+    // <-newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
     fmt.Printf("[ME %s] Successfully sent the file %s to %d, waiting for done\n", myVid, sdfsFilename, nodeId)
 
@@ -1329,7 +1376,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     f, err := os.Open(local_dir + localFilename) 
     if err != nil {
         log.Printf("[ME %d] Cannot open local file %s\n", localFilename)
-        <- newguard
+         select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
         <-connguard
 
         return
@@ -1339,7 +1391,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, localFilename)
         f.Close()
-        <-newguard
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
         <-connguard
         return
     }
@@ -1369,7 +1426,14 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, localFilename, nodeId)
             // request another node to write this file from master
             f.Close()
-            <-newguard
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            select {
+                case msg := <-newguard:
+                    fmt.Println("End newguard message %v \n",msg)
+                default:
+                    fmt.Println("moveove message received \n")
+            }
             newnode := replaceNode(nodeId, sdfsFilename, allNodes)
             for{
                 if newnode!= -1{
@@ -1379,8 +1443,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
                 }
             }
             
-            activeFileNum = activeFileNum-1
-            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            
             
             <-connguard
             connguard <- struct{}{}
@@ -1392,7 +1455,13 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     f.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard
+    // <-newguard
+    select {
+    case msg := <-newguard:
+        fmt.Println("End newguard message %v \n",msg)
+    default:
+        fmt.Println("moveove message received \n")
+    }
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
 
     conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))

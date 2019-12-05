@@ -379,9 +379,13 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         if err != nil {
             if err != io.EOF {
                 fmt.Printf("Unknown error encountered while reading file\n")
+                // f.Close()
+                // <-newguard
+                fileEnd = true
                 break
             }
             fileEnd = true
+            // break
         }
         if len(line) > 0 {
             // fmt.Printf("curr line: %s", line)
@@ -422,9 +426,21 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             f.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
+            fileEnd = false
             <-newguard 
             break
         }
+        
+    }
+    if fileEnd {
+            for _, fhandle := range(keyFileHandleMap) {
+                fhandle.Close()
+            }
+            f.Close()
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            <-newguard 
+            // break
     }
     
     keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
@@ -671,7 +687,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         ch <- false
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
-        <-newguard 
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n", msg)
+            default:
+                fmt.Println("moveove message received\n")
+        }
         <-connguard
         connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
@@ -708,7 +729,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     file.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard 
+    select {
+        case msg := <-newguard:
+            fmt.Println("End newguard message %v \n",msg)
+        default:
+            fmt.Println("moveove message received \n")
+    }
     <-connguard
     return    
 }
@@ -749,7 +775,7 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
     
      <-newguard
     fmt.Printf("Merged all files %v\n", inputFilePaths)
-   
+
 }
 
 
