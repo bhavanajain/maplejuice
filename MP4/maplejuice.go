@@ -58,6 +58,8 @@ var masterPort = 8085
 var fileTransferPort = 8084
 var masterNodeId = 0
 
+var maxGoroutines = 128
+
 var ongoingElection = false
 var electiondone = make(chan bool, 1)
 
@@ -73,14 +75,22 @@ var mapleId2Node = make(map[int]int)
 var mapleCompMap = make(map[int]bool)
 var node2mapleJob = make(map[int]*mapleJob)
 var keyStatus = make(map[string]int)
+var keyTimeStamp = make(map[string]int64) // For rerun a key
 var workerNodes []int
 var mapleBarrier = false
 var mapleRunning = false
 var sdfsMapleExe string
 var mapleFiles []string
 var keyMapleIdMap = make(map[string][]int)
+
+var keyCount = 0
 // master + others
 var sdfsInterPrefix string
+
+var newguard = make(chan struct{}, maxGoroutines)
+var connguard = make(chan struct{}, 256)
+
+var activeFileNum = 0
 
 var messageLength = 256
 var filler = "^"
@@ -138,7 +148,7 @@ func listenFileTransferPort() {
         and transfers file over the network to complete `get`, `put`, `replicate` requests.
         Also handles `delete` file.  
     */
-
+    // cguard := make(chan struct{}, maxGoroutines)
     ln, err := net.Listen("tcp", ":" + strconv.Itoa(fileTransferPort))
     if err != nil {
         log.Printf("[ME %d] Cannot listen on file transfer port %d\n", myVid, fileTransferPort)
@@ -161,23 +171,53 @@ func listenFileTransferPort() {
 
         switch message_type {
         case "keyaggr":
+            
             key := split_message[1]
             sdfsInterPrefix = split_message[2]
             fmt.Printf("Inside keyaggr: I am going to receive the nodes ids for key %s %s\n", key, sdfsInterPrefix)
             nodeInfoFile := simpleRecvFile(conn)
-
+            if len(nodeInfoFile) == 0{
+                break
+            }
             fmt.Printf("Received the key file for processing %s\n", key)
-
-            contentBytes, err := ioutil.ReadFile(maple_dir + nodeInfoFile)
+            newguard <- struct{}{}
+            activeFileNum = activeFileNum+1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            fileAgg, err := os.Open(maple_dir + nodeInfoFile)   
+            if err != nil {
+                log.Panicf("failed reading file: %s", err)
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                select {
+                    case msg := <-newguard:
+                        fmt.Println("End newguard message %v \n",msg)
+                    default:
+                        fmt.Println("moveove message received \n")
+                }
+                panic(err)
+            }
+            contentBytes, err := ioutil.ReadAll(fileAgg)
             if err != nil {
                 fmt.Printf("Could not read file %s corresponding to %s key\n", nodeInfoFile, key)
                 panic(err)
             }
+            fileAgg.Close()
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            select {
+                case msg := <-newguard:
+                    fmt.Println("End newguard message %v \n",msg)
+                default:
+                    fmt.Println("moveove message received \n")
+            }
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
-
+            
+            connguard <- struct{}{}
             go KeyAggregation(key, nodeInfoList)
+            // <-newguard
+
 
         case "keyfile":
             action := split_message[1]
@@ -207,6 +247,7 @@ func listenFileTransferPort() {
                 if success {
                     fmt.Printf("all maple executions finished\n")
                     mapleBarrier = true
+                    connguard <- struct{}{}
                     go AssembleKeyFiles()
                 }
                 
@@ -219,17 +260,33 @@ func listenFileTransferPort() {
             mapleId, _ := strconv.Atoi(split_message[1])
             sdfsMapleExe := split_message[2]
             localMapleExe := sdfsMapleExe
-            getFileWrapper(sdfsMapleExe, localMapleExe)
+            // for{
+            //     if getFileWrapper(sdfsMapleExe, localMapleExe){
+            //         break
+            //     }
+            // }
+            if !getFileWrapper(sdfsMapleExe, localMapleExe){
+                getFileWrapper(sdfsMapleExe, localMapleExe)
+            }
             fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
             localInputFile := inputFile
-            getFileWrapper(inputFile, localInputFile)
+            // for{
+            //     if getFileWrapper(inputFile, localInputFile){
+            //         break
+            //     }
+
+            // }
+            if !getFileWrapper(inputFile, localInputFile){
+                getFileWrapper(inputFile, localInputFile)
+            }
+            
             fmt.Printf("I got the file %s %s\n", inputFile, localInputFile)
 
             exeFile := fmt.Sprintf("local/%s", localMapleExe)
             inputFilePath := fmt.Sprintf("local/%s", localInputFile)
-            outputFilePath := fmt.Sprintf("%soutput_%d.out", maple_dir, mapleId)
+            outputFilePath := fmt.Sprintf("%soutput_%d.tempout", maple_dir, mapleId)
             ExecuteCommand(exeFile, inputFilePath, outputFilePath, mapleId)
 
             case "movefile":
@@ -245,8 +302,13 @@ func listenFileTransferPort() {
 
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
                 sharedFilePath := shared_dir + sdfsFilename
-
+                newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 err := os.Rename(tempFilePath, sharedFilePath)
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                <-newguard
                 if err != nil {
                     log.Printf("[ME %d] Could not move file %s to %s\n", myVid, tempFilePath, sharedFilePath)
                     break
@@ -275,6 +337,9 @@ func listenFileTransferPort() {
                     break
                 }
 
+                newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -320,7 +385,10 @@ func listenFileTransferPort() {
                     log.Printf("[ME %d] Could not send the complete file %s\n", myVid, filePath)
                 }
 
-                f1_race.Close()    
+                f1_race.Close()
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                <-newguard    
 
             case "getfile":
                 /* 
@@ -339,7 +407,9 @@ func listenFileTransferPort() {
                     log.Printf("[ME %d] Got a get for %s, but the file does not exist\n", myVid, sdfsFilename)
                     break
                 }
-
+                newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
@@ -386,6 +456,9 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                <-newguard
 
 
             case "putfile":
@@ -409,6 +482,9 @@ func listenFileTransferPort() {
 
                 // append sender to the tempFilePath to distinguish conflicting writes from multiple senders
                 tempFilePath := temp_dir + sdfsFilename + "." + sender
+                newguard <- struct{}{}
+                activeFileNum = activeFileNum+1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f, err := os.Create(tempFilePath)
                 if err != nil {
                     log.Printf("[ME %d] Cannot create file %s\n", myVid, sdfsFilename) 
@@ -439,6 +515,9 @@ func listenFileTransferPort() {
                 fmt.Printf("recvd file %s sender %s\n", sdfsFilename, sender)
 
                 f.Close()
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                <-newguard
 
                 if success {
                     log.Printf("[ME %d] Successfully received %s file from %s\n", myVid, sdfsFilename, sender)
@@ -479,7 +558,7 @@ func listenFileTransferPort() {
                 */
                 sdfsFilename := split_message[1]
                 destNode, _ := strconv.Atoi(split_message[2])
-
+                connguard <- struct{}{}
                 go replicateFile(destNode, sdfsFilename) 
         }
         conn.Close()
@@ -596,41 +675,44 @@ func listenMasterRequests() {
                 _, ok := conflictMap[sdfsFilename]
                 if ok {
                     fmt.Printf("file already in conflictMap\n")
-                    // if the current put is within 60 seconds of the last executed put raise conflict 
-                    if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
+                    // // if the current put is within 60 seconds of the last executed put raise conflict 
+                    // if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
                         
-                        reply := fmt.Sprintf("conflict %s\n", sdfsFilename)
-                        fmt.Fprintf(conn, reply)
+                    //     reply := fmt.Sprintf("conflict %s\n", sdfsFilename)
+                    //     fmt.Fprintf(conn, reply)
 
-                        // waits for a reply to conflict for 30 seconds and times out
-                        conn.SetReadDeadline(time.Now().Add(30*time.Second))
-                        confResp,err := conn_reader.ReadString('\n')
-                        if err != nil{
-                            fmt.Printf("timed out for %s\n", message)
-                            break
-                        }
-                        if len(confResp) > 0 {
-                            confResp = confResp[:len(confResp)-1]
-                        }
+                    //     // waits for a reply to conflict for 30 seconds and times out
+                    //     conn.SetReadDeadline(time.Now().Add(30*time.Second))
+                    //     confResp,err := conn_reader.ReadString('\n')
+                    //     if err != nil{
+                    //         fmt.Printf("timed out for %s\n", message)
+                    //         break
+                    //     }
+                    //     if len(confResp) > 0 {
+                    //         confResp = confResp[:len(confResp)-1]
+                    //     }
 
-                        if confResp == "yes"{
-                            // update conflictMap
-                            var newConflict conflictData
-                            newConflict.id = sender
-                            newConflict.timestamp = time.Now().Unix()
-                            conflictMap[sdfsFilename] = &newConflict
-                        } else {
-                            // ignore
-                            break
-                        }
-                    } else {
-                        // over 60 seconds from the last executed put request
-                        var newConflict conflictData
-                        newConflict.id = sender
-                        newConflict.timestamp = time.Now().Unix()
-                        conflictMap[sdfsFilename] = &newConflict
-                    }
-
+                    //     if confResp == "yes"{
+                    //         // update conflictMap
+                    //         var newConflict conflictData
+                    //         newConflict.id = sender
+                    //         newConflict.timestamp = time.Now().Unix()
+                    //         conflictMap[sdfsFilename] = &newConflict
+                    //     } else {
+                    //         // ignore
+                    //         break
+                    //     }
+                    // } else {
+                    //     // over 60 seconds from the last executed put request
+                    //     var newConflict conflictData
+                    //     newConflict.id = sender
+                    //     newConflict.timestamp = time.Now().Unix()
+                    //     conflictMap[sdfsFilename] = &newConflict
+                    // }
+                    var newConflict conflictData
+                    newConflict.id = sender
+                    newConflict.timestamp = time.Now().Unix()
+                    conflictMap[sdfsFilename] = &newConflict
                 } else{
                     fmt.Printf("file not in conflictMap\n")
                     // sdfsFilename not in conflictMap 
@@ -736,11 +818,16 @@ func listenMasterRequests() {
                 }
 
             case "keyack":
-                fmt.Printf("keyack RECVD\n")
-
+               
+                
                 key := split_message[1]
+                if keyStatus[key] != DONE{
+                    keyCount = keyCount -1
+                }
                 keyStatus[key] = DONE
-                log.Printf("keyack RECVD %s\n",key)
+                log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
+                fmt.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
+
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
                 success := true
@@ -783,6 +870,8 @@ func listenMasterRequests() {
                         delete(keyStatus, k)
                     }
 
+                    os.Exit(1)
+
                 }
 
             case "ack": 
@@ -822,6 +911,7 @@ func listenMasterRequests() {
 
                         destNodes := removeDuplicates(string2List(destNodes_str))
                         for _, node := range(destNodes) {
+                            connguard <- struct{}{}
                             go sendConfirmation(node, sdfsFilename, srcNode)
                         }
 
@@ -849,7 +939,7 @@ func listenMasterRequests() {
                 } else if action == "replicate" {
                     destNodes := removeDuplicates(string2List(destNodes_str))
                     destNode := destNodes[0]
-                    
+                    connguard <- struct{}{}
                     go sendConfirmation(destNode, sdfsFilename, srcNode)
                     
                     updateTimestamp := time.Now().Unix()
@@ -916,7 +1006,12 @@ func sendConfirmation(subject int, sdfsFilename string, sender int) {
     message := fmt.Sprintf("movefile %s %d", sdfsFilename, sender)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
-
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    }
     // fmt.Printf("Sent a movefile %s request to %d\n", sdfsFilename, subject)
 }
 
@@ -1044,17 +1139,50 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 func copyFile(srcFile string, destFile string) (bool){
 
     // [TODO] should use io.Copy instead of ioutil readfile writefile 
-    input, err := ioutil.ReadFile(srcFile)
+    newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
+    sfile, err := os.Open(srcFile)   
+    if err != nil {
+        log.Panicf("failed reading file: %s", err)
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
+        return false
+    }
+    input, err := ioutil.ReadAll(sfile)
+    sfile.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
+    select {
+        case msg := <-newguard:
+            fmt.Println("End newguard message %v \n",msg)
+        default:
+            fmt.Println("moveove message received \n")
+    }
     if err != nil {
         log.Printf("[ME %d] Cannot read file from %s", srcFile)
+        // sfile.Close()
+        // <-newguard
         return false
     }
 
+    newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     err = ioutil.WriteFile(destFile, input, 0644)
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
+    <-newguard
     if err != nil {
         log.Printf("[ME %d] Cannot write file to %s", destFile)
+        // <-newguard
         return false
     }
+    // <-newguard
     return true
 }
 
@@ -1069,6 +1197,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, nodeId, sdfsFilename)
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
     defer conn.Close()
@@ -1078,16 +1212,47 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     conn.Write([]byte(padded_message))
 
     // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
-
+    newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(shared_dir + sdfsFilename)
     if err != nil {
         log.Printf("[ME %d] Cannot open shared file %s\n", sdfsFilename)
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
 
     fileInfo, err := f.Stat()
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, sdfsFilename)
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
+        f.Close()
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
 
@@ -1106,6 +1271,21 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
                 break
             } else {
                 log.Printf("[ME %d] Error while reading file %s\n", myVid, sdfsFilename)
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                f.Close()
+                select {
+                    case msg := <-newguard:
+                        fmt.Println("End newguard message %v \n",msg)
+                    default:
+                        fmt.Println("moveove message received \n")
+                }
+                select {
+                    case msg := <-connguard:
+                        fmt.Println("End connguard message %v \n", msg)
+                    default:
+                        fmt.Println("No message received\n")
+                }
                 return false
             }
         }
@@ -1113,10 +1293,35 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         _, err = conn.Write(sendBuffer)
         if err != nil{
             log.Printf("[ME %d] Could not send %s file bytes to %d\n", myVid, sdfsFilename, nodeId)
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            f.Close()
+            select {
+                case msg := <-newguard:
+                    fmt.Println("End newguard message %v \n",msg)
+                default:
+                    fmt.Println("moveove message received \n")
+            }
+            select {
+                case msg := <-connguard:
+                    fmt.Println("End connguard message %v \n", msg)
+                default:
+                    fmt.Println("No message received\n")
+            }
             return false
         }
 
     }
+    f.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
+    select {
+        case msg := <-newguard:
+            fmt.Println("End newguard message %v \n",msg)
+        default:
+            fmt.Println("moveove message received \n")
+    }
+    // <-newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
     fmt.Printf("[ME %s] Successfully sent the file %s to %d, waiting for done\n", myVid, sdfsFilename, nodeId)
 
@@ -1126,6 +1331,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     ack, err := reader.ReadString('\n')
     if err != nil {
         log.Printf("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
     fmt.Printf("ack %s---------\n", ack)
@@ -1136,8 +1347,20 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         fmt.Printf("Received done, sending replicate ack to master\n")
         destNode := []int{nodeId}
         sendAcktoMaster("replicate", myVid, list2String(destNode), sdfsFilename)
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return true
     } else {
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
 }
@@ -1161,7 +1384,7 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
 var doneList = make([]int, 0, 4)
 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int) {
-
+    fmt.Printf("In the sendFile sending file %s to node %d\n",localFilename,nodeId)
     if nodeId == myVid {
         success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename + "." + strconv.Itoa(nodeId))
 
@@ -1170,6 +1393,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             fmt.Printf("sent the file to %d\n", nodeId)
             wg.Done()
         }
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
     }
 
@@ -1177,12 +1406,19 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     
     port := fileTransferPort
+    fmt.Printf("the node ID is %d\n",nodeId)
     fmt.Printf("the nodeID is %d and IP is %s\n",nodeId,memberMap[nodeId].ip)
     ip := memberMap[nodeId].ip
 
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send file %s)\n", myVid, nodeId, sdfsFilename)
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
     }
     defer conn.Close()
@@ -1192,16 +1428,44 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     conn.Write([]byte(padded_message))
 
     // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
-
+    newguard <- struct{}{}
+    activeFileNum = activeFileNum+1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(local_dir + localFilename) 
     if err != nil {
         log.Printf("[ME %d] Cannot open local file %s\n", localFilename)
+         select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
+
         return
     }
 
     fileInfo, err := f.Stat()
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, localFilename)
+        f.Close()
+        select {
+            case msg := <-newguard:
+                fmt.Println("End newguard message %v \n",msg)
+            default:
+                fmt.Println("moveove message received \n")
+        }
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
     }
 
@@ -1215,8 +1479,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         _, err = f.Read(sendBuffer)
         if err != nil {
             if err == io.EOF {
+                // f.close()
+                // <- newguard
                 break
             } else {
+                // f.close()
+                // <- newguard
                 log.Printf("[ME %d] Error while reading file %s", myVid, localFilename)
             }
         }
@@ -1225,11 +1493,47 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         if err != nil{
             log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, localFilename, nodeId)
             // request another node to write this file from master
+            f.Close()
+            activeFileNum = activeFileNum-1
+            fmt.Printf("The number of active Files %d \n",activeFileNum)
+            select {
+                case msg := <-newguard:
+                    fmt.Println("End newguard message %v \n",msg)
+                default:
+                    fmt.Println("moveove message received \n")
+            }
             newnode := replaceNode(nodeId, sdfsFilename, allNodes)
+            for{
+                if newnode!= -1{
+                    break
+                }else{
+                    newnode = replaceNode(nodeId, sdfsFilename, allNodes)
+                }
+            }
+            
+            
+            
+            select {
+                case msg := <-connguard:
+                    fmt.Println("End connguard message %v \n", msg)
+                default:
+                    fmt.Println("No message received\n")
+            }
+            connguard <- struct{}{}
             go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
             return
         }
 
+    }
+    f.Close()
+    activeFileNum = activeFileNum-1
+    fmt.Printf("The number of active Files %d \n",activeFileNum)
+    // <-newguard
+    select {
+    case msg := <-newguard:
+        fmt.Println("End newguard message %v \n",msg)
+    default:
+        fmt.Println("moveove message received \n")
     }
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
 
@@ -1240,7 +1544,21 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     if err != nil {
         log.Printf("[ME %d] Error while reading ACK from %d for %s file\n", myVid, nodeId, sdfsFilename)
         newnode := replaceNode(nodeId, sdfsFilename, allNodes)
+        for{
+            if newnode != -1{
+                break
+            }else{
+                newnode = replaceNode(nodeId, sdfsFilename, allNodes)
+            }
+        }
         allNodes = append(allNodes, newnode)
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
+        connguard <- struct{}{}
         go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
         return
     }
@@ -1251,6 +1569,23 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         doneList = append(doneList, nodeId)
         fmt.Printf("Sent the file to %d\n", nodeId)
         wg.Done()
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
+        return
+    }else{
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
+        connguard <- struct{}{}
+        go sendFile(nodeId, localFilename, sdfsFilename, wg, allNodes)
+        return
     }  
 }
 
@@ -1262,16 +1597,19 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         return -1
     }
-    defer conn.Close()
+    // defer conn.Close()
 
     master_command := fmt.Sprintf("replace %d %s %s", oldnode, sdfsFilename, list2String(excludeList))
     fmt.Fprintf(conn, master_command)
 
     reader := bufio.NewReader(conn)
     reply, err := reader.ReadString('\n')
-    if err != nil {
+    if err != nil || len(reply) == 0 {
         // Handle
+        conn.Close()
+        return replaceNode(oldnode,sdfsFilename,excludeList)
     }
+    conn.Close()
     newNode,_ := strconv.Atoi(reply[:len(reply)-1])
     return newNode
 
@@ -1446,6 +1784,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("Maple files %v\n", mapleFiles)
 
         workerNodes = getRandomNodes([]int{0}, numMaples)
+        fmt.Printf("Worker Nodes : %v \n",workerNodes)
+        time.Sleep(2 * time.Second)
+        // fmt.Printf("Worker Nodes : %v \n",workerNodes)
 
         var mapleIdx = 0
         var nodeIdx = 0
@@ -1466,6 +1807,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
                     node2mapleJob[currNode] = &jobnode
                 }
+                connguard <- struct{}{}
                 go sendMapleInfo(currNode, mapleIdx, sdfsMapleExe, mapleFiles[mapleIdx])
                 mapleIdx = mapleIdx + 1
                 if mapleIdx == len(mapleFiles) {
@@ -1474,6 +1816,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             }
             nodeIdx = (nodeIdx + 1) % len(workerNodes)
         }
+
 
         fmt.Printf("Maple map %v\n", mapleId2Node)
 
@@ -1556,6 +1899,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
         doneList = make([]int, 0, 4)
 
         for _, node := range nodeIds {
+
+            connguard <- struct{}{}
             go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
         }
 
@@ -1711,8 +2056,11 @@ func replicateFiles(subjectNode int) {
         fileMap[fileName].nodeIds = filenodes
 
         newnode := getRandomNodes(filenodes, 1)
-
-        go initiateReplica(fileName, filenodes[0], newnode[0])
+        fmt.Printf("File Name %s srcNode : %v , destNode : %v \n",fileName,filenodes,newnode)
+        // just checking for handling errors
+        if len(filenodes) > 0{
+            go initiateReplica(fileName, filenodes[0], newnode[0])
+        }
     }
     delete(nodeMap, subjectNode)
 }
@@ -1749,6 +2097,9 @@ func HandleFileReplication() {
                     continue
                 }
                 if len(filenodes) < 4 { 
+                    if len(filenodes) == 0{
+                        continue
+                    }
                     fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
                     fmt.Printf("[ME %d] Handling file Replication for %s\n",myVid,fileName)
                     fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
@@ -1795,7 +2146,7 @@ func LeaderElection() {
         // Move your own things to fileMap and nodeMap
         for fileName := range(fileTimeMap){
             // Handling the fileName part
-            fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
+            // fileMap[fileName].nodeIds = removeDuplicates(fileMap[fileName].nodeIds)
             _,ok := fileMap[fileName]
             if ok{
                 noAdd := true
@@ -1912,6 +2263,37 @@ func LeaderHandler( subject int, newPort int) {
 
     }(subject)
     return
+}
+
+
+func keyRerunHandler(){
+    for {
+        time.Sleep(time.Duration(replicatePeriod) * time.Second)
+
+        if myIP == masterIP{
+            testguard := make(chan struct{}, 64)
+            for tempKey := range keyStatus {
+                if keyStatus[tempKey] != DONE {
+                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120{
+                        // rerun the key
+                        testguard <- struct{}{} // would block if guard channel is already filled
+                        go func(key string, respNode int, mapleIds []int) {
+                             ProcessKey(key, respNode, mapleIds)
+                            <-testguard
+                        }(tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
+
+
+                    }
+                    // fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
+                    // success = false
+                    // break
+                }
+            }
+
+        }
+
+
+    }
 }
 
 
