@@ -2212,7 +2212,7 @@ func keyRerunHandler(){
             // testguard := make(chan struct{}, 64)
             for tempKey := range keyStatus {
                 if keyStatus[tempKey] != DONE {
-                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120{
+                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 400 {
                         // rerun the key
                         go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
 
