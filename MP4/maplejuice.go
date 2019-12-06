@@ -89,7 +89,7 @@ var sdfsInterPrefix string
 
 var newguard = make(chan struct{}, maxGoroutines)
 var connguard = make(chan struct{}, 256)
-var testguard = make(chan struct{}, 64)
+// var testguard = make(chan struct{}, 64)
 
 var activeFileNum = 0
 
@@ -111,6 +111,27 @@ func fillString(givenString string, toLength int) string {
     return givenString
 }
 
+
+
+func releaseConn(){
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    }
+
+}
+
+func releaseGuard(){
+    select {
+        case msg := <-newguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    }
+
+}
 
 func getmyIP() (string) {
     // helper func to get my IP
@@ -189,12 +210,7 @@ func listenFileTransferPort() {
                 log.Panicf("failed reading file: %s", err)
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
-                select {
-                    case msg := <-newguard:
-                        fmt.Println("End newguard message %v \n",msg)
-                    default:
-                        fmt.Println("moveove message received \n")
-                }
+                releaseGuard()
                 panic(err)
             }
             contentBytes, err := ioutil.ReadAll(fileAgg)
@@ -205,17 +221,12 @@ func listenFileTransferPort() {
             fileAgg.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            select {
-                case msg := <-newguard:
-                    fmt.Println("End newguard message %v \n",msg)
-                default:
-                    fmt.Println("moveove message received \n")
-            }
+            releaseGuard()
             content := string(contentBytes)
             nodeInfoList := strings.Split(content, "$$$$")
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
             
-            connguard <- struct{}{}
+            // connguard <- struct{}{}
             go KeyAggregation(key, nodeInfoList)
             // <-newguard
 
@@ -248,7 +259,7 @@ func listenFileTransferPort() {
                 if success {
                     fmt.Printf("all maple executions finished\n")
                     mapleBarrier = true
-                    connguard <- struct{}{}
+                    // connguard <- struct{}{}
                     go AssembleKeyFiles()
                 }
                 
@@ -266,9 +277,11 @@ func listenFileTransferPort() {
             //         break
             //     }
             // }
+            // connguard <- struct{}{}
             if !getFileWrapper(sdfsMapleExe, localMapleExe){
                 getFileWrapper(sdfsMapleExe, localMapleExe)
             }
+            // releaseConn()
             fmt.Printf("Got the maple exe, check my local folder\n");
 
             inputFile := split_message[3]
@@ -279,10 +292,11 @@ func listenFileTransferPort() {
             //     }
 
             // }
+            // connguard <- struct{}{}
             if !getFileWrapper(inputFile, localInputFile){
                 getFileWrapper(inputFile, localInputFile)
             }
-            
+            // releaseConn()
             fmt.Printf("I got the file %s %s\n", inputFile, localInputFile)
 
             exeFile := fmt.Sprintf("local/%s", localMapleExe)
@@ -309,7 +323,7 @@ func listenFileTransferPort() {
                 err := os.Rename(tempFilePath, sharedFilePath)
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
-                <-newguard
+                releaseGuard()
                 if err != nil {
                     log.Printf("[ME %d] Could not move file %s to %s\n", myVid, tempFilePath, sharedFilePath)
                     break
@@ -389,7 +403,7 @@ func listenFileTransferPort() {
                 f1_race.Close()
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
-                <-newguard    
+                releaseGuard()   
 
             case "getfile":
                 /* 
@@ -459,7 +473,7 @@ func listenFileTransferPort() {
                 f1_race.Close()
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
-                <-newguard
+                releaseGuard()
 
 
             case "putfile":
@@ -518,7 +532,7 @@ func listenFileTransferPort() {
                 f.Close()
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
-                <-newguard
+                releaseGuard()
 
                 if success {
                     log.Printf("[ME %d] Successfully received %s file from %s\n", myVid, sdfsFilename, sender)
@@ -559,7 +573,7 @@ func listenFileTransferPort() {
                 */
                 sdfsFilename := split_message[1]
                 destNode, _ := strconv.Atoi(split_message[2])
-                connguard <- struct{}{}
+                // connguard <- struct{}{}
                 go replicateFile(destNode, sdfsFilename) 
         }
         conn.Close()
@@ -1073,10 +1087,12 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 
     ip := memberMap[nodeId].ip
     port := fileTransferPort
-
+    connguard <- struct{}{}
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, nodeId, sdfsFilename)
+        conn.Close()
+        releaseConn()
         return false
     }
     defer conn.Close()
@@ -1094,16 +1110,20 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
         fmt.Println(err) // what error are you getting?
         log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, sdfsFilename, nodeId)
+        releaseConn()
         return false
     }
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
-
+    // newguard 
+    newguard <- struct{}{}
     file, err := os.Create(local_dir + localFilename)
     if err != nil {
         log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilename) 
+        releaseGuard()
+        releaseConn()
         return false
     }
     defer file.Close()
@@ -1134,6 +1154,8 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
         log.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
         // fmt.Printf("[ME %d] Successfully received file %s from %d\n", myVid, sdfsFilename, nodeId)
     }
+    releaseGuard()
+    releaseConn()
     return success
 }
 
@@ -1194,19 +1216,15 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
 
     ip := memberMap[nodeId].ip
     port := fileTransferPort
-
+    connguard<- struct{}{}
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, nodeId, sdfsFilename)
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseConn()
         return false
     }
-    defer conn.Close()
+    // defer conn.Close()
 
     message := fmt.Sprintf("putfile %s %d", sdfsFilename, myVid)
     padded_message := fillString(message, messageLength)
@@ -1221,18 +1239,9 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         log.Printf("[ME %d] Cannot open shared file %s\n", sdfsFilename)
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
-        select {
-            case msg := <-newguard:
-                fmt.Println("End newguard message %v \n",msg)
-            default:
-                fmt.Println("moveove message received \n")
-        }
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        releaseGuard()
+        conn.Close()
+        releaseConn()
         return false
     }
 
@@ -1242,18 +1251,9 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         f.Close()
-        select {
-            case msg := <-newguard:
-                fmt.Println("End newguard message %v \n",msg)
-            default:
-                fmt.Println("moveove message received \n")
-        }
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        releaseGuard()
+        conn.Close()
+        releaseConn()
         return false
     }
 
@@ -1275,18 +1275,9 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
                 f.Close()
-                select {
-                    case msg := <-newguard:
-                        fmt.Println("End newguard message %v \n",msg)
-                    default:
-                        fmt.Println("moveove message received \n")
-                }
-                select {
-                    case msg := <-connguard:
-                        fmt.Println("End connguard message %v \n", msg)
-                    default:
-                        fmt.Println("No message received\n")
-                }
+                releaseGuard()
+                conn.Close()
+                releaseConn()
                 return false
             }
         }
@@ -1297,18 +1288,9 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
             f.Close()
-            select {
-                case msg := <-newguard:
-                    fmt.Println("End newguard message %v \n",msg)
-                default:
-                    fmt.Println("moveove message received \n")
-            }
-            select {
-                case msg := <-connguard:
-                    fmt.Println("End connguard message %v \n", msg)
-                default:
-                    fmt.Println("No message received\n")
-            }
+            releaseGuard()
+            conn.Close()
+            releaseConn()
             return false
         }
 
@@ -1316,12 +1298,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     f.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    select {
-        case msg := <-newguard:
-            fmt.Println("End newguard message %v \n",msg)
-        default:
-            fmt.Println("moveove message received \n")
-    }
+    releaseGuard()
     // <-newguard
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, sdfsFilename, nodeId)
     fmt.Printf("[ME %s] Successfully sent the file %s to %d, waiting for done\n", myVid, sdfsFilename, nodeId)
@@ -1332,12 +1309,8 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     ack, err := reader.ReadString('\n')
     if err != nil {
         log.Printf("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseConn()
         return false
     }
     fmt.Printf("ack %s---------\n", ack)
@@ -1347,21 +1320,14 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     if ack == "done" {
         fmt.Printf("Received done, sending replicate ack to master\n")
         destNode := []int{nodeId}
+        conn.Close()
+        releaseConn()
         sendAcktoMaster("replicate", myVid, list2String(destNode), sdfsFilename)
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+
         return true
     } else {
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseConn()
         return false
     }
 }
@@ -1370,15 +1336,19 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
     ack_message := fmt.Sprintf("ack %s %d %s %s\n", action, srcNode, destNodes, fileName)
 
     timeout := time.Duration(20) * time.Second
-
+    connguard<- struct{}{}
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        conn.Close()
+        releaseConn()
         return
     }
-    defer conn.Close()
+    // defer conn.Close()
 
     fmt.Fprintf(conn, ack_message)
+    conn.Close()
+    releaseConn()
     return
 }
 
@@ -1410,19 +1380,15 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     fmt.Printf("the node ID is %d\n",nodeId)
     fmt.Printf("the nodeID is %d and IP is %s\n",nodeId,memberMap[nodeId].ip)
     ip := memberMap[nodeId].ip
-
+    connguard<- struct{}{}
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send file %s)\n", myVid, nodeId, sdfsFilename)
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseConn()
         return
     }
-    defer conn.Close()
+    // defer conn.Close()
 
     message := fmt.Sprintf("putfile %s %d", sdfsFilename, myVid)
     padded_message := fillString(message, messageLength)
@@ -1435,18 +1401,9 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     f, err := os.Open(local_dir + localFilename) 
     if err != nil {
         log.Printf("[ME %d] Cannot open local file %s\n", localFilename)
-         select {
-            case msg := <-newguard:
-                fmt.Println("End newguard message %v \n",msg)
-            default:
-                fmt.Println("moveove message received \n")
-        }
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseGuard()
+        releaseConn()
 
         return
     }
@@ -1455,18 +1412,9 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     if err != nil {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, localFilename)
         f.Close()
-        select {
-            case msg := <-newguard:
-                fmt.Println("End newguard message %v \n",msg)
-            default:
-                fmt.Println("moveove message received \n")
-        }
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        releaseGuard()
+        conn.Close()
+        releaseConn()
         return
     }
 
@@ -1497,12 +1445,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             f.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            select {
-                case msg := <-newguard:
-                    fmt.Println("End newguard message %v \n",msg)
-                default:
-                    fmt.Println("moveove message received \n")
-            }
+            releaseGuard()
             newnode := replaceNode(nodeId, sdfsFilename, allNodes)
             for{
                 if newnode!= -1{
@@ -1513,14 +1456,9 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             }
             
             
-            
-            select {
-                case msg := <-connguard:
-                    fmt.Println("End connguard message %v \n", msg)
-                default:
-                    fmt.Println("No message received\n")
-            }
-            connguard <- struct{}{}
+            conn.Close()
+            releaseConn()
+            // connguard <- struct{}{}
             go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
             return
         }
@@ -1530,12 +1468,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     // <-newguard
-    select {
-    case msg := <-newguard:
-        fmt.Println("End newguard message %v \n",msg)
-    default:
-        fmt.Println("moveove message received \n")
-    }
+    releaseGuard()
     log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
 
     conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))
@@ -1553,13 +1486,9 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             }
         }
         allNodes = append(allNodes, newnode)
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
-        connguard <- struct{}{}
+        conn.Close()
+        releaseConn()
+        // connguard <- struct{}{}
         go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
         return
     }
@@ -1570,21 +1499,13 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         doneList = append(doneList, nodeId)
         fmt.Printf("Sent the file to %d\n", nodeId)
         wg.Done()
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseConn()
         return
     }else{
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
-        connguard <- struct{}{}
+        conn.Close()
+        releaseConn()
+        // connguard <- struct{}{}
         go sendFile(nodeId, localFilename, sdfsFilename, wg, allNodes)
         return
     }  
@@ -1592,10 +1513,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
 func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
     timeout := 20 * time.Second
-
+    connguard<- struct{}{}
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        conn.Close()
+        releaseConn()
         return -1
     }
     // defer conn.Close()
@@ -1608,9 +1531,11 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
     if err != nil || len(reply) == 0 {
         // Handle
         conn.Close()
+        releaseConn()
         return replaceNode(oldnode,sdfsFilename,excludeList)
     }
     conn.Close()
+    releaseConn()
     newNode,_ := strconv.Atoi(reply[:len(reply)-1])
     return newNode
 
@@ -1812,7 +1737,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
                     node2mapleJob[currNode] = &jobnode
                 }
-                connguard <- struct{}{}
+                // connguard <- struct{}{}
                 go sendMapleInfo(currNode, mapleIdx, sdfsMapleExe, mapleFiles[mapleIdx])
                 mapleIdx = mapleIdx + 1
                 if mapleIdx == len(mapleFiles) {
@@ -1905,7 +1830,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         for _, node := range nodeIds {
 
-            connguard <- struct{}{}
+            // connguard <- struct{}{}
             go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
         }
 
@@ -2018,10 +1943,12 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
 
     ip := memberMap[srcNode].ip
     port := fileTransferPort
-
+    connguard<-struct{}{}
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, srcNode, fileName)
+        conn.Close()
+        releaseConn()
         return
     }
     defer conn.Close()
@@ -2031,6 +1958,8 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
     conn.Write([]byte(padded_message))
 
     log.Printf("[ME %d] Sent replicate %s file message from %d (at %d)\n", myVid, fileName, srcNode, destNode)
+    // conn.Close()
+    releaseConn()
     return
 }
 
@@ -2233,10 +2162,13 @@ func LeaderHandler( subject int, newPort int) {
         timeout := time.Duration(20) * time.Second
 
 
-
+        connguard<- struct{}{}
         conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
         if err != nil{
             fmt.Printf("[ME %d]Unable to connect to new Master %d \n",myVid,subject)
+            conn.Close()
+            releaseConn()
+
         }
         defer conn.Close()
 
@@ -2263,10 +2195,11 @@ func LeaderHandler( subject int, newPort int) {
         } 
         ongoingElection = false
         electiondone <- true   
-
+        releaseConn()
         return
 
     }(subject)
+
     return
 }
 
@@ -2281,11 +2214,7 @@ func keyRerunHandler(){
                 if keyStatus[tempKey] != DONE {
                     if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120{
                         // rerun the key
-                        testguard <- struct{}{} // would block if guard channel is already filled
-                        go func(key string, respNode int, mapleIds []int) {
-                             ProcessKey(key, respNode, mapleIds)
-                            <-testguard
-                        }(tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
+                        go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
 
 
                     }

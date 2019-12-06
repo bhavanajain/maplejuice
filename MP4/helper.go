@@ -25,10 +25,17 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
 
     ip := memberMap[nodeId].ip
     port := fileTransferPort
-
+    connguard <- struct{}{}
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send maple task for %s)\n", myVid, nodeId, sdfsMapleExe)
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
+        conn.Close()
         return
     }
     defer conn.Close()
@@ -37,12 +44,8 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     fmt.Printf("%s\n", message)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
-    select {
-        case msg := <-connguard:
-            fmt.Println("End connguard message %v \n", msg)
-        default:
-            fmt.Println("No message received\n")
-    }
+    releaseConn()
+    return
 }
 
 func getFileWrapper(sdfsFilename string, localFilename string) bool {
@@ -52,9 +55,12 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     // localFilename := split_command[2]
     // Create a connection to main to ask for the file
 	timeout := 20 * time.Second
+    connguard <- struct{}{}
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        conn.Close()
+        releaseConn()
         return false
     }
 
@@ -70,10 +76,12 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     if err != nil || len(reply) == 0 {
         log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
         conn.Close()
+        releaseConn()
         return false
     }
 
     conn.Close()    // [NEW]
+    releaseConn()
     if len(reply) == 0{
         fmt.Printf("Empty reply received fot file %s\n",sdfsFilename)
         return false
@@ -175,7 +183,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     fmt.Printf("Sending file to %v\n", nodeIds)
 
     for _, node := range nodeIds {
-        connguard <- struct{}{}
+        // connguard <- struct{}{}
         go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
     }
 
@@ -195,9 +203,12 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
     padded_message := fillString(message, messageLength)
 
     timeout := time.Duration(20) * time.Second
+    connguard<- struct{}{}
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        conn.Close()
+        releaseConn()
         return
     }
 
@@ -205,6 +216,7 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
     simpleSendFile(conn, keysFilename)
     fmt.Printf("Sent all the keys to the master\n")
     conn.Close()
+    releaseConn()
 }
 
 func simpleSendFile(conn net.Conn, filename string) {
@@ -217,7 +229,7 @@ func simpleSendFile(conn net.Conn, filename string) {
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         f.Close()
-        <-newguard
+        releaseGuard()
         return
     }
     defer f.Close()
@@ -227,7 +239,7 @@ func simpleSendFile(conn net.Conn, filename string) {
         fmt.Printf("Can't access file stats for %s\n", filename)
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
-        <-newguard
+        releaseGuard()
         return
     }
 
@@ -260,7 +272,7 @@ func simpleSendFile(conn net.Conn, filename string) {
     fmt.Printf("Completed sending the file %s\n", filename)
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard
+    releaseGuard()
     return
 }
 
@@ -320,7 +332,7 @@ func simpleRecvFile(conn net.Conn) string {
     f.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard
+    releaseGuard()
     if success {
         fmt.Printf("received file %s\n", fileName)
     }
@@ -368,7 +380,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     outfile.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard 
+    releaseGuard() 
 
     fmt.Printf("Maple execution done\n")
 
@@ -441,7 +453,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
             fileEnd = false
-            <-newguard 
+            releaseGuard()
             break
         }
         
@@ -453,14 +465,16 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
             f.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            <-newguard 
+            releaseGuard() 
             // break
     }
     
     keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
+    newguard<- struct{}{}
     keysFileHandle, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s\n", keysFilename)
+        releaseGuard()
         panic(err)
     }
     // may Add a dummy key 
@@ -468,6 +482,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         keysFileHandle.WriteString(key + "$$$$")
     }
     keysFileHandle.Close()
+    releaseGuard()
     fmt.Printf("Key File : %s created\n",keysFilename)
 
     sendKeyFile("maple", myVid, mapleId, keysFilename)
@@ -490,19 +505,14 @@ func AssembleKeyFiles() {
                 // fileOpen.Close()
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
-                select {
-                    case msg := <-newguard:
-                        fmt.Println("End newguard message %v \n",msg)
-                    default:
-                        fmt.Println("moveove message received \n")
-                }
+                releaseGuard()
                 panic(err)
             }
             contentBytes, err := ioutil.ReadAll(fileOpen)
             fileOpen.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            <-newguard
+            releaseGuard()
             if err != nil {
                 fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
                 panic(err)
@@ -551,21 +561,12 @@ func AssembleKeyFiles() {
 
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
 
-        testguard <- struct{}{} // would block if guard channel is already filled
-        go func(key string, respNode int, mapleIds []int) {
-             ProcessKey(key, respNode, mapleIds)
-            <-testguard
-        }(key, currNode, keyMapleIdMap[key])
+        go ProcessKey(key, currNode, keyMapleIdMap[key])
     
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
 
-    select {
-        case msg := <-connguard:
-            fmt.Println("End connguard message %v \n", msg)
-        default:
-            fmt.Println("No message received\n")
-    }
+    // releaseConn()
 }
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
@@ -591,7 +592,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     keyfile.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    <-newguard
+    releaseGuard()
     timeout := time.Duration(20) * time.Second
 
     nodeIP := memberMap[respNode].ip
@@ -608,12 +609,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
     conn.Close()
-    select {
-        case msg := <-connguard:
-            fmt.Println("End connguard message %v \n", msg)
-        default:
-            fmt.Println("No message received\n")
-    } 
+    releaseConn() 
 
     keyTimeStamp[key] = time.Now().Unix()
 }
@@ -640,12 +636,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
     for i := 0; i < len(nodeInfoList); i++ {
         success := <- ch
         if !success {
-            select {
-                case msg := <-connguard:
-                    fmt.Println("End connguard message %v \n", msg)
-                default:
-                    fmt.Println("No message received\n")
-            } 
+            // releaseConn()
             return
         }
     }
@@ -660,31 +651,24 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
 
     timeout := 20 * time.Second
-
+    connguard<- struct{}{}
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        } 
+        releaseConn()
         return
     }
 
     PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
     conn.Close()
+    releaseConn()
     // send an ack to the master
+    connguard<- struct{}{}
     conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
       if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        } 
+        conn.Close()
+        releaseConn()
         return
     }
     message := fmt.Sprintf("keyack %s\n", key)
@@ -692,12 +676,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
     conn.Close()
-    select {
-        case msg := <-connguard:
-            fmt.Println("End connguard message %v \n", msg)
-        default:
-            fmt.Println("No message received\n")
-    } 
+    releaseConn() 
 
     fmt.Printf("Appended the file for %s key\n", key)
     
@@ -709,12 +688,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     connguard <- struct{}{}
     if !memberMap[destNodeId].alive{
         ch <- false
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        releaseConn()
 
         return
 
@@ -728,24 +702,13 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
         ch <- false
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
         conn.Close()
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        releaseConn()
         // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
-    defer conn.Close()
+    // defer conn.Close()
 
     message := fmt.Sprintf("getfile2 %s", destFilePath)
     padded_message := fillString(message, messageLength)
@@ -759,12 +722,8 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         ch <- false
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseConn()
         // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
@@ -782,18 +741,9 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         ch <- false
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
-        select {
-            case msg := <-newguard:
-                fmt.Println("End newguard message %v \n", msg)
-            default:
-                fmt.Println("moveove message received\n")
-        }
-        select {
-            case msg := <-connguard:
-                fmt.Println("End connguard message %v \n", msg)
-            default:
-                fmt.Println("No message received\n")
-        }
+        conn.Close()
+        releaseGuard()
+        releaseConn()
         // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
@@ -829,18 +779,9 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     file.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
-    select {
-        case msg := <-newguard:
-            fmt.Println("End newguard message %v \n",msg)
-        default:
-            fmt.Println("moveove message received \n")
-    }
-    select {
-        case msg := <-connguard:
-            fmt.Println("End connguard message %v \n", msg)
-        default:
-            fmt.Println("No message received\n")
-    }
+    conn.Close()
+    releaseGuard()
+    releaseConn()
     return    
 }
 
@@ -871,14 +812,14 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
         fIn.Close()
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
-        <-newguard
+        releaseGuard()
     }
 
     outfile.Close()
     activeFileNum = activeFileNum-1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     
-     <-newguard
+    releaseGuard()
     fmt.Printf("Merged all files %v\n", inputFilePaths)
 
 }
@@ -943,7 +884,7 @@ func handleMapleFailure(subject int) {
                 for _, mapleid := range(assignedMapleIds) {
                     mapleId2Node[mapleid] = replacement
                     mapleCompMap[mapleid] = false
-                    connguard <- struct{}{}
+                    // connguard <- struct{}{}
                     go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                 }
             } else {
@@ -965,7 +906,7 @@ func handleMapleFailure(subject int) {
                     mapleBarrier = false
                     assignedMapleIds := node2mapleJob[subject].assignedMapleIds
                     for _, mapleid := range(assignedMapleIds) {
-                        connguard <- struct{}{}
+                        // connguard <- struct{}{}
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
@@ -973,12 +914,12 @@ func handleMapleFailure(subject int) {
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            testguard <- struct{}{} // would block if guard channel is already filled
-                            go func(key string, respNode int, mapleIds []int) {
-                                 ProcessKey(key, respNode, mapleIds)
-                                <-testguard
-                            }(keyAggr, replacement, keyMapleIdMap[keyAggr])
-                            // go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            // testguard <- struct{}{} // would block if guard channel is already filled
+                            // go func(key string, respNode int, mapleIds []int) {
+                            //      ProcessKey(key, respNode, mapleIds)
+                            //     <-testguard
+                            // }(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
                         }  
                     } 
                 }
