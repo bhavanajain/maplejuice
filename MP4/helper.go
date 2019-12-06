@@ -486,6 +486,7 @@ func AssembleKeyFiles() {
             fileOpen,err:= os.Open(maple_dir + keysFilename)
             if err != nil {
                 log.Panicf("failed reading file: %s", err)
+                fileOpen.Close()
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
                 select {
@@ -496,7 +497,7 @@ func AssembleKeyFiles() {
                 }
                 panic(err)
             }
-            contentBytes, err := ioutil.ReadFile(fileOpen)
+            contentBytes, err := ioutil.ReadAll(fileOpen)
             fileOpen.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
