@@ -275,7 +275,7 @@ func simpleRecvFile(conn net.Conn) string {
     conn.Read(bufferFileName)
     fmt.Printf("raw file name: blah-%s-blah ,length %d\n", string(bufferFileName), len(string(bufferFileName)))
 
-    if !strings.Contains("^", string(bufferFileName)) {
+    if !strings.Contains(string(bufferFileName),"^") {
         fmt.Printf("didnot read anythingas filename or size\n")
         log.Printf("didnot read anythingas filename or size\n")
 
@@ -283,7 +283,7 @@ func simpleRecvFile(conn net.Conn) string {
     }
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
     fileName := strings.Trim(string(bufferFileName), filler)
-    
+
 
     fmt.Printf("Incoming filesize %d filename %s\n", fileSize, fileName)
 
