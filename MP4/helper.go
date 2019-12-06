@@ -216,6 +216,7 @@ func simpleSendFile(conn net.Conn, filename string) {
         fmt.Printf("Cannot open %s\n", filename)
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
+        f.Close()
         <-newguard
         return
     }
@@ -474,7 +475,22 @@ func AssembleKeyFiles() {
             newguard <- struct{}{}
             activeFileNum = activeFileNum+1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            contentBytes, err := ioutil.ReadFile(maple_dir + keysFilename)
+            // Modify
+            fileOpen,err:= os.Open(maple_dir + keysFilename)
+            if err != nil {
+                log.Panicf("failed reading file: %s", err)
+                activeFileNum = activeFileNum-1
+                fmt.Printf("The number of active Files %d \n",activeFileNum)
+                select {
+                    case msg := <-newguard:
+                        fmt.Println("End newguard message %v \n",msg)
+                    default:
+                        fmt.Println("moveove message received \n")
+                }
+                panic(err)
+            }
+            contentBytes, err := ioutil.ReadFile(fileOpen)
+            fileOpen.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
             <-newguard
@@ -570,6 +586,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     timeout := time.Duration(20) * time.Second
 
     nodeIP := memberMap[respNode].ip
+    connguard <- struct{}{}
     conn, err := net.DialTimeout("tcp", nodeIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
@@ -581,6 +598,14 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 
     conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
+    conn.Close()
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    } 
+
     keyTimeStamp[key] = time.Now().Unix()
 }
 
