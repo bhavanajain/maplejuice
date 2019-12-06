@@ -56,9 +56,9 @@ func main() {
 				if ok {
 					wordCount[word] += 1
 				} else {
-					if len(wordCount) < 2000 {
-						wordCount[word] = 1
-					}
+					// if len(wordCount) < 2000 {
+					wordCount[word] = 1
+					// }
 				}
 			}
 		}
