@@ -37,7 +37,12 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     fmt.Printf("%s\n", message)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
-    <-connguard
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    }
 }
 
 func getFileWrapper(sdfsFilename string, localFilename string) bool {
@@ -523,7 +528,12 @@ func AssembleKeyFiles() {
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
 
-    <-connguard
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    }
 }
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
@@ -589,7 +599,12 @@ func KeyAggregation(key string, nodeInfoList []string) {
     for i := 0; i < len(nodeInfoList); i++ {
         success := <- ch
         if !success {
-            <-connguard 
+            select {
+                case msg := <-connguard:
+                    fmt.Println("End connguard message %v \n", msg)
+                default:
+                    fmt.Println("No message received\n")
+            } 
             return
         }
     }
@@ -608,7 +623,12 @@ func KeyAggregation(key string, nodeInfoList []string) {
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        <-connguard 
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        } 
         return
     }
 
@@ -618,7 +638,12 @@ func KeyAggregation(key string, nodeInfoList []string) {
     conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
       if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        <-connguard 
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        } 
         return
     }
     message := fmt.Sprintf("keyack %s\n", key)
@@ -626,7 +651,12 @@ func KeyAggregation(key string, nodeInfoList []string) {
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
     conn.Close()
-    <-connguard 
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    } 
 
     fmt.Printf("Appended the file for %s key\n", key)
     
@@ -637,7 +667,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     // get file 
     if !memberMap[destNodeId].alive{
         ch <- false
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
 
     }
@@ -650,7 +685,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
         ch <- false
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
@@ -669,7 +709,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         ch <- false
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
@@ -693,7 +738,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
             default:
                 fmt.Println("moveove message received\n")
         }
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
@@ -735,7 +785,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         default:
             fmt.Println("moveove message received \n")
     }
-    <-connguard
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    }
     return    
 }
 

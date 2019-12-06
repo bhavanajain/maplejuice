@@ -1003,7 +1003,12 @@ func sendConfirmation(subject int, sdfsFilename string, sender int) {
     message := fmt.Sprintf("movefile %s %d", sdfsFilename, sender)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
-    <-connguard
+    select {
+        case msg := <-connguard:
+            fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("No message received\n")
+    }
     // fmt.Printf("Sent a movefile %s request to %d\n", sdfsFilename, subject)
 }
 
@@ -1189,7 +1194,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, nodeId, sdfsFilename)
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
     defer conn.Close()
@@ -1213,7 +1223,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
             default:
                 fmt.Println("moveove message received \n")
         }
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
 
@@ -1229,7 +1244,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
             default:
                 fmt.Println("moveove message received \n")
         }
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
 
@@ -1257,7 +1277,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
                     default:
                         fmt.Println("moveove message received \n")
                 }
-                <-connguard
+                select {
+                    case msg := <-connguard:
+                        fmt.Println("End connguard message %v \n", msg)
+                    default:
+                        fmt.Println("No message received\n")
+                }
                 return false
             }
         }
@@ -1274,7 +1299,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
                 default:
                     fmt.Println("moveove message received \n")
             }
-            <-connguard
+            select {
+                case msg := <-connguard:
+                    fmt.Println("End connguard message %v \n", msg)
+                default:
+                    fmt.Println("No message received\n")
+            }
             return false
         }
 
@@ -1298,7 +1328,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     ack, err := reader.ReadString('\n')
     if err != nil {
         log.Printf("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
     fmt.Printf("ack %s---------\n", ack)
@@ -1309,10 +1344,20 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         fmt.Printf("Received done, sending replicate ack to master\n")
         destNode := []int{nodeId}
         sendAcktoMaster("replicate", myVid, list2String(destNode), sdfsFilename)
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return true
     } else {
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return false
     }
 }
@@ -1345,7 +1390,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             fmt.Printf("sent the file to %d\n", nodeId)
             wg.Done()
         }
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
     }
 
@@ -1360,7 +1410,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send file %s)\n", myVid, nodeId, sdfsFilename)
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
     }
     defer conn.Close()
@@ -1382,7 +1437,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             default:
                 fmt.Println("moveove message received \n")
         }
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
 
         return
     }
@@ -1397,7 +1457,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             default:
                 fmt.Println("moveove message received \n")
         }
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
     }
 
@@ -1445,7 +1510,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             
             
             
-            <-connguard
+            select {
+                case msg := <-connguard:
+                    fmt.Println("End connguard message %v \n", msg)
+                default:
+                    fmt.Println("No message received\n")
+            }
             connguard <- struct{}{}
             go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
             return
@@ -1479,7 +1549,12 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             }
         }
         allNodes = append(allNodes, newnode)
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         connguard <- struct{}{}
         go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
         return
@@ -1491,10 +1566,20 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         doneList = append(doneList, nodeId)
         fmt.Printf("Sent the file to %d\n", nodeId)
         wg.Done()
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         return
     }else{
-        <-connguard
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
         connguard <- struct{}{}
         go sendFile(nodeId, localFilename, sdfsFilename, wg, allNodes)
         return
