@@ -1811,6 +1811,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
             nodeIdx = (nodeIdx + 1) % len(workerNodes)
         }
 
+
         fmt.Printf("Maple map %v\n", mapleId2Node)
 
 
