@@ -92,16 +92,9 @@ var sdfsInterPrefix string
 // var testguard = make(chan struct{}, 64)
 var connTokensCount = 1000
 var connTokens = make(chan bool, connTokensCount)
-var Iinit = 0
-for Iinit= 0; Iinit < connTokensCount; Iinit++ {
-    connTokens <- true
-}
 
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
-for Iinit= 0; Iinit < fileTokensCount; Iinit++ {
-    fileTokens <- true
-}
 
 var activeFileNum = 0
 
@@ -1564,7 +1557,13 @@ func ReadWithTimeout(reader *bufio.Reader, timeout time.Duration) (string, error
     }
 }
 
+func releaseConn() {
+    connTokens <- true
+}
 
+func releaseFile() {
+    fileTokens <- true
+}
 
 func executeCommand(command string, userReader *bufio.Reader) {
 
@@ -1577,7 +1576,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         connTokens <- true
         return
     }
-    defer connTokens <- true
+    defer releaseConn()
     defer conn.Close()
 
     // fmt.Printf("%s\n", command)
@@ -1957,7 +1956,7 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
         connTokens <- true
         return
     }
-    defer connTokens <- true
+    defer releaseConn()
     defer conn.Close()
 
     message := fmt.Sprintf("replicatefile %s %d", fileName, destNode)
