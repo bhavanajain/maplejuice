@@ -118,7 +118,7 @@ func releaseConn(){
         case msg := <-connguard:
             fmt.Println("End connguard message %v \n", msg)
         default:
-            fmt.Println("No message received\n")
+            fmt.Println("Why you be trying to pop empty connguard?\n")
     }
 
 }
@@ -128,7 +128,7 @@ func releaseGuard(){
         case msg := <-newguard:
             fmt.Println("End connguard message %v \n", msg)
         default:
-            fmt.Println("No message received\n")
+            fmt.Println("Why you be trying to pop empty newguard?\n")
     }
 
 }
