@@ -27,11 +27,11 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send maple task for %s)\n", myVid, nodeId, sdfsMapleExe)
-        connTokens <- true
+        releaseConn()
 
         return
     }
-    defer connTokens <- true
+    defer releaseConn()
     defer conn.Close()
 
 
@@ -231,7 +231,7 @@ func simpleSendFile(conn net.Conn, filename string) {
         fileTokens<- true
         return
     }
-    defer fileTokens <- true
+    defer releaseFile()
     defer f.Close()
 
 
@@ -718,7 +718,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
-    defer connTokens <- true
+    defer releaseConn()
     defer conn.Close()
 
     message := fmt.Sprintf("getfile2 %s", destFilePath)
@@ -759,7 +759,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
-    defer fileTokens <- true
+    defer releaseFile()
     defer file.Close()
 
     var receivedBytes int64
