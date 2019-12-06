@@ -14,9 +14,6 @@ import (
     "io"
     "os/exec"
     "io/ioutil"
-    // "math/rand"
-    // "errors"
-    // "math"
 )
 
 
@@ -25,23 +22,24 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
 
     ip := memberMap[nodeId].ip
     port := fileTransferPort
+
     <- connTokens
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send maple task for %s)\n", myVid, nodeId, sdfsMapleExe)
         connTokens <- true
-        // conn.Close()
+
         return
     }
-    // defer conn.Close()
+    defer connTokens <- true
+    defer conn.Close()
+
 
     message := fmt.Sprintf("runmaple %d %s %s", mapleId, sdfsMapleExe, inputFile)
-    fmt.Printf("%s\n", message)
+    // fmt.Printf("%s\n", message)
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
     // releaseConn()
-    conn.Close()
-    connTokens <- true
     return
 }
 
@@ -202,18 +200,20 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
     padded_message := fillString(message, messageLength)
 
     timeout := time.Duration(20) * time.Second
-    <-connTokens
+
+
+    <- connTokens
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        // conn.Close()
-        connTokens<- true
+        connTokens <- true
         return
     }
 
     conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
     fmt.Printf("Sent all the keys to the master\n")
+
     conn.Close()
     connTokens <- true
 }
