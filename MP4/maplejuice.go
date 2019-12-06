@@ -1091,7 +1091,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, nodeId, sdfsFilename)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return false
     }
@@ -1220,7 +1220,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, nodeId, sdfsFilename)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return false
     }
@@ -1340,7 +1340,7 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return
     }
@@ -1384,7 +1384,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send file %s)\n", myVid, nodeId, sdfsFilename)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return
     }
@@ -1517,7 +1517,7 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return -1
     }
@@ -1947,7 +1947,7 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, srcNode, fileName)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return
     }
@@ -2166,7 +2166,7 @@ func LeaderHandler( subject int, newPort int) {
         conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
         if err != nil{
             fmt.Printf("[ME %d]Unable to connect to new Master %d \n",myVid,subject)
-            conn.Close()
+            // conn.Close()
             releaseConn()
 
         }

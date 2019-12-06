@@ -35,7 +35,7 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
             default:
                 fmt.Println("No message received\n")
         }
-        conn.Close()
+        // conn.Close()
         return
     }
     defer conn.Close()
@@ -59,7 +59,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return false
     }
@@ -207,7 +207,7 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        conn.Close()
+        // conn.Close()
         releaseConn()
         return
     }
@@ -667,7 +667,8 @@ func KeyAggregation(key string, nodeInfoList []string) {
     conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
       if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        conn.Close()
+        // should not close the connection if err-ed; gives seg fault
+        // conn.Close()
         releaseConn()
         return
     }
