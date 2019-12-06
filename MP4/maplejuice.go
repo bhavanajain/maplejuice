@@ -1784,8 +1784,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("Maple files %v\n", mapleFiles)
 
         workerNodes = getRandomNodes([]int{0}, numMaples)
-        // time.Sleep(1 * time.Second)
         fmt.Printf("Worker Nodes : %v \n",workerNodes)
+        time.Sleep(2 * time.Second)
+        // fmt.Printf("Worker Nodes : %v \n",workerNodes)
 
         var mapleIdx = 0
         var nodeIdx = 0
