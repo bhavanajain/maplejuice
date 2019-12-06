@@ -2273,7 +2273,7 @@ func keyRerunHandler(){
                         go func(key string, respNode int, mapleIds []int) {
                              ProcessKey(key, respNode, mapleIds)
                             <-testguard
-                        }(tempKey, getRandomNodes([]int{0},1)[0], keyMapleIdMap[tempKey])
+                        }(tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
 
 
                     }
