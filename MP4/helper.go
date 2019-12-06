@@ -271,11 +271,9 @@ func simpleRecvFile(conn net.Conn) string {
 
     conn.Read(bufferFileSize)
     fmt.Printf("raw file size: blah-%s-blah, length %d\n", string(bufferFileSize),len(string(bufferFileSize)))
-    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
     conn.Read(bufferFileName)
     fmt.Printf("raw file name: blah-%s-blah ,length %d\n", string(bufferFileName), len(string(bufferFileName)))
-    fileName := strings.Trim(string(bufferFileName), filler)
 
     if !strings.Contains("^", string(bufferFileName)) {
         fmt.Printf("didnot read anythingas filename or size\n")
@@ -283,6 +281,9 @@ func simpleRecvFile(conn net.Conn) string {
 
         return ""
     }
+    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
+    fileName := strings.Trim(string(bufferFileName), filler)
+    
 
     fmt.Printf("Incoming filesize %d filename %s\n", fileSize, fileName)
 
@@ -486,7 +487,7 @@ func AssembleKeyFiles() {
             fileOpen,err:= os.Open(maple_dir + keysFilename)
             if err != nil {
                 log.Panicf("failed reading file: %s", err)
-                fileOpen.Close()
+                // fileOpen.Close()
                 activeFileNum = activeFileNum-1
                 fmt.Printf("The number of active Files %d \n",activeFileNum)
                 select {
