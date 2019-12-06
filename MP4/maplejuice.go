@@ -88,7 +88,7 @@ var keyCount = 0
 var sdfsInterPrefix string
 
 var newguard = make(chan struct{}, maxGoroutines)
-var connguard = make(chan struct{}, 64)
+var connguard = make(chan struct{}, 256)
 
 var activeFileNum = 0
 
