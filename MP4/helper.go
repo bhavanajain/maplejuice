@@ -679,6 +679,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
     conn.Close()
     releaseConn() 
 
+    fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", key)
     fmt.Printf("Appended the file for %s key\n", key)
     
     // put the appended file into sdfs and notify master
