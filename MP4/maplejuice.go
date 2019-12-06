@@ -274,7 +274,7 @@ func listenFileTransferPort() {
             inputFile := split_message[3]
             localInputFile := inputFile
             // for{
-            //     if getFileWrapper(inputFile, localInputFile){
+            //     if getFileWrapper(inputFile, localInputFile){e
             //         break
             //     }
 
@@ -1786,7 +1786,10 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
         workerNodes = getRandomNodes([]int{0}, numMaples)
         fmt.Printf("Worker Nodes : %v \n",workerNodes)
-        time.Sleep(2 * time.Second)
+        log.Printf("Worker Nodes : %v \n",workerNodes)
+
+        // time.Sleep(2 * time.Second)
+
         // fmt.Printf("Worker Nodes : %v \n",workerNodes)
 
         var mapleIdx = 0
