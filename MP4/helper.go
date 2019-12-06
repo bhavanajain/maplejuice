@@ -517,8 +517,13 @@ func AssembleKeyFiles() {
             continue
         }
         currNode := workerNodes[nodeIdx]
-        log.Printf("Accessing node in Assemple Key : %d \n",currNode)
         fmt.Printf("Accessing node in Assemple Key : %d \n",currNode)
+        log.Printf("Accessing node in Assemple Key : %d \n",currNode)
+
+        fmt.Printf("Accessing node in Assemple Key : %d keyAggr thing %v\n",currNode, node2mapleJob[currNode].keysAggregate)
+
+        log.Printf("Accessing node in Assemple Key : %d keyAggr thing %v\n",currNode, node2mapleJob[currNode].keysAggregate)
+
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
 
         testguard <- struct{}{} // would block if guard channel is already filled
