@@ -182,7 +182,7 @@ func listenFileTransferPort() {
     log.Printf("[ME %d] Started listening on file transfer port %d\n", myVid, fileTransferPort)
 
     for {
-        <- connTokens
+        // <- connTokens
         conn, _ := ln.Accept()
         log.Printf("[ME %d] Accepted a new connection from %s\n", myVid, conn.RemoteAddr().(*net.TCPAddr).IP.String())     
         bufferMessage := make([]byte, messageLength)
@@ -617,7 +617,7 @@ func listenFileTransferPort() {
                 go replicateFile(destNode, sdfsFilename) 
         }
         conn.Close()
-        connTokens <- true
+        // connTokens <- true
     }
 }
 
@@ -637,9 +637,9 @@ func listenMasterRequests() {
     for {
         if myIP == masterIP {
 
-            fmt.Printf("[MASTER] Waiting for a conn token to accept a new connection\n")
-            <- connTokens
-            fmt.Printf("[MASTER] Received a conn token to accept a new connection\n")
+            // fmt.Printf("[MASTER] Waiting for a conn token to accept a new connection\n")
+            // // <- connTokens
+            // fmt.Printf("[MASTER] Received a conn token to accept a new connection\n")
 
             conn, err := ln.Accept()
             if err != nil{
@@ -1472,7 +1472,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
             ack = ack[:len(ack)-1]
             if ack == "done" {
                 doneList = append(doneList, nodeId)
-                fmt.Printf("Sent the file to %d\n", nodeId)
+                fmt.Printf("Sent the file %s to %d\n", localFilename ,nodeId)
                 wg.Done()
             } else {
                 success2 = false
