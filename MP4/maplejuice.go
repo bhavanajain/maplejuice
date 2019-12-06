@@ -93,13 +93,13 @@ var sdfsInterPrefix string
 var connTokensCount = 1000
 var connTokens = make(chan bool, connTokensCount)
 var Iinit = 0
-for Iinit= 0, Iinit < connTokensCount; Iinit++ {
+for Iinit= 0; Iinit < connTokensCount; Iinit++ {
     connTokens <- true
 }
 
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
-for Iinit= 0, Iinit < fileTokensCount; Iinit++ {
+for Iinit= 0; Iinit < fileTokensCount; Iinit++ {
     fileTokens <- true
 }
 
@@ -1400,10 +1400,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
-    // fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
-    // newguard <- struct{}{}
-    // activeFileNum = activeFileNum+1
-    // fmt.Printf("The number of active Files %d \n",activeFileNum)
+    fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
 
     <- fileTokens
     f, err := os.Open(local_dir + localFilename) 
@@ -1439,87 +1436,71 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     sendBuffer := make([]byte, BUFFERSIZE)
 
+    success := true
+
     for {
         _, err = f.Read(sendBuffer)
         if err != nil {
             if err == io.EOF {
                 break
             } else {
+                success = false
                 log.Printf("[ME %d] Error while reading file %s", myVid, localFilename)
+                break
             }
         }
 
         _, err = conn.Write(sendBuffer)
-        if err != nil{
+        if err != nil {
+            success = false
             log.Printf("[ME %d] Could not send %s file bytes to %d", myVid, localFilename, nodeId)
             // request another node to write this file from master
-            f.Close()
-            activeFileNum = activeFileNum-1
-            fmt.Printf("The number of active Files %d \n",activeFileNum)
-            releaseGuard()
-            newnode := replaceNode(nodeId, sdfsFilename, allNodes)
-            for{
-                if newnode!= -1{
-                    break
-                }else{
-                    newnode = replaceNode(nodeId, sdfsFilename, allNodes)
-                }
-            }
-            
-            
-            conn.Close()
-            releaseConn()
-            // connguard <- struct{}{}
-            go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
-            return
+            break
         }
-
     }
+
     f.Close()
-    activeFileNum = activeFileNum-1
-    fmt.Printf("The number of active Files %d \n",activeFileNum)
-    // <-newguard
-    releaseGuard()
-    log.Printf("[ME %s] Successfully sent the file %s to %d\n", myVid, localFilename, nodeId)
+    fileTokens <- true
 
-    conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))
+    success2 := true
 
-    reader := bufio.NewReader(conn)
-    ack, err := reader.ReadString('\n')
-    if err != nil {
-        log.Printf("[ME %d] Error while reading ACK from %d for %s file\n", myVid, nodeId, sdfsFilename)
+    if success {
+        log.Printf("[ME %s] Successfully sent the file %s to %d, now waiting for ACK\n", myVid, localFilename, nodeId)
+
+        conn.SetReadDeadline(time.Now().Add(time.Duration(ackTimeOut) * time.Second))
+        reader := bufio.NewReader(conn)
+        ack, err := reader.ReadString('\n')
+        if err != nil {
+            success2 = false
+            log.Printf("[ME %d] Error while reading ACK from %d for %s file\n", myVid, nodeId, sdfsFilename)
+        } else {
+            ack = ack[:len(ack)-1]
+            if ack == "done" {
+                doneList = append(doneList, nodeId)
+                fmt.Printf("Sent the file to %d\n", nodeId)
+                wg.Done()
+            } else {
+                success2 = false
+            }
+        }
+    }
+
+    if !success || !success2 {
         newnode := replaceNode(nodeId, sdfsFilename, allNodes)
-        for{
-            if newnode != -1{
+        for {
+            if newnode != -1 {
                 break
-            }else{
+            } else {
                 newnode = replaceNode(nodeId, sdfsFilename, allNodes)
             }
         }
         allNodes = append(allNodes, newnode)
-        conn.Close()
-        releaseConn()
-        // connguard <- struct{}{}
+        
         go sendFile(newnode, localFilename, sdfsFilename, wg, allNodes)
-        return
     }
-    ack = ack[:len(ack)-1]
 
-    if ack == "done" {
-        // fmt.Printf("Received an ack from node %d\n", nodeId)
-        doneList = append(doneList, nodeId)
-        fmt.Printf("Sent the file to %d\n", nodeId)
-        wg.Done()
-        conn.Close()
-        releaseConn()
-        return
-    }else{
-        conn.Close()
-        releaseConn()
-        // connguard <- struct{}{}
-        go sendFile(nodeId, localFilename, sdfsFilename, wg, allNodes)
-        return
-    }  
+    conn.Close()
+    connTokens <- true 
 }
 
 func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
