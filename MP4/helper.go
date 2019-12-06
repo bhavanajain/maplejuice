@@ -509,7 +509,7 @@ func AssembleKeyFiles() {
     // do range or hash partitioning
     nodeIdx := 0
     
-    testguard := make(chan struct{}, 64) // limitng the number
+    // testguard = make(chan struct{}, 64) // limitng the number
     keyCount = len(keyMapleIdMap)
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
@@ -919,7 +919,7 @@ func handleMapleFailure(subject int) {
                         go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
-                    testguard := make(chan struct{}, 50)
+                    // testguard := make(chan struct{}, 50)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED

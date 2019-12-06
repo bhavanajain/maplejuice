@@ -89,6 +89,7 @@ var sdfsInterPrefix string
 
 var newguard = make(chan struct{}, maxGoroutines)
 var connguard = make(chan struct{}, 256)
+var testguard = make(chan struct{}, 64)
 
 var activeFileNum = 0
 
@@ -2271,7 +2272,7 @@ func keyRerunHandler(){
         time.Sleep(time.Duration(replicatePeriod) * time.Second)
 
         if myIP == masterIP{
-            testguard := make(chan struct{}, 64)
+            // testguard := make(chan struct{}, 64)
             for tempKey := range keyStatus {
                 if keyStatus[tempKey] != DONE {
                     if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120{
