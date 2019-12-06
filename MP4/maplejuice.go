@@ -92,13 +92,14 @@ var sdfsInterPrefix string
 // var testguard = make(chan struct{}, 64)
 var connTokensCount = 1000
 var connTokens = make(chan bool, connTokensCount)
-for i := 0, i < connTokensCount; i++ {
+var Iinit = 0
+for Iinit= 0, Iinit < connTokensCount; Iinit++ {
     connTokens <- true
 }
 
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
-for i := 0, i < fileTokensCount; i++ {
+for Iinit= 0, Iinit < fileTokensCount; Iinit++ {
     fileTokens <- true
 }
 
@@ -222,8 +223,8 @@ func listenFileTransferPort() {
                 // log.Panicf("failed reading file: %s", err)
                 // activeFileNum = activeFileNum-1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
-                log.Printf("[KEYAGGR] Could not open the file %s\n" maple_dir + nodeInfoFile)
-                fmt.Printf("[KEYAGGR] Could not open the file %s\n" maple_dir + nodeInfoFile)
+                log.Printf("[KEYAGGR] Could not open the file %s\n",maple_dir + nodeInfoFile)
+                fmt.Printf("[KEYAGGR] Could not open the file %s\n",maple_dir + nodeInfoFile)
 
                 fileTokens <- true
                 break
