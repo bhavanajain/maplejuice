@@ -592,7 +592,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         nodeId, _ := strconv.Atoi(nodeId_str)
         dataFilePath := fmt.Sprintf("%soutput_%s_%s.out", maple_dir, mapleId_str, key)
         dataFileList = append(dataFileList, dataFilePath)
-        connguard <- struct{}{}
+        // connguard <- struct{}{}
         go getDirFile(nodeId, dataFilePath, dataFilePath, ch)
     }
     
@@ -665,6 +665,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
 func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch chan<- bool) {
     // get file 
+    connguard <- struct{}{}
     if !memberMap[destNodeId].alive{
         ch <- false
         select {
@@ -673,6 +674,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
             default:
                 fmt.Println("No message received\n")
         }
+
         return
 
     }
@@ -691,7 +693,14 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
             default:
                 fmt.Println("No message received\n")
         }
-        connguard <- struct{}{}
+        conn.Close()
+        select {
+            case msg := <-connguard:
+                fmt.Println("End connguard message %v \n", msg)
+            default:
+                fmt.Println("No message received\n")
+        }
+        // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
@@ -715,7 +724,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
             default:
                 fmt.Println("No message received\n")
         }
-        connguard <- struct{}{}
+        // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
@@ -744,7 +753,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
             default:
                 fmt.Println("No message received\n")
         }
-        connguard <- struct{}{}
+        // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
