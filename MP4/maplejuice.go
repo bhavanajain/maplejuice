@@ -757,7 +757,7 @@ func listenMasterRequests() {
                     processing the put request now
                 */
 
-                _, ok = fileMap[sdfsFilename]
+                _, ok := fileMap[sdfsFilename]
                 if ok {
                     fmt.Printf("file already exists, sending old nodes\n")
                     var nodes_str = ""
@@ -2037,9 +2037,9 @@ func HandleFileReplication() {
     }
 }
 
-/*
 
-Disabled leader election for now
+
+//Disabled leader election for now
 
 func LeaderHandleFileReplication() {
     if myIP == masterIP {
@@ -2171,7 +2171,8 @@ func LeaderHandler( subject int, newPort int) {
         timeout := time.Duration(20) * time.Second
 
 
-        connguard<- struct{}{}
+        // connguard<- struct{}{}
+        <- connTokens
         conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
         if err != nil{
             fmt.Printf("[ME %d]Unable to connect to new Master %d \n",myVid,subject)
@@ -2179,6 +2180,7 @@ func LeaderHandler( subject int, newPort int) {
             releaseConn()
 
         }
+        defer releaseConn()
         defer conn.Close()
 
         // Send your fileTimeMap for
@@ -2204,14 +2206,14 @@ func LeaderHandler( subject int, newPort int) {
         } 
         ongoingElection = false
         electiondone <- true   
-        releaseConn()
+
         return
 
     }(subject)
 
     return
 }
-*/
+
 
 
 func keyRerunHandler(){
