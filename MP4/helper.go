@@ -702,7 +702,8 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
         ch <- false
-        conn.Close()
+        // should not close the connection if err-ed; gives seg fault
+        // conn.Close()
         releaseConn()
         // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
