@@ -675,41 +675,44 @@ func listenMasterRequests() {
                 _, ok := conflictMap[sdfsFilename]
                 if ok {
                     fmt.Printf("file already in conflictMap\n")
-                    // if the current put is within 60 seconds of the last executed put raise conflict 
-                    if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
+                    // // if the current put is within 60 seconds of the last executed put raise conflict 
+                    // if time.Now().Unix() - conflictMap[sdfsFilename].timestamp < 60 {
                         
-                        reply := fmt.Sprintf("conflict %s\n", sdfsFilename)
-                        fmt.Fprintf(conn, reply)
+                    //     reply := fmt.Sprintf("conflict %s\n", sdfsFilename)
+                    //     fmt.Fprintf(conn, reply)
 
-                        // waits for a reply to conflict for 30 seconds and times out
-                        conn.SetReadDeadline(time.Now().Add(30*time.Second))
-                        confResp,err := conn_reader.ReadString('\n')
-                        if err != nil{
-                            fmt.Printf("timed out for %s\n", message)
-                            break
-                        }
-                        if len(confResp) > 0 {
-                            confResp = confResp[:len(confResp)-1]
-                        }
+                    //     // waits for a reply to conflict for 30 seconds and times out
+                    //     conn.SetReadDeadline(time.Now().Add(30*time.Second))
+                    //     confResp,err := conn_reader.ReadString('\n')
+                    //     if err != nil{
+                    //         fmt.Printf("timed out for %s\n", message)
+                    //         break
+                    //     }
+                    //     if len(confResp) > 0 {
+                    //         confResp = confResp[:len(confResp)-1]
+                    //     }
 
-                        if confResp == "yes"{
-                            // update conflictMap
-                            var newConflict conflictData
-                            newConflict.id = sender
-                            newConflict.timestamp = time.Now().Unix()
-                            conflictMap[sdfsFilename] = &newConflict
-                        } else {
-                            // ignore
-                            break
-                        }
-                    } else {
-                        // over 60 seconds from the last executed put request
-                        var newConflict conflictData
-                        newConflict.id = sender
-                        newConflict.timestamp = time.Now().Unix()
-                        conflictMap[sdfsFilename] = &newConflict
-                    }
-
+                    //     if confResp == "yes"{
+                    //         // update conflictMap
+                    //         var newConflict conflictData
+                    //         newConflict.id = sender
+                    //         newConflict.timestamp = time.Now().Unix()
+                    //         conflictMap[sdfsFilename] = &newConflict
+                    //     } else {
+                    //         // ignore
+                    //         break
+                    //     }
+                    // } else {
+                    //     // over 60 seconds from the last executed put request
+                    //     var newConflict conflictData
+                    //     newConflict.id = sender
+                    //     newConflict.timestamp = time.Now().Unix()
+                    //     conflictMap[sdfsFilename] = &newConflict
+                    // }
+                    var newConflict conflictData
+                    newConflict.id = sender
+                    newConflict.timestamp = time.Now().Unix()
+                    conflictMap[sdfsFilename] = &newConflict
                 } else{
                     fmt.Printf("file not in conflictMap\n")
                     // sdfsFilename not in conflictMap 
