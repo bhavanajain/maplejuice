@@ -537,7 +537,7 @@ func AssembleKeyFiles() {
             fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
             
         }
-        fmt.Printf("%v\n", keyMapleIdMap)
+        // fmt.Printf("%v\n", keyMapleIdMap)
     }
     
     // assign key processing to worker nodes
