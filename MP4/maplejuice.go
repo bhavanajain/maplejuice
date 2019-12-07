@@ -273,8 +273,8 @@ func listenFileTransferPort() {
                 // log.Panicf("failed reading file: %s", err)
                 // activeFileNum = activeFileNum-1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
-                log.Printf("[KEYAGGR] Could not open the file %s\n",maple_dir + nodeInfoFile)
-                fmt.Printf("[KEYAGGR] Could not open the file %s\n",maple_dir + nodeInfoFile)
+                log.Printf("[KEYAGGR] Could not open the file %s\n",nodeInfofilePath)
+                fmt.Printf("[KEYAGGR] Could not open the file %s\n",nodeInfofilePath)
 
                 releaseFile()
                 break
@@ -283,8 +283,8 @@ func listenFileTransferPort() {
 
             contentBytes, err := ioutil.ReadAll(fileAgg)
             if err != nil {
-                fmt.Printf("Could not read file %s corresponding to %s key\n", nodeInfoFile, key)
-                log.Printf("Could not read file %s corresponding to %s key\n", nodeInfoFile, key)
+                fmt.Printf("Could not read file %s corresponding to %s key\n", nodeInfofilePath, key)
+                log.Printf("Could not read file %s corresponding to %s key\n", nodeInfofilePath, key)
 
                 // panic(err)
             }

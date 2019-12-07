@@ -527,7 +527,7 @@ func AssembleKeyFiles() {
             keys = keys[:len(keys)-1]
 
             currNode := mapleId2Node[mapleId]
-            node2mapleJob[currNode].keysGenerate = append(node2mapleJob[currNode].keysGenerate, keys)
+            node2mapleJob[currNode].keysGenerate = append(node2mapleJob[currNode].keysGenerate,keys...)
 
 
 
