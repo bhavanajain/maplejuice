@@ -93,14 +93,14 @@ var sdfsInterPrefix string
 // var newguard = make(chan struct{}, maxGoroutines)
 // var connguard = make(chan struct{}, 256)
 // var testguard = make(chan struct{}, 64)
-var connTokensCount = 600
+var connTokensCount = 400
 
 var connTokens = make(chan bool, connTokensCount)
 
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
 
-var parallelCount = 100
+var parallelCount = 50
 var parallelToken = make(chan bool, parallelCount)
 
 
@@ -635,13 +635,13 @@ func listenFileTransferPort() {
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
             
             // connguard <- struct{}{}
-            acquireParallel()
-            go func (Lkey string, nList []string) {
-                KeyAggregation(Lkey,nList)
-                releaseParallel()
+            // acquireParallel()
+            // go func (Lkey string, nList []string) {
+            //     KeyAggregation(Lkey,nList)
+            //     releaseParallel()
                 
-            }(key,nodeInfoList)
-            // go KeyAggregation(key, nodeInfoList)
+            // }(key,nodeInfoList)
+            go KeyAggregation(key, nodeInfoList)
             // <-newguard
 
 
