@@ -79,9 +79,11 @@ var keyTimeStamp = make(map[string]int64) // For rerun a key
 var workerNodes []int
 var mapleBarrier = false
 var mapleRunning = false
+// var juiceRunning = false
 var sdfsMapleExe string
 var mapleFiles []string
 var keyMapleIdMap = make(map[string][]int)
+
 
 var keyCount = 0
 // master + others
@@ -90,11 +92,11 @@ var sdfsInterPrefix string
 // var newguard = make(chan struct{}, maxGoroutines)
 // var connguard = make(chan struct{}, 256)
 // var testguard = make(chan struct{}, 64)
-var connTokensCount = 800
+var connTokensCount = 100
 
 var connTokens = make(chan bool, connTokensCount)
 
-var fileTokensCount = 2800
+var fileTokensCount = 500
 var fileTokens = make(chan bool, fileTokensCount)
 
 var activeFileNum = 0
@@ -107,6 +109,7 @@ var mapleJuicePort = 8079
 
 var activeConnCount = 0
 var activeFileCount = 0
+
 
 func listenMapleJuicePort() {
     ln, err := net.Listen("tcp", ":" + strconv.Itoa(mapleJuicePort))
@@ -137,10 +140,11 @@ func listenMapleJuicePort() {
             switch message_type {
             case "keyack":
                 key := split_message[1]
+                sender,_ := strconv.Atoi(split_message[2])
                 if keyStatus[key] != DONE{
                     keyCount = keyCount -1
-                    log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
-                    fmt.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
+                    log.Printf("keyack RECVD %s from %d , remaining keys %d \n",key,sender,keyCount)
+                    fmt.Printf("keyack RECVD %s from %d, remaining keys %d \n",key,sender,keyCount)
                 }
                 keyStatus[key] = DONE
                 
@@ -274,6 +278,7 @@ func releaseFile() {
     //         fmt.Println("Why you be trying to pop empty fileTokens?\n")
     // }
 }
+
 
 
 
@@ -2014,6 +2019,46 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("Maple map %v\n", mapleId2Node)
 
 
+
+    // case "juice":
+    //     if myIP != masterIP {
+    //         fmt.Printf("Run juice command from master\n")
+    //         break
+    //     }
+
+    //     if juiceRunning{
+    //         fmt.Printf("Already Running juice\n")
+    //         break
+    //     }
+    //     juiceExeFile := split_command[1]    // mapleExe should be in local
+    //     numJuice, err := strconv.Atoi(split_command[2])
+    //     if err != nil {
+    //         fmt.Printf("Could not convert numJuice %s to int\n", split_command[2])
+    //     }
+    //     aliveNodeCount := getAliveNodeCount()
+    //     numJuice = min(numJuice, aliveNodeCount - 1)
+    //     fmt.Printf("num of juice %d\n", numJuice)
+
+    //     sdfsInterPrefix = split_command[3]
+    //     juiceDestPrefix := split_command[4]
+
+    //     sdfsJuiceExe = juiceExeFile
+    //     PutFileWrapper(juiceExeFile, sdfsJuiceExe, conn)
+    //     fmt.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, sdfsJuiceExe)
+
+    //     juiceFiles = []string{}
+    //     for file := range fileMap {
+    //         if strings.Contains(file, sdfsInterPrefix) {
+    //             mapleFiles = append(mapleFiles, file)
+    //         }
+    //     }
+    //     fmt.Printf("Maple files %v\n", mapleFiles)
+    //     numMaples = min(numMaples, len(mapleFiles))
+
+
+
+
+
     case "put":
         initTime := time.Now()
         localFilename := split_command[1] 
@@ -2174,7 +2219,7 @@ func scanCommands() {
                 }
             }
 
-        case "ls", "get", "delete", "put", "maple":
+        case "ls", "get", "delete", "put", "maple", "juice":
             if command_type == "get" {
                 if len(split_command) < 3 {
                     break

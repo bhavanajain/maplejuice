@@ -589,6 +589,9 @@ func AssembleKeyFiles() {
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
     keyStatus[key] = ONGOING
+
+    // Ensure only some work is given per node
+
     // newguard <- struct{}{}
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
@@ -651,7 +654,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         dataFilePath := fmt.Sprintf("%soutput_%s_%s.out", maple_dir, mapleId_str, key)
         dataFileList = append(dataFileList, dataFilePath)
         // connguard <- struct{}{}
-        go getDirFile(nodeId, dataFilePath, dataFilePath, ch, 2)
+        go getDirFile(nodeId, dataFilePath, dataFilePath, ch, 3)
     }
     
     for i := 0; i < len(nodeInfoList); i++ {
@@ -699,7 +702,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         releaseConn()
         return
     }
-    message := fmt.Sprintf("keyack %s\n", key)
+    message := fmt.Sprintf("keyack %s %d\n", key,myVid)
     fmt.Printf("Sending %s\n",message)
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
