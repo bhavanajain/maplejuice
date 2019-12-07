@@ -1147,6 +1147,7 @@ func listenMasterRequests() {
                     }
                 }
                 reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
+                log.Printf("Reply for message :%s is %s \n",message,reply)
                 fmt.Fprintf(conn, reply)
                 fmt.Printf("Sent a reply %s\n", reply)
 
