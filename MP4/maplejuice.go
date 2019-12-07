@@ -139,10 +139,11 @@ func listenMapleJuicePort() {
                 key := split_message[1]
                 if keyStatus[key] != DONE{
                     keyCount = keyCount -1
+                    log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
+                    fmt.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
                 }
                 keyStatus[key] = DONE
-                log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
-                fmt.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
+                
 
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
