@@ -150,7 +150,7 @@ func releaseConn() {
 
     select {
         case msg := <-connTokens:
-            // fmt.Println("End connguard message %v \n", msg)
+            fmt.Printf("released conn %v\n", msg)
         default:
             fmt.Println("Why you be trying to pop empty connTokens?\n")
     }
@@ -167,7 +167,7 @@ func releaseFile() {
 
     select {
         case msg := <-fileTokens:
-            // fmt.Println("End connguard message %v \n", msg)
+            fmt.Printf("released file %v\n", msg)
         default:
             fmt.Println("Why you be trying to pop empty fileTokens?\n")
     }
