@@ -673,7 +673,9 @@ func KeyAggregation(key string, nodeInfoList []string) {
     acquireConn()
     conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(mapleJuicePort), timeout)
       if err != nil {
-        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
+        fmt.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
+
         // should not close the connection if err-ed; gives seg fault
         // conn.Close()
         releaseConn()
