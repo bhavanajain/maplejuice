@@ -886,7 +886,7 @@ func listenOtherPort() (err error) {
 
 					// Check the files belonging to the dead node and redistribute the files
 
-					log.Printf("Handling error for %d, HANDLE ERR %v\n", subject, handlingErr)
+					// log.Printf("Handling error for %d, HANDLE ERR %v\n", subject, handlingErr)
 
 					if myIP == masterIP {
 						go replicateFiles(subject)
