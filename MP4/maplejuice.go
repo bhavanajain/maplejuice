@@ -1521,6 +1521,11 @@ var doneList = make([]int, 0, 4)
 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int,ch chan<- int,tryCount int) {
 
+    if nodeId<0{
+        ch <- -1
+        wg.Done()
+        return
+    }
     if tryCount<=0{
         ch <- -1
         wg.Done()
