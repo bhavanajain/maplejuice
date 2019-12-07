@@ -38,9 +38,12 @@ func distributedFileSystem() {
     if myIP == masterIP {
         go listenMasterRequests()
         go listenMapleJuicePort()
+        
+        go listenAckPort()
+        go listenGetPort()
+
         go HandleFileReplication()
         go keyRerunHandler()
-        go listenAckPort()
     } else {
         // go listenFileTransferPort()
         // go scanCommands()

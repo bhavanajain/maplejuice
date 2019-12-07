@@ -51,9 +51,9 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     // Create a connection to main to ask for the file
 	timeout := 20 * time.Second
     acquireConn()
-    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(getPort), timeout)
     if err != nil {
-        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, getPort)
         // conn.Close()
         releaseConn()
         return false

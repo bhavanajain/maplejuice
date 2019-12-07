@@ -111,6 +111,7 @@ var filler = "^"
 
 var mapleJuicePort = 8079
 var ackPort = 8078
+var getPort = 8077
 
 
 var activeConnCount = 0
@@ -335,6 +336,71 @@ func listenAckPort() {
         }
     }
 }
+
+
+func listenGetPort() {
+    ln, err := net.Listen("tcp", ":" + strconv.Itoa(getPort))
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    for {
+        if myIP == masterIP {
+
+            conn, err := ln.Accept()
+            if err != nil{
+                fmt.Println(err)
+            }
+            log.Printf("[ME %d] Accepted a new connection on the master port %d\n", myVid, getPort)     
+
+            conn_reader := bufio.NewReader(conn)
+            message, _ := conn_reader.ReadString('\n')
+            if len(message) > 0 {
+                // remove the '\n' char at the end
+                message = message[:len(message)-1]
+                fmt.Printf("")
+            }
+            
+            split_message := strings.Split(message, " ")
+            message_type := split_message[0]
+
+            switch message_type {
+                ////
+                case "get":
+                /*
+                    "get sdfsFilename"
+
+                    returns a list of nodes that have the sdfsFilename.
+                    if the file does not exist (in the shared file system)
+                    it replies with an empty list.
+                */
+
+                    fmt.Printf("Received a get request %s\n", message)
+                    log.Printf("Received a get request %s\n",message)
+                    sdfsFilename := split_message[1]
+                    _, ok := fileMap[sdfsFilename]
+                    var nodes_str = ""
+
+                    if ok {
+                        fileMap[sdfsFilename].nodeIds = removeDuplicates(fileMap[sdfsFilename].nodeIds)
+                        for _, node := range(fileMap[sdfsFilename].nodeIds) {
+                            nodes_str = nodes_str + strconv.Itoa(node) + ","
+                        }
+                        if len(nodes_str) > 0 {
+                            nodes_str = nodes_str[:len(nodes_str)-1]
+                        }
+                    }
+                    reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
+                    log.Printf("Reply for message :%s is %s \n",message,reply)
+                    fmt.Fprintf(conn, reply)
+                    fmt.Printf("Sent a reply %s\n", reply)
+
+            }
+        }
+    }
+}
+
+
 
 func fillString(givenString string, toLength int) string {
     // pads `givenString` with ':' to make it of `toLength` size
