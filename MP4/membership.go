@@ -833,6 +833,7 @@ func listenOtherPort() (err error) {
 			if (!ok || eventTimeMap[subject] < origin_time) {
 
 				fmt.Printf("Processing CRASH for %d\n", subject)
+				log.Printf("Processing CRASH for %d\n", subject)
 
 				eventTimeMap[subject] = origin_time
 				disseminate(message)
@@ -861,6 +862,9 @@ func listenOtherPort() (err error) {
 					log.Printf("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
 
 					// Check the files belonging to the dead node and redistribute the files
+
+					log.Printf("Handling error for %d, HANDLE ERR %v\n", subject, handlingErr)
+
 					if myIP == masterIP  && handlingErr{
 						go replicateFiles(subject)
 						// if map task is ongoing, rerun stuff

@@ -944,6 +944,7 @@ func removeFromList(l []int, target int)([]int) {
 
 func handleMapleFailure(subject int) {
 
+    log.Printf("handling MAPLE FALIURE for %d mapleRunning: %v\n", subject, mapleRunning)
 
     if mapleRunning {
         _, isNodeMaple := node2mapleJob[subject]
