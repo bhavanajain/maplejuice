@@ -175,20 +175,33 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     var wg sync.WaitGroup
     wg.Add(4)
 
-    doneList = make([]int, 0, 4)
+    LocdoneList:= []int{}
+    myChan := make(chan int , 4)
 
     fmt.Printf("Sending file to %v\n", nodeIds)
 
     for _, node := range nodeIds {
         // connguard <- struct{}{}
-        go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
+        go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds,myChan,2)
     }
 
     wg.Wait()
+    for i:= 0;i<4;i++{
+        newVal := <-myChan
+        if newVal < 0{
+            continue
+        }else{
+            LocdoneList = append(LocdoneList,newVal)
+        }
+    }
 
-    doneList_str := list2String(doneList)
-    fmt.Printf("Send ack to master")
-    sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+    doneList_str := list2String(LocdoneList)
+    if len(LocdoneList) > 0{
+        fmt.Printf("Send ack to master")
+        sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+    }else{
+        fmt.Printf("Can't Finish Put request for %d\n",sdfsFilename)
+    }
 
     // elapsed := time.Since(initTime)
 
