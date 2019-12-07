@@ -104,6 +104,10 @@ var filler = "^"
 
 var mapleJuicePort = 8079
 
+
+var activeConnCount = 0
+var activeFileCount = 0
+
 func listenMapleJuicePort() {
     ln, err := net.Listen("tcp", ":" + strconv.Itoa(mapleJuicePort))
     if err != nil {
@@ -227,6 +231,8 @@ func fillString(givenString string, toLength int) string {
 func acquireConn() {
     // l1
     <- connTokens
+    activeConnCount = activeConnCount+1
+    fmt.Printf("Active Conn Count %d \n",activeConnCount)
 
     //l2
     // connTokens <- true
@@ -236,6 +242,8 @@ func acquireConn() {
 func releaseConn() {
     //l1
     connTokens <- true
+    activeConnCount = activeConnCount-1
+    fmt.Printf("Active Conn Count %d \n",activeConnCount)
 
     // select {
     //     case msg := <-connTokens:
@@ -247,12 +255,16 @@ func releaseConn() {
 
 func acquireFile() {
     <- fileTokens
+    activeFileCount = activeFileCount+1
+    fmt.Printf("Active Conn Count %d \n",activeFileCount)
 
     // fileTokens <- true
 }
 
 func releaseFile() {
     fileTokens <- true
+    activeFileCount = activeFileCount-1
+    fmt.Printf("Active Conn Count %d \n",activeFileCount)
 
     // select {
     //     case msg := <-fileTokens:
@@ -1690,6 +1702,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         if fileOpenState{
             f.Close()
             releaseFile()
+            fileOpenState = false
         }
 
 
