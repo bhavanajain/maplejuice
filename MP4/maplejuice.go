@@ -90,7 +90,6 @@ var sdfsInterPrefix string
 // var newguard = make(chan struct{}, maxGoroutines)
 // var connguard = make(chan struct{}, 256)
 // var testguard = make(chan struct{}, 64)
-// var connTokensCount = 1000
 var connTokensCount = 200
 
 var connTokens = make(chan bool, connTokensCount)
@@ -135,6 +134,24 @@ func fillString(givenString string, toLength int) string {
 //     }
 
 // }
+
+func acquireConn() {
+    <- connTokens
+}
+
+func releaseConn() {
+    connTokens <- true
+}
+
+func acquireFile() {
+    <- fileTokens
+}
+
+func releaseFile() {
+    fileTokens <- true
+}
+
+
 
 func getmyIP() (string) {
     // helper func to get my IP
@@ -182,7 +199,7 @@ func listenFileTransferPort() {
     log.Printf("[ME %d] Started listening on file transfer port %d\n", myVid, fileTransferPort)
 
     for {
-        // <- connTokens
+        // acquireConn()
         conn, _ := ln.Accept()
         log.Printf("[ME %d] Accepted a new connection from %s\n", myVid, conn.RemoteAddr().(*net.TCPAddr).IP.String())     
         bufferMessage := make([]byte, messageLength)
@@ -212,7 +229,7 @@ func listenFileTransferPort() {
             // activeFileNum = activeFileNum+1
             // fmt.Printf("The number of active Files %d \n",activeFileNum)
 
-            <- fileTokens
+            acquireFile()
             fileAgg, err := os.Open(maple_dir + nodeInfoFile)   
             if err != nil {
                 // log.Panicf("failed reading file: %s", err)
@@ -221,7 +238,7 @@ func listenFileTransferPort() {
                 log.Printf("[KEYAGGR] Could not open the file %s\n",maple_dir + nodeInfoFile)
                 fmt.Printf("[KEYAGGR] Could not open the file %s\n",maple_dir + nodeInfoFile)
 
-                fileTokens <- true
+                releaseFile()
                 break
                 // panic(err)
             }
@@ -235,7 +252,7 @@ func listenFileTransferPort() {
             }
 
             fileAgg.Close()
-            fileTokens <- true
+            releaseFile()
 
             // activeFileNum = activeFileNum-1
             // fmt.Printf("The number of active Files %d \n",activeFileNum)
@@ -339,9 +356,9 @@ func listenFileTransferPort() {
                 // activeFileNum = activeFileNum+1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
 
-                <- fileTokens
+                acquireFile()
                 err := os.Rename(tempFilePath, sharedFilePath)
-                fileTokens <- true
+                releaseFile()
                 // activeFileNum = activeFileNum-1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
                 // releaseGuard()
@@ -375,12 +392,12 @@ func listenFileTransferPort() {
                 // activeFileNum = activeFileNum+1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
 
-                <- fileTokens
+                acquireFile()
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
                     log.Printf("[ME %d] Can't open file %s\n", myVid, filePath)
-                    fileTokens <- true
+                    releaseFile()
                     break
                 }
 
@@ -388,7 +405,7 @@ func listenFileTransferPort() {
                 if err != nil {
                     log.Printf("[ME %d] Can't access file stats for %s\n", myVid, filePath)
                     f1_race.Close()
-                    fileTokens <- true
+                    releaseFile()
                     break
                 }
 
@@ -425,7 +442,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                fileTokens <- true
+                releaseFile()
                 // activeFileNum = activeFileNum-1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
                 // releaseGuard()   
@@ -452,12 +469,12 @@ func listenFileTransferPort() {
                 // activeFileNum = activeFileNum+1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
 
-                <- fileTokens
+                acquireFile()
                 f1_race, err := os.Open(filePath)
                 if err != nil {
                     log.Printf("[ME %d] file open error: %s\n", err)
                     log.Printf("[ME %d] Can't open file %s\n", myVid, shared_dir + sdfsFilename)
-                    fileTokens <- true
+                    releaseFile()
                     break
                 }
 
@@ -465,7 +482,7 @@ func listenFileTransferPort() {
                 if err != nil {
                     log.Printf("[ME %d] Can't access file stats for %s\n", myVid, sdfsFilename)
                     f1_race.Close()
-                    fileTokens <- true
+                    releaseFile()
                     break
                 }
 
@@ -502,7 +519,7 @@ func listenFileTransferPort() {
                 }
 
                 f1_race.Close()
-                fileTokens <- true
+                releaseFile()
 
                 // activeFileNum = activeFileNum-1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
@@ -534,11 +551,11 @@ func listenFileTransferPort() {
                 // activeFileNum = activeFileNum+1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
 
-                <- fileTokens
+                acquireFile()
                 f, err := os.Create(tempFilePath)
                 if err != nil {
                     log.Printf("[ME %d] Cannot create file %s\n", myVid, sdfsFilename) 
-                    fileTokens <- true
+                    releaseFile()
                     break
                 }
 
@@ -574,7 +591,7 @@ func listenFileTransferPort() {
                 }
 
                 f.Close()
-                fileTokens <- true
+                releaseFile()
 
                 // activeFileNum = activeFileNum-1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
@@ -617,7 +634,7 @@ func listenFileTransferPort() {
                 go replicateFile(destNode, sdfsFilename) 
         }
         conn.Close()
-        // connTokens <- true
+        // releaseConn()
     }
 }
 
@@ -638,7 +655,7 @@ func listenMasterRequests() {
         if myIP == masterIP {
 
             // fmt.Printf("[MASTER] Waiting for a conn token to accept a new connection\n")
-            // // <- connTokens
+            // // acquireConn()
             // fmt.Printf("[MASTER] Received a conn token to accept a new connection\n")
 
             conn, err := ln.Accept()
@@ -652,6 +669,7 @@ func listenMasterRequests() {
             if len(message) > 0 {
                 // remove the '\n' char at the end
                 message = message[:len(message)-1]
+                fmt.Printf("")
             }
             
             split_message := strings.Split(message, " ")
@@ -1027,11 +1045,11 @@ func sendConfirmation(subject int, sdfsFilename string, sender int) {
     ip := memberMap[subject].ip
     port := fileTransferPort
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send confirmation for %s)\n", myVid, subject, sdfsFilename)
-        connTokens <- true
+        releaseConn()
         return
     } 
 
@@ -1040,7 +1058,7 @@ func sendConfirmation(subject int, sdfsFilename string, sender int) {
     conn.Write([]byte(padded_message))
 
     conn.Close()
-    connTokens <- true
+    releaseConn()
     fmt.Printf("Sent a movefile %s request to %d\n", sdfsFilename, subject)
 }
 
@@ -1080,11 +1098,11 @@ func deleteFile(nodeId int, sdfsFilename string) {
     ip := memberMap[nodeId].ip
     port := fileTransferPort
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to delete file %s)\n", myVid, nodeId, sdfsFilename)
-        connTokens <- true
+        releaseConn()
         return
     }
 
@@ -1093,7 +1111,7 @@ func deleteFile(nodeId int, sdfsFilename string) {
     conn.Write([]byte(padded_message))
 
     conn.Close()
-    connTokens <- true
+    releaseConn()
 
     log.Printf("[ME %d] Sent deletefile %s to %d\n", myVid, sdfsFilename, nodeId)
 }
@@ -1107,11 +1125,11 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 
     // connguard <- struct{}{}
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, nodeId, sdfsFilename)
-        connTokens <- true
+        releaseConn()
         return false
     }
 
@@ -1135,7 +1153,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
         log.Printf("[ME %d] Error %s while fetching file %s from %d\n", myVid, err, sdfsFilename, nodeId)
         fmt.Printf("[ME %d] Error %s while fetching file %s from %d\n", myVid, err, sdfsFilename, nodeId)
 
-        connTokens <- true
+        releaseConn()
         return false
     }
 
@@ -1144,11 +1162,11 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
 
-    <- fileTokens
+    acquireFile()
     file, err := os.Create(local_dir + localFilename)
     if err != nil {
         log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilename) 
-        fileTokens <- true
+        releaseFile()
         return false
     }
 
@@ -1180,22 +1198,22 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     }
 
     file.Close()
-    fileTokens <- true
+    releaseFile()
 
     conn.Close()
-    connTokens <- true
+    releaseConn()
 
     return success
 }
 
 func copyFile(srcFile string, destFile string) (bool){
  
-    <- fileTokens
+    acquireFile()
     sfile, err := os.Open(srcFile)   
     if err != nil {
         // log.Panicf("failed reading file: %s", err)
         fmt.Printf("Error: %s, Could not open file %s for copying\n", err, srcFile)
-        fileTokens <- true
+        releaseFile()
 
         return false
     }
@@ -1203,16 +1221,16 @@ func copyFile(srcFile string, destFile string) (bool){
     input, err := ioutil.ReadAll(sfile)
 
     sfile.Close()
-    fileTokens <- true
+    releaseFile()
 
     if err != nil {
         log.Printf("[ME %d] Cannot read file from %s", srcFile)
         return false
     }
 
-    <- fileTokens
+    acquireFile()
     err = ioutil.WriteFile(destFile, input, 0644)
-    fileTokens <- true
+    releaseFile()
 
     if err != nil {
         log.Printf("[ME %d] Cannot write file to %s", destFile)
@@ -1230,12 +1248,12 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     ip := memberMap[nodeId].ip
     port := fileTransferPort
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, nodeId, sdfsFilename)
         
-        connTokens <- true
+        releaseConn()
         return false
     }
 
@@ -1243,15 +1261,15 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     padded_message := fillString(message, messageLength)
     conn.Write([]byte(padded_message))
 
-    <- fileTokens
+    acquireFile()
     f, err := os.Open(shared_dir + sdfsFilename)
     if err != nil {
         log.Printf("[ME %d] Cannot open shared file %s\n", sdfsFilename)
         
-        fileTokens <- true
+        releaseFile()
 
         conn.Close()
-        connTokens <- true
+        releaseConn()
 
         return false
     }
@@ -1261,10 +1279,10 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, sdfsFilename)
         
         f.Close()
-        fileTokens <- true
+        releaseFile()
 
         conn.Close()
-        connTokens <- true
+        releaseConn()
 
         return false
     }
@@ -1300,7 +1318,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     }
 
     f.Close()
-    fileTokens <- true
+    releaseFile()
 
     if success {
         log.Printf("[ME %s] Successfully sent the file %s to %d, waiting for done\n", myVid, sdfsFilename, nodeId)
@@ -1312,13 +1330,13 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
         if err != nil {
             log.Printf("[ME %d] Error while reading ACK from %d for %s file", myVid, nodeId, sdfsFilename)
             conn.Close()
-            connTokens <- true
+            releaseConn()
 
             return false
         }
 
         conn.Close()
-        connTokens <- true
+        releaseConn()
 
         ack = ack[:len(ack)-1]
         if ack == "done" {
@@ -1334,7 +1352,7 @@ func replicateFile(nodeId int, sdfsFilename string) (bool) {
     } else {
         fmt.Printf("Could not send file %s to %d, exiting\n", sdfsFilename, nodeId)
         conn.Close()
-        connTokens <- true
+        releaseConn()
 
         return false
     }
@@ -1346,17 +1364,17 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
 
     timeout := time.Duration(20) * time.Second
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        connTokens <- true
+        releaseConn()
         return
     }
 
     fmt.Fprintf(conn, ack_message)
     conn.Close()
-    connTokens <- true
+    releaseConn()
     return
 }
 
@@ -1383,11 +1401,11 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     port := fileTransferPort
     ip := memberMap[nodeId].ip
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send file %s)\n", myVid, nodeId, sdfsFilename)
-        connTokens <- true
+        releaseConn()
         return
     }
 
@@ -1397,15 +1415,15 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
 
     fmt.Printf("Sent a putfile %s request to %d\n", sdfsFilename, nodeId)
 
-    <- fileTokens
+    acquireFile()
     f, err := os.Open(local_dir + localFilename) 
     if err != nil {
         log.Printf("[ME %d] Cannot open local file %s\n", localFilename)
         
-        fileTokens <- true
+        releaseFile()
 
         conn.Close()
-        connTokens <- true
+        releaseConn()
 
         return
     }
@@ -1415,10 +1433,10 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         log.Printf("[ME %d] Cannot get file stats for %s\n", myVid, localFilename)
         
         f.Close()
-        fileTokens <- true
+        releaseFile()
 
         conn.Close()
-        connTokens <- true
+        releaseConn()
 
         return
     }
@@ -1455,7 +1473,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     }
 
     f.Close()
-    fileTokens <- true
+    releaseFile()
 
     success2 := true
 
@@ -1495,19 +1513,19 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
     }
 
     conn.Close()
-    connTokens <- true 
+    releaseConn() 
 }
 
 func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
 
     timeout := 20 * time.Second
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
 
-        connTokens <- true
+        releaseConn()
         return -1
     }
 
@@ -1519,13 +1537,13 @@ func replaceNode(oldnode int, sdfsFilename string, excludeList []int) int {
     if err != nil || len(reply) == 0 {
         
         conn.Close()
-        connTokens <- true
+        releaseConn()
 
         return replaceNode(oldnode, sdfsFilename, excludeList)
     }
 
     conn.Close()
-    connTokens <- true
+    releaseConn()
 
     newNode, err := strconv.Atoi(reply[:len(reply)-1])
     if err != nil {
@@ -1559,23 +1577,15 @@ func ReadWithTimeout(reader *bufio.Reader, timeout time.Duration) (string, error
     }
 }
 
-func releaseConn() {
-    connTokens <- true
-}
-
-func releaseFile() {
-    fileTokens <- true
-}
-
 func executeCommand(command string, userReader *bufio.Reader) {
 
     timeout := 20 * time.Second
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        connTokens <- true
+        releaseConn()
         return
     }
     defer releaseConn()
@@ -1816,7 +1826,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         */
 
         // conn.Close()
-        // connTokens <- true
+        // releaseConn()
         go func(){
             nodeIds_str := strings.Split(split_reply[2], ",")
             nodeIds := []int{}
@@ -1954,11 +1964,11 @@ func initiateReplica(fileName string, srcNode int, destNode int) {
     port := fileTransferPort
     // connguard<-struct{}{}
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to replicate file %s)\n", myVid, srcNode, fileName)
-        connTokens <- true
+        releaseConn()
         return
     }
     defer releaseConn()
@@ -2177,7 +2187,7 @@ func LeaderHandler( subject int, newPort int) {
 
 
         // connguard<- struct{}{}
-        <- connTokens
+        acquireConn()
         conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
         if err != nil{
             fmt.Printf("[ME %d]Unable to connect to new Master %d \n",myVid,subject)

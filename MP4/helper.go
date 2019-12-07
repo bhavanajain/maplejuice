@@ -23,7 +23,7 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     ip := memberMap[nodeId].ip
     port := fileTransferPort
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to send maple task for %s)\n", myVid, nodeId, sdfsMapleExe)
@@ -50,12 +50,12 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     // localFilename := split_command[2]
     // Create a connection to main to ask for the file
 	timeout := 20 * time.Second
-    <-connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         // conn.Close()
-        connTokens <- true
+        releaseConn()
         return false
     }
 
@@ -71,12 +71,12 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     if err != nil || len(reply) == 0 {
         log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
         conn.Close()
-        connTokens <- true
+        releaseConn()
         return false
     }
 
     conn.Close()    // [NEW]
-    connTokens <- true
+    releaseConn()
     if len(reply) == 0{
         fmt.Printf("Empty reply received fot file %s\n",sdfsFilename)
         return false
@@ -151,7 +151,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     if err != nil{
         log.Printf(" Can't move forward with put reqest")
         // conn.Close()
-        // connTokens <- true
+        // releaseConn()
         return // free up the user request
     }
     reply = reply[:len(reply)-1]
@@ -202,11 +202,11 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
     timeout := time.Duration(20) * time.Second
 
 
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        connTokens <- true
+        releaseConn()
         return
     }
 
@@ -215,11 +215,11 @@ func sendKeyFile(action string, srcNode int, taskId int, keysFilename string) {
     fmt.Printf("Sent all the keys to the master\n")
 
     conn.Close()
-    connTokens <- true
+    releaseConn()
 }
 
 func simpleSendFile(conn net.Conn, filename string) {
-    <-fileTokens
+    acquireFile()
     activeFileNum = activeFileNum+1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(filename)
@@ -228,7 +228,7 @@ func simpleSendFile(conn net.Conn, filename string) {
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         // f.Close()
-        fileTokens<- true
+        releaseFile()
         return
     }
     defer releaseFile()
@@ -299,14 +299,14 @@ func simpleRecvFile(conn net.Conn) string {
     fmt.Printf("Incoming filesize %d filename %s\n", fileSize, fileName)
 
     mapleFilePath := maple_dir + fileName
-    <-fileTokens
+    acquireFile()
     activeFileNum = activeFileNum+1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Create(mapleFilePath)
     if err != nil {
         fmt.Printf("Cannot create file %s\n", mapleFilePath) 
         // If this happens
-        fileTokens <- true
+        releaseFile()
         fmt.Println(err)
     }
 
@@ -332,7 +332,7 @@ func simpleRecvFile(conn net.Conn) string {
     f.Close()
     // activeFileNum = activeFileNum-1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
-    fileTokens <- true
+    releaseFile()
     if success {
         fmt.Printf("received file %s\n", fileName)
     }
@@ -349,7 +349,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
 
     run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
     fmt.Printf("Trying to run %s\n", run_cmd)
-    <-fileTokens
+    acquireFile()
     // activeFileNum = activeFileNum+1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
     outfile, err := os.Create(outputFilePath)
@@ -380,19 +380,19 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     outfile.Close()
     // activeFileNum = activeFileNum-1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
-    fileTokens <- true
+    releaseFile()
 
     fmt.Printf("Maple execution done\n")
 
     // separate output into key specific files
     // todo: extend to more than 1024 keys!!
-    <- fileTokens
+    acquireFile()
     // activeFileNum = activeFileNum+1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
     f, err := os.Open(outputFilePath)
     if err != nil {
         fmt.Printf("Cannot open %s for reading\n", outputFilePath)
-        fileTokens <- true
+        releaseFile()
         return
     }
     fmt.Printf("opened generated output file for key separation\n")
@@ -433,10 +433,10 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
                         break
                     }
                     keyFileHandleMap[randomkey].Close()
-                    fileTokens <- true
+                    releaseFile()
                     delete(keyFileHandleMap, randomkey)
                 }
-                <- fileTokens
+                acquireFile()
                 tempFile, err := os.OpenFile(tempFilePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
                 if err != nil {
                     fmt.Printf("Could not append/create the file %s\n", tempFilePath)
@@ -451,13 +451,13 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         if fileEnd {
             for _, fhandle := range(keyFileHandleMap) {
                 fhandle.Close()
-                fileTokens <- true
+                releaseFile()
             }
             f.Close()
             // activeFileNum = activeFileNum-1
             // fmt.Printf("The number of active Files %d \n",activeFileNum)
             fileEnd = false
-            fileTokens <- true
+            releaseFile()
             break
         }
         
@@ -465,21 +465,21 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
     if fileEnd {
             for _, fhandle := range(keyFileHandleMap) {
                 fhandle.Close()
-                fileTokens <- true
+                releaseFile()
             }
             f.Close()
             activeFileNum = activeFileNum-1
             fmt.Printf("The number of active Files %d \n",activeFileNum)
-            fileTokens <- true
+            releaseFile()
             // break
     }
     
     keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
-    <- fileTokens
+    acquireFile()
     keysFileHandle, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s\n", keysFilename)
-        fileTokens <- true
+        releaseFile()
         panic(err)
     }
     // may Add a dummy key 
@@ -487,7 +487,7 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         keysFileHandle.WriteString(key + "$$$$")
     }
     keysFileHandle.Close()
-    fileTokens <- true
+    releaseFile()
     fmt.Printf("Key File : %s created\n",keysFilename)
 
     sendKeyFile("maple", myVid, mapleId, keysFilename)
@@ -500,7 +500,7 @@ func AssembleKeyFiles() {
     if len(keyMapleIdMap) == 0 {
         for mapleId := range mapleId2Node {
             keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
-            <- fileTokens
+            acquireFile()
             // activeFileNum = activeFileNum+1
             // fmt.Printf("The number of active Files %d \n",activeFileNum)
             // Modify
@@ -510,14 +510,14 @@ func AssembleKeyFiles() {
                 // fileOpen.Close()
                 // activeFileNum = activeFileNum-1
                 // fmt.Printf("The number of active Files %d \n",activeFileNum)
-                fileTokens <- true
+                releaseFile()
                 panic(err)
             }
             contentBytes, err := ioutil.ReadAll(fileOpen)
             fileOpen.Close()
             // activeFileNum = activeFileNum-1
             // fmt.Printf("The number of active Files %d \n",activeFileNum)
-            fileTokens <- true
+            releaseFile()
             if err != nil {
                 fmt.Printf("Could not read file corresponding to %d maple id\n", mapleId)
                 panic(err)
@@ -581,13 +581,13 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 
     keysFilename := fmt.Sprintf("%s_node.info", key)
     
-    <-fileTokens
+    acquireFile()
     // activeFileNum = activeFileNum+1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
     keyfile, err := os.Create(keysFilename)
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
-        fileTokens <- true
+        releaseFile()
         panic(err)
     }
     for _, mapleId := range mapleIds {
@@ -598,15 +598,15 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     keyfile.Close()
     // activeFileNum = activeFileNum-1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
-    fileTokens <- true
+    releaseFile()
     timeout := time.Duration(20) * time.Second
 
     nodeIP := memberMap[respNode].ip
-    <-connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", nodeIP + ":" + strconv.Itoa(fileTransferPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        connTokens <- true
+        releaseConn()
         return
     }
 
@@ -616,7 +616,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     conn.Write([]byte(padded_message))
     simpleSendFile(conn, keysFilename)
     conn.Close()
-    connTokens <- true
+    releaseConn()
 
     keyTimeStamp[key] = time.Now().Unix()
 }
@@ -658,25 +658,25 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
 
     timeout := 20 * time.Second
-    <-connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
     if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
-        connTokens <- true
+        releaseConn()
         return
     }
 
     PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
     conn.Close()
-    connTokens <- true
+    releaseConn()
     // send an ack to the master
-    <-connTokens
+    acquireConn()
     conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
       if err != nil {
         log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
         // should not close the connection if err-ed; gives seg fault
         // conn.Close()
-        connTokens <- true
+        releaseConn()
         return
     }
     message := fmt.Sprintf("keyack %s\n", key)
@@ -684,7 +684,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
     conn.Close()
-    connTokens <- true
+    releaseConn()
 
     fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", key)
     fmt.Printf("Appended the file for %s key\n", key)
@@ -706,14 +706,14 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 
     ip := memberMap[destNodeId].ip
     port := fileTransferPort
-    <- connTokens
+    acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
         ch <- false
         // should not close the connection if err-ed; gives seg fault
         // conn.Close()
-        connTokens <- true
+        releaseConn()
         // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
@@ -743,7 +743,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
-    <-fileTokens
+    acquireFile()
     activeFileNum = activeFileNum+1
     fmt.Printf("The number of active Files %d \n",activeFileNum)
     file, err := os.Create(localFilePath)
@@ -753,7 +753,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         // conn.Close()
-        fileTokens <- true
+        releaseFile()
         // releaseConn()
         // connguard <- struct{}{}
         go getDirFile(destNodeId,destFilePath,localFilePath,ch)
@@ -798,24 +798,24 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 }
 
 func AppendFiles(inputFilePaths []string, outFilePath string) {
-    <- fileTokens
+    acquireFile()
     // activeFileNum = activeFileNum+1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
     outfile, err := os.Create(outFilePath)
     if err != nil {
         fmt.Printf("Could not open %s file for appending\n", outFilePath)
-        fileTokens <- true
+        releaseFile()
         panic(err)
     }
 
     for _, inputfile := range inputFilePaths {
-        <- fileTokens 
+        acquireFile() 
         // activeFileNum = activeFileNum+1
         // fmt.Printf("The number of active Files %d \n",activeFileNum)
         fIn, err := os.Open(inputfile)
         if err != nil {
             fmt.Printf("Could not open %s file for appending\n", inputfile)
-            fileTokens <- true
+            releaseFile()
             panic(err)
         } 
 
@@ -826,14 +826,14 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
         fIn.Close()
         // activeFileNum = activeFileNum-1
         // fmt.Printf("The number of active Files %d \n",activeFileNum)
-        fileTokens <- true
+        releaseFile()
     }
 
     outfile.Close()
     // activeFileNum = activeFileNum-1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
     
-    fileTokens <- true
+    releaseFile()
     fmt.Printf("Merged all files %v\n", inputFilePaths)
 
 }
