@@ -102,6 +102,95 @@ var activeFileNum = 0
 var messageLength = 256
 var filler = "^"
 
+var mapleJuicePort = 8079
+
+func listenMapleJuicePort() {
+    ln, err := net.Listen("tcp", ":" + strconv.Itoa(mapleJuicePort))
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    for {
+        if myIP == masterIP {
+
+            conn, err := ln.Accept()
+            if err != nil{
+                fmt.Println(err)
+            }
+            log.Printf("[ME %d] Accepted a new connection on the master port %d\n", myVid, masterPort)     
+
+            conn_reader := bufio.NewReader(conn)
+            message, _ := conn_reader.ReadString('\n')
+            if len(message) > 0 {
+                // remove the '\n' char at the end
+                message = message[:len(message)-1]
+                fmt.Printf("")
+            }
+            
+            split_message := strings.Split(message, " ")
+            message_type := split_message[0]
+
+            switch message_type {
+            case "keyack":
+                key := split_message[1]
+                if keyStatus[key] != DONE{
+                    keyCount = keyCount -1
+                }
+                keyStatus[key] = DONE
+                log.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
+                fmt.Printf("keyack RECVD %s , remaining keys %d \n",key,keyCount)
+
+                fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
+
+                success := true
+                for tempKey := range keyStatus {
+                    if keyStatus[tempKey] != DONE {
+                        // fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
+                        success = false
+                        break
+                    }
+                }
+
+                if success {
+                    fmt.Printf("Maple task completed successfully\n")
+                    mapleRunning = false
+                    // clear all the data structures, maple, delete misc temp files
+                    // for tempKey := range(keyStatus) {
+                    //     fmt.Printf("%s ", tempKey)
+                    // }
+                    // fmt.Printf("\n")
+                    //Clean the data structure
+
+                    for k := range mapleId2Node {
+                        delete(mapleId2Node, k)
+                    }
+                    for k := range mapleCompMap{
+                        delete(mapleCompMap, k)
+                    }
+                    for k := range node2mapleJob {
+                        delete(node2mapleJob, k)
+                    }
+
+                    workerNodes = nil
+
+                    mapleBarrier = false
+
+                    for k := range(keyMapleIdMap){
+                        delete(keyMapleIdMap, k)
+                    }
+
+                    for k := range(keyStatus){
+                        delete(keyStatus, k)
+                    }
+
+                    os.Exit(1)
+                }
+
+            }
+        }
+    }
+}
+
 func fillString(givenString string, toLength int) string {
     // pads `givenString` with ':' to make it of `toLength` size
     for {
@@ -905,6 +994,7 @@ func listenMasterRequests() {
                     fmt.Fprintf(conn, "file %s does not exist in the SDFS\n", sdfsFilename)
                 }
 
+            /*
             case "keyack":
                
                 
@@ -961,6 +1051,7 @@ func listenMasterRequests() {
 
                     os.Exit(1)
                 }
+            */
 
             case "ack": 
                 /*
