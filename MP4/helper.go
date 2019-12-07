@@ -647,6 +647,8 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 func KeyAggregation(key string, nodeInfoList []string) {
     // var wg sync.WaitGroup
     // wg.Add(len(nodeInfoList))
+    acquireParallel()
+    defer releaseParallel()
     ch := make(chan bool, len(nodeInfoList))
 
     dataFileList := []string{}
