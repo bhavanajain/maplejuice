@@ -819,6 +819,12 @@ func listenOtherPort() (err error) {
 
 		case "LEAVE", "CRASH":
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
+			_,chk := memberMap[subject]
+			if !chk{
+				break
+			}else if !memberMap[subject].alive{
+				break
+			}
 
 			_, ok := eventTimeMap[subject]
 

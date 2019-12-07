@@ -83,6 +83,7 @@ var mapleRunning = false
 var sdfsMapleExe string
 var mapleFiles []string
 var keyMapleIdMap = make(map[string][]int)
+// var failRerunMap = make(map[int]bool)
 
 
 var keyCount = 0
