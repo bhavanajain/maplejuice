@@ -601,7 +601,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
         releaseFile()
-        keyStatus[key] = FAIL
+        keyStatus[key] = FAILED
         return
     }
     for _, mapleId := range mapleIds {
