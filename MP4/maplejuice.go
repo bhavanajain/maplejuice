@@ -635,7 +635,13 @@ func listenFileTransferPort() {
             nodeInfoList = nodeInfoList[:len(nodeInfoList)-1]
             
             // connguard <- struct{}{}
-            go KeyAggregation(key, nodeInfoList)
+            acquireParallel()
+            go func (Lkey string, nList []string) {
+                KeyAggregation(Lkey,nList)
+                releaseParallel()
+                
+            }(key,nodeInfoList)
+            // go KeyAggregation(key, nodeInfoList)
             // <-newguard
 
 
