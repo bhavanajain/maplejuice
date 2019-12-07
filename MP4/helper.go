@@ -949,7 +949,6 @@ func handleMapleFailure(subject int) {
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that
-            old_len := len(workerNodes)
             workerNodes = removeFromList(workerNodes, subject)
             replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
             var jobnode mapleJob
