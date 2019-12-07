@@ -921,7 +921,7 @@ func min(a int, b int) int {
     }
 }
 
-func removeFromList(l []int, target int) {
+func removeFromList(l []int, target int)([]int) {
     targetidx := -1
     for idx, elem := range l {
         if elem == target {
@@ -933,6 +933,7 @@ func removeFromList(l []int, target int) {
         l[targetidx] = l[len(l)-1]
         l = l[:len(l)-1]
     }
+    return l
     
 }
 
@@ -946,6 +947,7 @@ func handleMapleFailure(subject int) {
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that
+            workerNodes = removeFromList(workerNodes, subject)
             replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
             var jobnode mapleJob
             jobnode.assignedMapleIds = node2mapleJob[subject].assignedMapleIds
@@ -953,10 +955,10 @@ func handleMapleFailure(subject int) {
             jobnode.keysGenerate = node2mapleJob[subject].keysGenerate
             node2mapleJob[replacement] = &jobnode
 
-            removeFromList(workerNodes, subject)
+            
             workerNodes = append(workerNodes, replacement)
-            fmt.Printf("[ME %d] Worker node %v \n",workerNodes)
-            log.Printf("[ME %d] Worker node %v \n",workerNodes)
+            fmt.Printf("[ME %d] Worker node %v \n",myVid,workerNodes)
+            log.Printf("[ME %d] Worker node %v \n",myVid,workerNodes)
 
             if !mapleBarrier {
                 // re-run all the maple ids assigned to this node
@@ -967,6 +969,7 @@ func handleMapleFailure(subject int) {
                     // connguard <- struct{}{}
                     go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                 }
+                return
             } else {
                 mapleAgain := false
                 for _, keyGen := range node2mapleJob[subject].keysGenerate {
@@ -1010,6 +1013,7 @@ func handleMapleFailure(subject int) {
                     } 
                 }
             }
+            return
         }
     }
 }
