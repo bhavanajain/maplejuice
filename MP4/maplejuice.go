@@ -1815,39 +1815,42 @@ func executeCommand(command string, userReader *bufio.Reader) {
         }
         */
 
-        conn.Close()
-        connTokens <- true
-
-        nodeIds_str := strings.Split(split_reply[2], ",")
-        nodeIds := []int{}
-        for _, node_str := range nodeIds_str {
-            node, err := strconv.Atoi(node_str)
-            if err != nil {
-                panic(err)
-                // break // Free up the user 
+        // conn.Close()
+        // connTokens <- true
+        go func(){
+            nodeIds_str := strings.Split(split_reply[2], ",")
+            nodeIds := []int{}
+            for _, node_str := range nodeIds_str {
+                node, err := strconv.Atoi(node_str)
+                if err != nil {
+                    panic(err)
+                    // break // Free up the user 
+                }
+                nodeIds = append(nodeIds, node)
             }
-            nodeIds = append(nodeIds, node)
-        }
 
-        var wg sync.WaitGroup
-        wg.Add(4)
+            var wg sync.WaitGroup
+            wg.Add(4)
 
-        doneList = make([]int, 0, 4)
+            doneList = make([]int, 0, 4)
 
-        for _, node := range nodeIds {
+            for _, node := range nodeIds {
 
-            // connguard <- struct{}{}
-            go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
-        }
+                // connguard <- struct{}{}
+                go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
+            }
 
-        wg.Wait()
+            wg.Wait()
 
-        doneList_str := list2String(doneList)
-        sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+            doneList_str := list2String(doneList)
+            sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
 
-        elapsed := time.Since(initTime)
+            elapsed := time.Since(initTime)
 
-        fmt.Printf("Time taken for put %s\n",elapsed)
+            fmt.Printf("Time taken for put %s\n",elapsed)
+
+        }()
+        
     }
 }
 
