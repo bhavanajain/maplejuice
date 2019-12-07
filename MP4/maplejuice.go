@@ -99,7 +99,7 @@ var connTokens = make(chan bool, connTokensCount)
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
 
-var parallelCount = 60
+var parallelCount = 30
 var parallelToken = make(chan bool, parallelCount)
 
 
@@ -474,6 +474,7 @@ func listenFileTransferPort() {
 
                 if success {
                     fmt.Printf("all maple executions finished\n")
+                    log.Printf("[MAPLE] All maple executions finished\n")
                     mapleBarrier = true
                     // connguard <- struct{}{}
                     go AssembleKeyFiles()

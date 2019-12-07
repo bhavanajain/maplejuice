@@ -955,6 +955,8 @@ func handleMapleFailure(subject int) {
 
             removeFromList(workerNodes, subject)
             workerNodes = append(workerNodes, replacement)
+            fmt.Printf("[ME %d] Worker node %v \n",workerNodes)
+            log.Printf("[ME %d] Worker node %v \n",workerNodes)
 
             if !mapleBarrier {
                 // re-run all the maple ids assigned to this node
@@ -976,10 +978,16 @@ func handleMapleFailure(subject int) {
 
                 if mapleAgain {
                     for _, keyGen := range node2mapleJob[subject].keysGenerate {
-                        keyStatus[keyGen] = FAILED
+                        if keyStatus[keyGen] != DONE{
+                            keyStatus[keyGen] = FAILED
+                        }
+                        
                     }
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
-                        keyStatus[keyAggr] = FAILED
+                        if keyStatus[keyAggr] != DONE{
+                            keyStatus[keyAggr] = FAILED
+                        }
+                        
                     }
                     mapleBarrier = false
                     assignedMapleIds := node2mapleJob[subject].assignedMapleIds
