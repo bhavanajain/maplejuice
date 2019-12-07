@@ -223,6 +223,7 @@ func checkSuspicion(vid int) {
 			updateMonitors()
 			if myIP == masterIP {
 				go replicateFiles(suspect) // Redistribute it's file
+				go handleMapleFailure(suspect)
 			}
 			if memberMap[vid].ip == masterIP{
 				go LeaderElection()
@@ -843,17 +844,17 @@ func listenOtherPort() (err error) {
 
 			log.Printf("Inside switch-case, CRASH message origin time: %d eventTimeMap[subject]: %d\n", origin_time, eventTimeMap[subject])
 
-			handlingErr := true 
-			_,chk := memberMap[subject]
-			if !chk{
-				handlingErr = false
-			}else if !memberMap[subject].alive{
-				handlingErr = false
-			}
+			// handlingErr := true 
+			// _,chk := memberMap[subject]
+			// if !chk{
+			// 	handlingErr = false
+			// }else if !memberMap[subject].alive{
+			// 	handlingErr = false
+			// }
 
 			_, ok := eventTimeMap[subject]
 
-			if (!ok || eventTimeMap[subject] <= origin_time) && handlingErr {
+			if (!ok || eventTimeMap[subject] < origin_time) {
 				eventTimeMap[subject] = origin_time
 				fmt.Printf("Processing CRASH for %d\n", subject)
 				log.Printf("Processing CRASH for %d\n", subject)
@@ -887,13 +888,13 @@ func listenOtherPort() (err error) {
 
 					log.Printf("Handling error for %d, HANDLE ERR %v\n", subject, handlingErr)
 
-					if myIP == masterIP  && handlingErr{
+					if myIP == masterIP {
 						go replicateFiles(subject)
 						// if map task is ongoing, rerun stuff
 						go handleMapleFailure(subject)
 					}
 
-					if memberMap[subject].ip == masterIP && handlingErr {
+					if memberMap[subject].ip == masterIP  {
 						go LeaderElection()
 					}
 					// This is for MP4
