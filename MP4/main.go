@@ -34,6 +34,7 @@ func distributedFileSystem() {
     myIP := getmyIP()
     if myIP == masterIP {
         go listenMasterRequests()
+        go listenMapleJuicePort()
         go HandleFileReplication()
         go keyRerunHandler()
     } else {
