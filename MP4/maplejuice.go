@@ -100,7 +100,7 @@ var connTokens = make(chan bool, connTokensCount)
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
 
-var parallelCount = 30
+var parallelCount = 50
 var parallelToken = make(chan bool, parallelCount)
 
 
@@ -110,6 +110,7 @@ var messageLength = 256
 var filler = "^"
 
 var mapleJuicePort = 8079
+var ackPort = 8078
 
 
 var activeConnCount = 0
@@ -199,6 +200,136 @@ func listenMapleJuicePort() {
 
                     os.Exit(1)
                 }
+
+            }
+        }
+    }
+}
+
+
+func listenAckPort() {
+    ln, err := net.Listen("tcp", ":" + strconv.Itoa(ackPort))
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    for {
+        if myIP == masterIP {
+
+            conn, err := ln.Accept()
+            if err != nil{
+                fmt.Println(err)
+            }
+            log.Printf("[ME %d] Accepted a new connection on the master port %d\n", myVid, ackPort)     
+
+            conn_reader := bufio.NewReader(conn)
+            message, _ := conn_reader.ReadString('\n')
+            if len(message) > 0 {
+                // remove the '\n' char at the end
+                message = message[:len(message)-1]
+                fmt.Printf("")
+            }
+            
+            split_message := strings.Split(message, " ")
+            message_type := split_message[0]
+
+            switch message_type {
+                ////
+                case "ack": 
+                    /*
+                        "ack action srcNode destNode(s) sdfsFilename"
+
+                        if action is put, it means quorum has been reached 
+                        for file sdfsFilename and with destNodes. 
+                        now the master must send a confirmation to destNodes 
+                        to "movefile" from temp dir to shared dir. 
+                        Also update fileMap and nodeMap. 
+
+                        Similarly for replicate, the only difference is --  
+                        for put quorum is reached (for 4 nodes), whereas replicate
+                        means the file has been replicated to destNode (only one node).
+                    */
+
+                    action := split_message[1]
+                    srcNode, err := strconv.Atoi(split_message[2])
+                    if err != nil {
+                        log.Printf("[ME %d] Cannot convert %s to an int node id\n", myVid, split_message[2])
+                        break
+                    }
+                    destNodes_str := split_message[3]
+                    sdfsFilename := split_message[4]
+
+                    if action == "put" {
+                        
+                        /*
+                            respond only if the quorum is for the lastest put on sdfsFilename
+                            if write-write conflict happens and the user replies yes;
+                            then the earlier quorum ack can be ignored 
+                            => respond only if the quorum ack corresponds to the last put on sdfsFilename
+                        */ 
+
+                        if conflictMap[sdfsFilename].id == srcNode {
+
+                            destNodes := removeDuplicates(string2List(destNodes_str))
+                            for _, node := range(destNodes) {
+                                go sendConfirmation(node, sdfsFilename, srcNode)
+                            }
+
+                            updateTimestamp := time.Now().Unix()
+                            var newfiledata fileData 
+                            newfiledata.timestamp = updateTimestamp
+                            if len(destNodes) > 4{
+                                destNodes = destNodes[:4]
+                            }
+                            newfiledata.nodeIds = destNodes
+                            fileMap[sdfsFilename] = &newfiledata
+
+                            for _, node := range(destNodes) {
+                                _, ok := nodeMap[node]
+                                if ok {
+                                    nodeMap[node][sdfsFilename] = updateTimestamp
+                                } else {
+                                    nodeMap[node] = make(map[string]int64)
+                                    nodeMap[node][sdfsFilename] = updateTimestamp
+                                }
+                            }
+                        } else {
+                            // ignore
+                        }
+                    } else if action == "replicate" {
+                        destNodes := removeDuplicates(string2List(destNodes_str))
+                        destNode := destNodes[0]
+
+                        go sendConfirmation(destNode, sdfsFilename, srcNode)
+                        
+                        updateTimestamp := time.Now().Unix()
+                        if len(fileMap[sdfsFilename].nodeIds) < 4 {
+                            toAdd := true
+                            for _,elem := range fileMap[sdfsFilename].nodeIds{
+                                if elem == destNode{
+                                    toAdd = false
+                                    break
+                                }
+                            }
+                            if !toAdd{
+                                break
+                            }
+                            fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
+                        }else{
+                            break
+                        }
+
+                        _, ok := nodeMap[destNode]
+                        if ok {
+                            nodeMap[destNode][sdfsFilename] = updateTimestamp
+                        } else {
+                            nodeMap[destNode] = make(map[string]int64)
+                            nodeMap[destNode][sdfsFilename] = updateTimestamp
+                        } 
+
+                        fmt.Printf("replicate %s complete, time now = %d\n", sdfsFilename, time.Now().UnixNano())                   
+                    }
+
 
             }
         }
@@ -1106,100 +1237,100 @@ func listenMasterRequests() {
                 }
             */
 
-            case "ack": 
-                /*
-                    "ack action srcNode destNode(s) sdfsFilename"
+            // case "ack": 
+            //     /*
+            //         "ack action srcNode destNode(s) sdfsFilename"
 
-                    if action is put, it means quorum has been reached 
-                    for file sdfsFilename and with destNodes. 
-                    now the master must send a confirmation to destNodes 
-                    to "movefile" from temp dir to shared dir. 
-                    Also update fileMap and nodeMap. 
+            //         if action is put, it means quorum has been reached 
+            //         for file sdfsFilename and with destNodes. 
+            //         now the master must send a confirmation to destNodes 
+            //         to "movefile" from temp dir to shared dir. 
+            //         Also update fileMap and nodeMap. 
 
-                    Similarly for replicate, the only difference is --  
-                    for put quorum is reached (for 4 nodes), whereas replicate
-                    means the file has been replicated to destNode (only one node).
-                */
+            //         Similarly for replicate, the only difference is --  
+            //         for put quorum is reached (for 4 nodes), whereas replicate
+            //         means the file has been replicated to destNode (only one node).
+            //     */
 
-                action := split_message[1]
-                srcNode, err := strconv.Atoi(split_message[2])
-                if err != nil {
-                    log.Printf("[ME %d] Cannot convert %s to an int node id\n", myVid, split_message[2])
-                    break
-                }
-                destNodes_str := split_message[3]
-                sdfsFilename := split_message[4]
+            //     action := split_message[1]
+            //     srcNode, err := strconv.Atoi(split_message[2])
+            //     if err != nil {
+            //         log.Printf("[ME %d] Cannot convert %s to an int node id\n", myVid, split_message[2])
+            //         break
+            //     }
+            //     destNodes_str := split_message[3]
+            //     sdfsFilename := split_message[4]
 
-                if action == "put" {
+            //     if action == "put" {
                     
-                    /*
-                        respond only if the quorum is for the lastest put on sdfsFilename
-                        if write-write conflict happens and the user replies yes;
-                        then the earlier quorum ack can be ignored 
-                        => respond only if the quorum ack corresponds to the last put on sdfsFilename
-                    */ 
+            //         /*
+            //             respond only if the quorum is for the lastest put on sdfsFilename
+            //             if write-write conflict happens and the user replies yes;
+            //             then the earlier quorum ack can be ignored 
+            //             => respond only if the quorum ack corresponds to the last put on sdfsFilename
+            //         */ 
 
-                    if conflictMap[sdfsFilename].id == srcNode {
+            //         if conflictMap[sdfsFilename].id == srcNode {
 
-                        destNodes := removeDuplicates(string2List(destNodes_str))
-                        for _, node := range(destNodes) {
-                            go sendConfirmation(node, sdfsFilename, srcNode)
-                        }
+            //             destNodes := removeDuplicates(string2List(destNodes_str))
+            //             for _, node := range(destNodes) {
+            //                 go sendConfirmation(node, sdfsFilename, srcNode)
+            //             }
 
-                        updateTimestamp := time.Now().Unix()
-                        var newfiledata fileData 
-                        newfiledata.timestamp = updateTimestamp
-                        if len(destNodes) > 4{
-                            destNodes = destNodes[:4]
-                        }
-                        newfiledata.nodeIds = destNodes
-                        fileMap[sdfsFilename] = &newfiledata
+            //             updateTimestamp := time.Now().Unix()
+            //             var newfiledata fileData 
+            //             newfiledata.timestamp = updateTimestamp
+            //             if len(destNodes) > 4{
+            //                 destNodes = destNodes[:4]
+            //             }
+            //             newfiledata.nodeIds = destNodes
+            //             fileMap[sdfsFilename] = &newfiledata
 
-                        for _, node := range(destNodes) {
-                            _, ok := nodeMap[node]
-                            if ok {
-                                nodeMap[node][sdfsFilename] = updateTimestamp
-                            } else {
-                                nodeMap[node] = make(map[string]int64)
-                                nodeMap[node][sdfsFilename] = updateTimestamp
-                            }
-                        }
-                    } else {
-                        // ignore
-                    }
-                } else if action == "replicate" {
-                    destNodes := removeDuplicates(string2List(destNodes_str))
-                    destNode := destNodes[0]
+            //             for _, node := range(destNodes) {
+            //                 _, ok := nodeMap[node]
+            //                 if ok {
+            //                     nodeMap[node][sdfsFilename] = updateTimestamp
+            //                 } else {
+            //                     nodeMap[node] = make(map[string]int64)
+            //                     nodeMap[node][sdfsFilename] = updateTimestamp
+            //                 }
+            //             }
+            //         } else {
+            //             // ignore
+            //         }
+            //     } else if action == "replicate" {
+            //         destNodes := removeDuplicates(string2List(destNodes_str))
+            //         destNode := destNodes[0]
 
-                    go sendConfirmation(destNode, sdfsFilename, srcNode)
+            //         go sendConfirmation(destNode, sdfsFilename, srcNode)
                     
-                    updateTimestamp := time.Now().Unix()
-                    if len(fileMap[sdfsFilename].nodeIds) < 4 {
-                        toAdd := true
-                        for _,elem := range fileMap[sdfsFilename].nodeIds{
-                            if elem == destNode{
-                                toAdd = false
-                                break
-                            }
-                        }
-                        if !toAdd{
-                            break
-                        }
-                        fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
-                    }else{
-                        break
-                    }
+            //         updateTimestamp := time.Now().Unix()
+            //         if len(fileMap[sdfsFilename].nodeIds) < 4 {
+            //             toAdd := true
+            //             for _,elem := range fileMap[sdfsFilename].nodeIds{
+            //                 if elem == destNode{
+            //                     toAdd = false
+            //                     break
+            //                 }
+            //             }
+            //             if !toAdd{
+            //                 break
+            //             }
+            //             fileMap[sdfsFilename].nodeIds = append(fileMap[sdfsFilename].nodeIds, destNode)
+            //         }else{
+            //             break
+            //         }
 
-                    _, ok := nodeMap[destNode]
-                    if ok {
-                        nodeMap[destNode][sdfsFilename] = updateTimestamp
-                    } else {
-                        nodeMap[destNode] = make(map[string]int64)
-                        nodeMap[destNode][sdfsFilename] = updateTimestamp
-                    } 
+            //         _, ok := nodeMap[destNode]
+            //         if ok {
+            //             nodeMap[destNode][sdfsFilename] = updateTimestamp
+            //         } else {
+            //             nodeMap[destNode] = make(map[string]int64)
+            //             nodeMap[destNode][sdfsFilename] = updateTimestamp
+            //         } 
 
-                    fmt.Printf("replicate %s complete, time now = %d\n", sdfsFilename, time.Now().UnixNano())                   
-                }
+            //         fmt.Printf("replicate %s complete, time now = %d\n", sdfsFilename, time.Now().UnixNano())                   
+            //     }
 
             case "replace":
                 /*
@@ -1549,9 +1680,9 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
     timeout := time.Duration(20) * time.Second
 
     acquireConn()
-    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(ackPort), timeout)
     if err != nil {
-        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, ackPort)
         releaseConn()
         return
     }

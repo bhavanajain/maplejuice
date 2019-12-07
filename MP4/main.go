@@ -40,6 +40,7 @@ func distributedFileSystem() {
         go listenMapleJuicePort()
         go HandleFileReplication()
         go keyRerunHandler()
+        go listenAckPort()
     } else {
         // go listenFileTransferPort()
         // go scanCommands()
