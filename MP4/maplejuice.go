@@ -2373,6 +2373,7 @@ func keyRerunHandler(){
                 if keyStatus[tempKey] != DONE {
                     if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 400 {
                         // rerun the key
+                        fmt.Printf("Key Rerun : %s \n",tempKey)
                         go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
                     }
                 }
