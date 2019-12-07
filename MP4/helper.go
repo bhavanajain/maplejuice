@@ -68,7 +68,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     reader := bufio.NewReader(conn)
     reply, err := reader.ReadString('\n')
-    if err != nil || len(reply) == 0 {
+    if err != nil{
         log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
         fmt.Printf("[ME %d] Could not read reply from master (for get %s) Reply : %s\n", myVid, sdfsFilename,reply)
 
@@ -81,7 +81,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     releaseConn()
     fmt.Printf("get Request Reply from master : %s \n",reply)
     if len(reply) == 0{
-        fmt.Printf("Empty reply received fot file %s\n",sdfsFilename)
+        fmt.Printf("Empty reply received for file %s\n",sdfsFilename)
         return false
     }
     reply = reply[:len(reply)-1]
