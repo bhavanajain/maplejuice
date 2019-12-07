@@ -971,12 +971,17 @@ func handleMapleFailure(subject int) {
 
             if !mapleBarrier {
                 // re-run all the maple ids assigned to this node
-                assignedMapleIds := node2mapleJob[subject].assignedMapleIds
+                assignedMapleIds := node2mapleJob[replacement].assignedMapleIds
                 for _, mapleid := range(assignedMapleIds) {
                     mapleId2Node[mapleid] = replacement
                     mapleCompMap[mapleid] = false
-                    // connguard <- struct{}{}              
-                    go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                    // connguard <- struct{}{}   
+                    acquireParallel() // would block if guard channel is already filled
+                    go func(node int, mapleID int, fname string, inpFile string) {
+                        sendMapleInfo(node, mapleID, fname,inpFile)
+                        releaseParallel()
+                    }(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])          
+                    // go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                 }
                 return
             } else {
@@ -1002,10 +1007,18 @@ func handleMapleFailure(subject int) {
                         
                     }
                     mapleBarrier = false
-                    assignedMapleIds := node2mapleJob[subject].assignedMapleIds
+                    assignedMapleIds := node2mapleJob[replacement].assignedMapleIds
                     for _, mapleid := range(assignedMapleIds) {
+                        mapleId2Node[mapleid] = replacement
+                        mapleCompMap[mapleid] = false
+
                         // connguard <- struct{}{}
-                        go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                        acquireParallel() // would block if guard channel is already filled
+                        go func(node int, mapleID int, fname string, inpFile string) {
+                            sendMapleInfo(node, mapleID, fname,inpFile)
+                            releaseParallel()
+                        }(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                        // go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
                     // testguard := make(chan struct{}, 50)

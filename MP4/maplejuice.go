@@ -2799,6 +2799,8 @@ func keyRerunHandler(){
                     if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 60 {
                         // rerun the key
                         fmt.Printf("Key Rerun : %s \n",tempKey)
+                        log.Printf("Key Rerun : %s \n",tempKey)
+
                         // go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
                         acquireParallel() // would block if guard channel is already filled
                         go func(key string, respNode int, mapleIds []int) {
