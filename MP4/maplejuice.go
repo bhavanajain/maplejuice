@@ -1132,6 +1132,7 @@ func listenMasterRequests() {
                 */
 
                 fmt.Printf("Received a get request %s\n", message)
+                log.Printf("Received a get request %s\n",message)
                 sdfsFilename := split_message[1]
                 _, ok := fileMap[sdfsFilename]
                 var nodes_str = ""
@@ -2552,7 +2553,7 @@ func LeaderHandleFileReplication() {
                         initiateReplica(fileName, srcNode, destNode)
                         releaseParallel()
                     }(fileName, filenodes[0], newnode)
-                    
+
                     // go initiateReplica(fileName, filenodes[0], newnode)
                 }
             }
