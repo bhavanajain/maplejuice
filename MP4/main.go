@@ -22,13 +22,13 @@ func distributedFileSystem() {
     os.RemoveAll(maple_dir)
     os.MkdirAll(maple_dir, 0777)
 
-	// for i:=0; i < connTokensCount; i++ {
-	//     connTokens <- true
-	// }
+	for i:=0; i < connTokensCount; i++ {
+	    connTokens <- true
+	}
 
-	// for i:=0; i < fileTokensCount; i++ {
-	//     fileTokens <- true
-	// }
+	for i:=0; i < fileTokensCount; i++ {
+	    fileTokens <- true
+	}
 
 
     myIP := getmyIP()
