@@ -77,6 +77,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     conn.Close()    // [NEW]
     releaseConn()
+    fmt.Printf("get Request Reply from master : %s \n",reply)
     if len(reply) == 0{
         fmt.Printf("Empty reply received fot file %s\n",sdfsFilename)
         return false
@@ -93,7 +94,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     nodeIds_str := strings.Split(split_reply[2], ",")
 
-    // fmt.Printf("nodestr: %v %d\n", nodeIds_str, len(nodeIds_str))
+    fmt.Printf("[Get File] nodestr: %v %d\n", nodeIds_str, len(nodeIds_str))
 
     nodeIds := []int{}
     for _, node_str := range nodeIds_str {
@@ -106,7 +107,9 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     success := false
     for _, node := range(nodeIds) {
-        success = getFile(node, sdfsFilename, localFilename)
+        fmt.Printf("[ME %d] Trying to read file %s from %d \n",myVid,sdfsFilename,node)
+        log.Printf("[ME %d] Trying to read file %s from %d \n",myVid,sdfsFilename,node)
+        success = getFile(node, sdfsFilename, localFilename) // Modify here
         if success {
             fmt.Printf("File received!!! %s %s\n",sdfsFilename,localFilename)
             break
@@ -968,7 +971,7 @@ func handleMapleFailure(subject int) {
                 for _, mapleid := range(assignedMapleIds) {
                     mapleId2Node[mapleid] = replacement
                     mapleCompMap[mapleid] = false
-                    // connguard <- struct{}{}
+                    // connguard <- struct{}{}              
                     go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                 }
                 return

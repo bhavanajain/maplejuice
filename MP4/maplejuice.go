@@ -1306,7 +1306,7 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
     port := fileTransferPort
 
     // connguard <- struct{}{}
-
+    // fmt.Printf("[ME %d] Dialing ")
     acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
