@@ -136,19 +136,41 @@ func fillString(givenString string, toLength int) string {
 // }
 
 func acquireConn() {
-    <- connTokens
+    // l1
+    // <- connTokens
+
+    //l2
+    connTokens <- true
+
 }
 
 func releaseConn() {
-    connTokens <- true
+    //l1
+    // connTokens <- true
+
+    select {
+        case msg := <-connTokens:
+            // fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("Why you be trying to pop empty connTokens?\n")
+    }
 }
 
 func acquireFile() {
-    <- fileTokens
+    // <- fileTokens
+
+    fileTokens <- true
 }
 
 func releaseFile() {
-    fileTokens <- true
+    // fileTokens <- true
+
+    select {
+        case msg := <-fileTokens:
+            // fmt.Println("End connguard message %v \n", msg)
+        default:
+            fmt.Println("Why you be trying to pop empty fileTokens?\n")
+    }
 }
 
 
@@ -2034,7 +2056,7 @@ func HandleFileReplication() {
                     continue
                 }
                 if len(filenodes) < 4 { 
-                    if len(filenodes) == 0{
+                    if len(filenodes) == 0 {
                         continue
                     }
                     fmt.Printf("+++++++++++++++++++++++++++++++++++++++++++")
