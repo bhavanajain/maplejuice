@@ -944,6 +944,8 @@ func handleMapleFailure(subject int) {
         _, isNodeMaple := node2mapleJob[subject]
         if isNodeMaple {
             fmt.Printf("Rerunning the maple task for failed nodes %d \n",subject)
+            log.Printf("Rerunning the maple task for failed nodes %d \n",subject)
+
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that
