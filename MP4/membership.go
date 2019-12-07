@@ -151,13 +151,31 @@ func checkChildren() {
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
 				log.Printf("[ME %d] No heartbeat from %d since two heartbeat periods", myVid, child_vid)
-				suspects = append(suspects, child_vid)
+				if !elemExist(suspects,child_vid){
+					suspects = append(suspects, child_vid)
+				}
 				go checkSuspicion(child_vid)
 			}
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
 	return
+}
+
+func elemExist(l []int, e int)(bool){
+	idx := -1
+	for i,elem := range l{
+		if elem == e{
+			idx = i
+			break
+		}
+	}
+	if idx == -1{
+		return false
+	}else{
+		return true
+	}
+
 }
 
 func checkSuspicion(vid int) {
@@ -189,6 +207,9 @@ func checkSuspicion(vid int) {
 	for i, suspect := range(suspects) {
 		if suspect == vid {
 			suspect_idx = i
+			if !memberMap[suspect].alive{
+				break
+			}
 			memberMap[suspect].alive = false
 			_, ok := children[vid]
 			if ok {
@@ -832,12 +853,11 @@ func listenOtherPort() (err error) {
 
 			_, ok := eventTimeMap[subject]
 
-			if (!ok || eventTimeMap[subject] < origin_time) {
-
+			if (!ok || eventTimeMap[subject] <= origin_time) && handlingErr {
+				eventTimeMap[subject] = origin_time
 				fmt.Printf("Processing CRASH for %d\n", subject)
 				log.Printf("Processing CRASH for %d\n", subject)
 
-				eventTimeMap[subject] = origin_time
 				disseminate(message)
 
 				_, ok := memberMap[subject]
