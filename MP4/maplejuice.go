@@ -256,7 +256,7 @@ func releaseConn() {
 func acquireFile() {
     <- fileTokens
     activeFileCount = activeFileCount+1
-    fmt.Printf("Active Conn Count %d \n",activeFileCount)
+    fmt.Printf("Active File Count %d \n",activeFileCount)
 
     // fileTokens <- true
 }
@@ -264,7 +264,7 @@ func acquireFile() {
 func releaseFile() {
     fileTokens <- true
     activeFileCount = activeFileCount-1
-    fmt.Printf("Active Conn Count %d \n",activeFileCount)
+    fmt.Printf("Active File Count %d \n",activeFileCount)
 
     // select {
     //     case msg := <-fileTokens:
