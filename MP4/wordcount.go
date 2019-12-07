@@ -56,7 +56,7 @@ func main() {
 				if ok {
 					wordCount[word] += 1
 				} else {
-					if len(wordCount) < 100 {
+					if len(wordCount) < 1000 {
 						wordCount[word] = 1
 					}
 				}
