@@ -745,6 +745,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // conn.Close()
         releaseConn()
         // connguard <- struct{}{}
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -766,6 +767,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // conn.Close()
         // releaseConn()
         // connguard <- struct{}{}
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -786,6 +788,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         releaseFile()
         // releaseConn()
         // connguard <- struct{}{}
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -817,6 +820,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     if success {
         fmt.Printf("Received file %s\n", destFilePath)
     }else{
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
