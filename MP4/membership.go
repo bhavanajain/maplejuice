@@ -819,11 +819,13 @@ func listenOtherPort() (err error) {
 
 		case "LEAVE", "CRASH":
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
+
+			handlingErr := true 
 			_,chk := memberMap[subject]
 			if !chk{
-				break
+				handlingErr = false
 			}else if !memberMap[subject].alive{
-				break
+				handlingErr = false
 			}
 
 			_, ok := eventTimeMap[subject]
@@ -859,13 +861,13 @@ func listenOtherPort() (err error) {
 					log.Printf("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
 
 					// Check the files belonging to the dead node and redistribute the files
-					if myIP == masterIP {
+					if myIP == masterIP  && handlingErr{
 						go replicateFiles(subject)
 						// if map task is ongoing, rerun stuff
 						go handleMapleFailure(subject)
 					}
 
-					if memberMap[subject].ip == masterIP {
+					if memberMap[subject].ip == masterIP && handlingErr {
 						go LeaderElection()
 					}
 					// This is for MP4

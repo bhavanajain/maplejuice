@@ -2482,7 +2482,12 @@ func replicateFiles(subjectNode int) {
         fmt.Printf("File Name %s srcNode : %v , destNode : %v \n",fileName,filenodes,newnode)
         // just checking for handling errors
         if len(filenodes) > 0{
-            go initiateReplica(fileName, filenodes[0], newnode[0])
+            acquireParallel()
+            go func (fileName string, srcNode int , destNode int) {
+                initiateReplica(fileName, srcNode, destNode)
+                releaseParallel()
+            }(fileName, filenodes[0], newnode[0])
+            // go 
         }
     }
     delete(nodeMap, subjectNode)
@@ -2513,7 +2518,13 @@ func HandleFileReplication() {
                     newnodes := getRandomNodes(filenodes, 4 - len(filenodes))
                     fmt.Printf("Init vector %v , Added nodes %v\n",filenodes, newnodes)
                     for _, newnode := range(newnodes) {
-                        go initiateReplica(fileName, filenodes[0], newnode)
+
+                        acquireParallel()
+                        go func (fileName string, srcNode int , destNode int) {
+                            initiateReplica(fileName, srcNode, destNode)
+                            releaseParallel()
+                        }(fileName, filenodes[0], newnode)
+                        // go initiateReplica(fileName, filenodes[0], newnode)
                     }
                 }
             }
@@ -2536,7 +2547,13 @@ func LeaderHandleFileReplication() {
                 newnodes := getRandomNodes(filenodes, 4 - len(filenodes))
                 fmt.Printf("Init vector %v , Added nodes %v\n",filenodes, newnodes)
                 for _, newnode := range(newnodes) {
-                    go initiateReplica(fileName, filenodes[0], newnode)
+                    acquireParallel()
+                    go func (fileName string, srcNode int , destNode int) {
+                        initiateReplica(fileName, srcNode, destNode)
+                        releaseParallel()
+                    }(fileName, filenodes[0], newnode)
+                    
+                    // go initiateReplica(fileName, filenodes[0], newnode)
                 }
             }
         }
