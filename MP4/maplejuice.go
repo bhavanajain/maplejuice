@@ -344,6 +344,10 @@ func listenGetPort() {
         fmt.Println(err)
     }
 
+    // fmt.Printf("Started listening on Get port %d\n", getPort)
+    log.Printf("Started listening on GETPORT port %d\n", getPort)
+    
+
     for {
         if myIP == masterIP {
 
@@ -351,7 +355,7 @@ func listenGetPort() {
             if err != nil{
                 fmt.Println(err)
             }
-            log.Printf("[ME %d] Accepted a new connection on the master port %d\n", myVid, getPort)     
+            log.Printf("[ME %d] Accepted a new connection on the GETPORT port %d\n", myVid, getPort)     
 
             conn_reader := bufio.NewReader(conn)
             message, _ := conn_reader.ReadString('\n')
@@ -376,7 +380,7 @@ func listenGetPort() {
                 */
 
                     fmt.Printf("Received a get request %s\n", message)
-                    log.Printf("Received a get request %s\n",message)
+                    log.Printf("Received a GETPORT request %s\n",message)
                     sdfsFilename := split_message[1]
                     _, ok := fileMap[sdfsFilename]
                     var nodes_str = ""
@@ -391,7 +395,7 @@ func listenGetPort() {
                         }
                     }
                     reply := fmt.Sprintf("getreply %s %s\n", sdfsFilename, nodes_str)
-                    log.Printf("Reply for message :%s is %s \n",message,reply)
+                    log.Printf("GETPORT Reply for message :%s is %s \n",message,reply)
                     fmt.Fprintf(conn, reply)
                     fmt.Printf("Sent a reply %s\n", reply)
 
