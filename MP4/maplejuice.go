@@ -137,40 +137,40 @@ func fillString(givenString string, toLength int) string {
 
 func acquireConn() {
     // l1
-    // <- connTokens
+    <- connTokens
 
     //l2
-    connTokens <- true
+    // connTokens <- true
 
 }
 
 func releaseConn() {
     //l1
-    // connTokens <- true
+    connTokens <- true
 
-    select {
-        case msg := <-connTokens:
-            fmt.Printf("released conn %v\n", msg)
-        default:
-            fmt.Println("Why you be trying to pop empty connTokens?\n")
-    }
+    // select {
+    //     case msg := <-connTokens:
+    //         fmt.Printf("released conn %v\n", msg)
+    //     default:
+    //         fmt.Println("Why you be trying to pop empty connTokens?\n")
+    // }
 }
 
 func acquireFile() {
-    // <- fileTokens
+    <- fileTokens
 
-    fileTokens <- true
+    // fileTokens <- true
 }
 
 func releaseFile() {
-    // fileTokens <- true
+    fileTokens <- true
 
-    select {
-        case msg := <-fileTokens:
-            fmt.Printf("released file %v\n", msg)
-        default:
-            fmt.Println("Why you be trying to pop empty fileTokens?\n")
-    }
+    // select {
+    //     case msg := <-fileTokens:
+    //         fmt.Printf("released file %v\n", msg)
+    //     default:
+    //         fmt.Println("Why you be trying to pop empty fileTokens?\n")
+    // }
 }
 
 
@@ -239,20 +239,36 @@ func listenFileTransferPort() {
         case "keyaggr":
             key := split_message[1]
             sdfsInterPrefix = split_message[2]
+            nodeInfofilePath := split_message[3]
+            sender,_ := strconv.Atoi(split_message[4])
             // fmt.Printf("Inside keyaggr: I am going to receive the nodes ids for key %s %s\n", key, sdfsInterPrefix)
 
-            nodeInfoFile := simpleRecvFile(conn)
-            if len(nodeInfoFile) == 0 {
-                break
-            }
+            // nodeInfoFile := simpleRecvFile(conn) // Could be an issue Use getDirFile
+            // if len(nodeInfoFile) == 0 {
+            //     break
+            // }
+            ch := make(chan bool,1)
 
+            getDirFile(sender,nodeInfofilePath,nodeInfofilePath,ch)
+            for{
+                success:= <- ch
+                if !success{
+                    fmt.Printf("Failed to getDir the file for KeyAggr %s\n",key)
+                    log.Printf("Failed to getDir the file for KeyAggr %s\n",key)
+                    getDirFile(sender,nodeInfofilePath,nodeInfofilePath,ch)
+                }else{
+                    fmt.Printf("KeyAggr getDir file  received for key : %s\n", key)
+                    log.Printf("KeyAggr getDir file  received for key : %s\n", key)
+                    break
+                }
+            }
             fmt.Printf("Received the key file for processing %s\n", key)
             // newguard <- struct{}{}
             // activeFileNum = activeFileNum+1
             // fmt.Printf("The number of active Files %d \n",activeFileNum)
 
             acquireFile()
-            fileAgg, err := os.Open(maple_dir + nodeInfoFile)   
+            fileAgg, err := os.Open(nodeInfofilePath)   
             if err != nil {
                 // log.Panicf("failed reading file: %s", err)
                 // activeFileNum = activeFileNum-1
@@ -1718,6 +1734,10 @@ func executeCommand(command string, userReader *bufio.Reader) {
             break
         }
         // clear all the maple related maps
+        if mapleRunning{
+            fmt.Printf("Already Running Maple\n")
+            break
+        }
         mapleRunning = true
 
         mapleExeFile := split_command[1]    // mapleExe should be in local

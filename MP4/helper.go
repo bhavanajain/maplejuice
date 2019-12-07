@@ -463,15 +463,15 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         
     }
     if fileEnd {
-            for _, fhandle := range(keyFileHandleMap) {
-                fhandle.Close()
-                releaseFile()
-            }
-            f.Close()
-            activeFileNum = activeFileNum-1
-            fmt.Printf("The number of active Files %d \n",activeFileNum)
+        for _, fhandle := range(keyFileHandleMap) {
+            fhandle.Close()
             releaseFile()
-            // break
+        }
+        f.Close()
+        activeFileNum = activeFileNum-1
+        fmt.Printf("The number of active Files %d \n",activeFileNum)
+        releaseFile()
+        // break
     }
     
     keysFilename := fmt.Sprintf("keys_%d.info", mapleId)
@@ -527,7 +527,7 @@ func AssembleKeyFiles() {
             keys = keys[:len(keys)-1]
 
             currNode := mapleId2Node[mapleId]
-            node2mapleJob[currNode].keysGenerate = keys
+            node2mapleJob[currNode].keysGenerate = append(node2mapleJob[currNode].keysGenerate, keys)
 
 
 
@@ -579,7 +579,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     // newguard <- struct{}{}
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
-    keysFilename := fmt.Sprintf("%s_node.info", key)
+    keysFilename := fmt.Sprintf("%s%s_node.info",maple_dir,key)
     
     acquireFile()
     // activeFileNum = activeFileNum+1
@@ -610,11 +610,11 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         return
     }
 
-    message := fmt.Sprintf("keyaggr %s %s", key, sdfsInterPrefix)
+    message := fmt.Sprintf("keyaggr %s %s %s %d", key, sdfsInterPrefix,keysFilename,myVid) // send filepath 
     padded_message := fillString(message, messageLength)
 
     conn.Write([]byte(padded_message))
-    simpleSendFile(conn, keysFilename)
+    // simpleSendFile(conn, keysFilename) // Don't use this
     conn.Close()
     releaseConn()
 
@@ -694,7 +694,17 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
 func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch chan<- bool) {
     // get file 
-    
+    if destNodeId == myVid {
+        success := copyFile(destFilePath, localFilePath)
+        ch <- success
+        // if success {
+        //     doneList = append(doneList, nodeId)
+        //     fmt.Printf("sent the file to %d\n", nodeId)
+        //     wg.Done()
+        // }
+
+        return
+    }
     if !memberMap[destNodeId].alive{
         ch <- false
         // releaseConn()
@@ -715,7 +725,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // conn.Close()
         releaseConn()
         // connguard <- struct{}{}
-        go getDirFile(destNodeId,destFilePath,localFilePath,ch)
+        // go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
     defer releaseConn()
@@ -736,7 +746,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // conn.Close()
         // releaseConn()
         // connguard <- struct{}{}
-        go getDirFile(destNodeId,destFilePath,localFilePath,ch)
+        // go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
@@ -756,7 +766,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         releaseFile()
         // releaseConn()
         // connguard <- struct{}{}
-        go getDirFile(destNodeId,destFilePath,localFilePath,ch)
+        // go getDirFile(destNodeId,destFilePath,localFilePath,ch)
         return
     }
     defer releaseFile()
