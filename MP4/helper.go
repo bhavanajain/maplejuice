@@ -561,6 +561,7 @@ func AssembleKeyFiles() {
             
         }
         // fmt.Printf("%v\n", keyMapleIdMap)
+        keyCount = len(keyMapleIdMap)
     }
     
     // assign key processing to worker nodes
@@ -568,7 +569,7 @@ func AssembleKeyFiles() {
     nodeIdx := 0
     
     // testguard = make(chan struct{}, 64) // limitng the number
-    keyCount = len(keyMapleIdMap)
+    
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
