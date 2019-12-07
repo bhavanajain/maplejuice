@@ -637,7 +637,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         dataFilePath := fmt.Sprintf("%soutput_%s_%s.out", maple_dir, mapleId_str, key)
         dataFileList = append(dataFileList, dataFilePath)
         // connguard <- struct{}{}
-        go getDirFile(nodeId, dataFilePath, dataFilePath, ch)
+        go getDirFile(nodeId, dataFilePath, dataFilePath, ch, 2)
     }
     
     for i := 0; i < len(nodeInfoList); i++ {
@@ -692,8 +692,13 @@ func KeyAggregation(key string, nodeInfoList []string) {
     // put the appended file into sdfs and notify master
 }
 
-func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch chan<- bool) {
+func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch chan<- bool, count int) {
+
     // get file 
+    if count <= 0{
+        ch <- false
+        return
+    }
     if destNodeId == myVid {
         success := copyFile(destFilePath, localFilePath)
         ch <- success
@@ -720,12 +725,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
         log.Printf("[ME %d] Unable to dial a connection to %d (to get file %s)\n", myVid, destNodeId, destFilePath)
-        ch <- false
+        // ch <- false
         // should not close the connection if err-ed; gives seg fault
         // conn.Close()
         releaseConn()
         // connguard <- struct{}{}
-        // go getDirFile(destNodeId,destFilePath,localFilePath,ch)
+        go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
     defer releaseConn()
@@ -742,11 +747,11 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         fmt.Println(err) // what error are you getting?
         log.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
         fmt.Printf("[ME %d] Error while fetching file %s from %d\n", myVid, destFilePath, destNodeId)
-        ch <- false
+        // ch <- false
         // conn.Close()
         // releaseConn()
         // connguard <- struct{}{}
-        // go getDirFile(destNodeId,destFilePath,localFilePath,ch)
+        go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
     fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
@@ -759,14 +764,14 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     file, err := os.Create(localFilePath)
     if err != nil {
         log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilePath) 
-        ch <- false
+        // ch <- false
         activeFileNum = activeFileNum-1
         fmt.Printf("The number of active Files %d \n",activeFileNum)
         // conn.Close()
         releaseFile()
         // releaseConn()
         // connguard <- struct{}{}
-        // go getDirFile(destNodeId,destFilePath,localFilePath,ch)
+        go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
     defer releaseFile()
@@ -796,6 +801,9 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 
     if success {
         fmt.Printf("Received file %s\n", destFilePath)
+    }else{
+        go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
+        return
     }
     ch <- success
     // file.Close()

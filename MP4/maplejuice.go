@@ -249,13 +249,13 @@ func listenFileTransferPort() {
             // }
             ch := make(chan bool,1)
 
-            getDirFile(sender,nodeInfofilePath,nodeInfofilePath,ch)
+            getDirFile(sender,nodeInfofilePath,nodeInfofilePath,ch,1)
             for{
                 success:= <- ch
                 if !success{
                     fmt.Printf("Failed to getDir the file for KeyAggr %s\n",key)
                     log.Printf("Failed to getDir the file for KeyAggr %s\n",key)
-                    getDirFile(sender,nodeInfofilePath,nodeInfofilePath,ch)
+                    getDirFile(sender,nodeInfofilePath,nodeInfofilePath,ch,1)
                 }else{
                     fmt.Printf("KeyAggr getDir file  received for key : %s\n", key)
                     log.Printf("KeyAggr getDir file  received for key : %s\n", key)
