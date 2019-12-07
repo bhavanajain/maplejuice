@@ -70,7 +70,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     reply, err := reader.ReadString('\n')
     if err != nil || len(reply) == 0 {
         log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
-        fmt.Printf("[ME %d] Could not read reply from master (for get %s) Reply : %s\n", myVid, sdfsFilename,reply
+        fmt.Printf("[ME %d] Could not read reply from master (for get %s) Reply : %s\n", myVid, sdfsFilename,reply)
 
         conn.Close()
         releaseConn()
