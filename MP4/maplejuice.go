@@ -92,12 +92,16 @@ var sdfsInterPrefix string
 // var newguard = make(chan struct{}, maxGoroutines)
 // var connguard = make(chan struct{}, 256)
 // var testguard = make(chan struct{}, 64)
-var connTokensCount = 100
+var connTokensCount = 600
 
 var connTokens = make(chan bool, connTokensCount)
 
-var fileTokensCount = 500
+var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
+
+var parallelCount = 60
+var parallelToken = make(chan bool, parallelCount)
+
 
 var activeFileNum = 0
 
@@ -270,6 +274,27 @@ func releaseFile() {
     fileTokens <- true
     activeFileCount = activeFileCount-1
     fmt.Printf("Active File Count %d \n",activeFileCount)
+
+    // select {
+    //     case msg := <-fileTokens:
+    //         fmt.Printf("released file %v\n", msg)
+    //     default:
+    //         fmt.Println("Why you be trying to pop empty fileTokens?\n")
+    // }
+}
+
+func acquireParallel() {
+    <- parallelToken
+    // activeFileCount = activeFileCount+1
+    // fmt.Printf("Active File Count %d \n",activeFileCount)
+
+    // fileTokens <- true
+}
+
+func releaseParallel() {
+    parallelToken <- true
+    // activeFileCount = activeFileCount-1
+    // fmt.Printf("Active File Count %d \n",activeFileCount)
 
     // select {
     //     case msg := <-fileTokens:
@@ -2553,7 +2578,12 @@ func keyRerunHandler(){
                     if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 300 {
                         // rerun the key
                         fmt.Printf("Key Rerun : %s \n",tempKey)
-                        go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
+                        // go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
+                        acquireParallel() // would block if guard channel is already filled
+                        go func(key string, respNode int, mapleIds []int) {
+                            ProcessKey(key, respNode, mapleIds)
+                            releaseParallel()
+                        }(tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
                     }
                 }
             }

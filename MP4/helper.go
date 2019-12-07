@@ -579,7 +579,12 @@ func AssembleKeyFiles() {
 
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
 
-        go ProcessKey(key, currNode, keyMapleIdMap[key])
+        // go ProcessKey(key, currNode, keyMapleIdMap[key])
+        acquireParallel() // would block if guard channel is already filled
+        go func(key string, respNode int, mapleIds []int) {
+            ProcessKey(key, respNode, mapleIds)
+            releaseParallel()
+        }(key, currNode, keyMapleIdMap[key])
     
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
@@ -985,12 +990,12 @@ func handleMapleFailure(subject int) {
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            // testguard <- struct{}{} // would block if guard channel is already filled
-                            // go func(key string, respNode int, mapleIds []int) {
-                            //      ProcessKey(key, respNode, mapleIds)
-                            //     <-testguard
-                            // }(keyAggr, replacement, keyMapleIdMap[keyAggr])
-                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            acquireParallel() // would block if guard channel is already filled
+                            go func(key string, respNode int, mapleIds []int) {
+                                ProcessKey(key, respNode, mapleIds)
+                                releaseParallel()
+                            }(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            // go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
                         }  
                     } 
                 }

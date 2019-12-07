@@ -30,6 +30,9 @@ func distributedFileSystem() {
 	    fileTokens <- true
 	}
 
+	for i:=0; i < parallelCount; i++ {
+	    parallelToken <- true
+	}
 
     myIP := getmyIP()
     if myIP == masterIP {
