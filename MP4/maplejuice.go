@@ -2077,6 +2077,10 @@ func executeCommand(command string, userReader *bufio.Reader) {
         // conn.Close()
         // releaseConn()
         go func(){
+
+            if len(split_reply[2]) == 0{
+                return
+            }
             nodeIds_str := strings.Split(split_reply[2], ",")
             nodeIds := []int{}
             for _, node_str := range nodeIds_str {
@@ -2085,14 +2089,18 @@ func executeCommand(command string, userReader *bufio.Reader) {
                     panic(err)
                     // break // Free up the user 
                 }
-                nodeIds = append(nodeIds, node)
+                if node >= 0{
+                    nodeIds = append(nodeIds, node)
+                }
             }
-
+            if len(nodeIds) == 0{
+                return
+            }
             var wg sync.WaitGroup
-            wg.Add(4)
+            wg.Add(len(nodeIds))
 
             LocdoneList:=[]int{}
-            myChan := make(chan int , 4)
+            myChan := make(chan int , len(nodeIds))
 
             for _, node := range nodeIds {
 
@@ -2102,7 +2110,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
             wg.Wait()
             // Get All the 
-            for i:= 0;i<4;i++{
+            for i:= 0;i<len(nodeIds);i++{
                 newVal := <-myChan
                 if newVal < 0{
                     continue

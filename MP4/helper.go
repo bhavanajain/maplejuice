@@ -601,7 +601,8 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
         releaseFile()
-        panic(err)
+        keyStatus[key] = FAIL
+        return
     }
     for _, mapleId := range mapleIds {
         // each record is mapleId:nodeId
@@ -666,7 +667,11 @@ func KeyAggregation(key string, nodeInfoList []string) {
     outFilename := fmt.Sprintf("%s_inter.info", key)
     outFilePath := fmt.Sprintf("%s%s", local_dir, outFilename)
     
-    AppendFiles(dataFileList, outFilePath)
+    statusUpdate:=AppendFiles(dataFileList, outFilePath,2)
+    if !statusUpdate{
+        fmt.Printf("Unable to append file for key %s \n",key)
+        return
+    }
 
 
 
@@ -834,7 +839,11 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     return    
 }
 
-func AppendFiles(inputFilePaths []string, outFilePath string) {
+func AppendFiles(inputFilePaths []string, outFilePath string, tryCount int)(bool) {
+
+    if tryCount<=0{
+        return false
+    }
     acquireFile()
     // activeFileNum = activeFileNum+1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
@@ -842,7 +851,8 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
     if err != nil {
         fmt.Printf("Could not open %s file for appending\n", outFilePath)
         releaseFile()
-        panic(err)
+        return AppendFiles(inputFilePaths,outFilePath,tryCount-1)
+        // panic(err)
     }
 
     for _, inputfile := range inputFilePaths {
@@ -853,12 +863,17 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
         if err != nil {
             fmt.Printf("Could not open %s file for appending\n", inputfile)
             releaseFile()
-            panic(err)
+            releaseFile()// two files
+            return AppendFiles(inputFilePaths,outFilePath,tryCount-1)
+            // panic(err)
         } 
 
         _, err = io.Copy(outfile, fIn)
         if err != nil {
             fmt.Printf("Could not copy the file from %s to %s\n", inputfile, outFilePath)
+            releaseFile()
+            releaseFile()// two files
+            return AppendFiles(inputFilePaths,outFilePath,tryCount-1)
         }
         fIn.Close()
         // activeFileNum = activeFileNum-1
@@ -872,6 +887,8 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
     
     releaseFile()
     fmt.Printf("Merged all files %v\n", inputFilePaths)
+    return true
+
 
 }
 
