@@ -79,11 +79,15 @@ var keyTimeStamp = make(map[string]int64) // For rerun a key
 var workerNodes []int
 var mapleBarrier = false
 var mapleRunning = false
-// var juiceRunning = false
+var mapleInitTime time.Time
 var sdfsMapleExe string
 var mapleFiles []string
 var keyMapleIdMap = make(map[string][]int)
 // var failRerunMap = make(map[int]bool)
+
+// juice related
+var juiceRunning = false
+// var juiceInitTime
 
 
 var keyCount = 0
@@ -99,9 +103,8 @@ var connTokens = make(chan bool, connTokensCount)
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
 
-var parallelCount = 50
+var parallelCount = 100
 var parallelToken = make(chan bool, parallelCount)
-
 
 var activeFileNum = 0
 
@@ -111,14 +114,15 @@ var filler = "^"
 var mapleJuicePort = 8079
 var ackPort = 8078
 var getPort = 8077
+var putPort = 8076
 
 
 var activeConnCount = 0
 var activeFileCount = 0
 var activeParallelCount = 0
 
-var mapleInitTime time.Time
 
+var keyBatchChans []chan bool
 
 func listenMapleJuicePort() {
     ln, err := net.Listen("tcp", ":" + strconv.Itoa(mapleJuicePort))
@@ -367,7 +371,6 @@ func listenGetPort() {
             if len(message) > 0 {
                 // remove the '\n' char at the end
                 message = message[:len(message)-1]
-                fmt.Printf("")
             }
             
             split_message := strings.Split(message, " ")
@@ -403,6 +406,118 @@ func listenGetPort() {
                     log.Printf("GETPORT Reply for message :%s is %s \n",message,reply)
                     fmt.Fprintf(conn, reply)
                     fmt.Printf("Sent a reply %s\n", reply)
+
+            }
+        }
+    }
+}
+
+
+func listenPutPort() {
+    ln, err := net.Listen("tcp", ":" + strconv.Itoa(putPort))
+    if err != nil {
+        fmt.Println(err)
+    }
+
+    // fmt.Printf("Started listening on Get port %d\n", getPort)
+    log.Printf("Started listening on PUTPORT port %d\n", getPort)
+
+    for {
+        if myIP == masterIP {
+
+            conn, err := ln.Accept()
+            if err != nil{
+                fmt.Println(err)
+            }
+            log.Printf("[ME %d] Accepted a new connection on the PUTPORT port %d\n", myVid, getPort)     
+
+            conn_reader := bufio.NewReader(conn)
+            message, _ := conn_reader.ReadString('\n')
+            if len(message) > 0 {
+                // remove the '\n' char at the end
+                message = message[:len(message)-1]
+                // fmt.Printf("")
+            }
+            
+            split_message := strings.Split(message, " ")
+            message_type := split_message[0]
+
+            switch message_type {
+                ////
+                case "put":
+                /*
+                    "put sdfsFilename sender"
+
+                    `sender` node wants to put (insert/update) `sdfsFilename` file
+                    master must resolve write-write conflicts if any and reply with 
+                    a list of nodes (selected randomly for insert or from fileMap for update).
+                    Uses conflictMap to store last executed put for sdfsFilename.
+                */
+
+                fmt.Printf("Received a put request %s\n", message)
+
+                sdfsFilename := split_message[1]
+                sender, _ := strconv.Atoi(split_message[2])
+
+                var newConflict conflictData
+                newConflict.id = sender
+                newConflict.timestamp = time.Now().Unix()
+                conflictMap[sdfsFilename] = &newConflict
+
+                // _, ok := conflictMap[sdfsFilename]
+                // if ok {
+                //     fmt.Printf("file already in conflictMap\n")
+                //     var newConflict conflictData
+                //     newConflict.id = sender
+                //     newConflict.timestamp = time.Now().Unix()
+                //     conflictMap[sdfsFilename] = &newConflict
+                // } else{
+                //     fmt.Printf("file not in conflictMap\n")
+                //     // sdfsFilename not in conflictMap 
+                //     var newConflict conflictData
+                //     newConflict.id = sender
+                //     newConflict.timestamp = time.Now().Unix()
+                //     conflictMap[sdfsFilename] = &newConflict
+                // }
+
+                /*
+                    Congratulations, your put request has cleared all hurdles
+                    processing the put request now
+                */
+
+                _, ok := fileMap[sdfsFilename]
+                if ok {
+                    fmt.Printf("file already exists, sending old nodes\n")
+                    var nodes_str = ""
+                    for _, node := range(fileMap[sdfsFilename].nodeIds) {
+                        nodes_str = nodes_str + strconv.Itoa(node) + ","
+                    }
+                    if len(nodes_str) > 0{
+                        nodes_str = nodes_str[:len(nodes_str)-1]
+                    }
+
+                    reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
+                    fmt.Fprintf(conn, reply)
+
+                } else {
+                    fmt.Printf("file new, send new nodes\n");
+                    var excludelist = []int{sender}
+                    // get three random nodes other than the sender itself
+                    nodes := getRandomNodes(excludelist, 3)
+                    nodes = append(nodes, sender)
+
+                    var nodes_str = ""
+                    for _, node := range(nodes) {
+                        nodes_str = nodes_str + strconv.Itoa(node) + ","
+                    }
+                    if len(nodes_str) > 0 {
+                        nodes_str = nodes_str[:len(nodes_str)-1]
+                    }
+
+                    reply := fmt.Sprintf("putreply %s %s\n", sdfsFilename, nodes_str)
+                    fmt.Printf("Sending this reply for the put request %s\n", reply)
+                    fmt.Fprintf(conn, reply)
+                }
 
             }
         }
@@ -2181,6 +2296,50 @@ func executeCommand(command string, userReader *bufio.Reader) {
             fmt.Printf("%s",reply)
         }
 
+    // case "juice":
+
+    //     if myIP != masterIP {
+    //         fmt.Printf("Run Juice command from master\n")
+    //         break
+    //     }
+
+    //     if (mapleRunning || juiceRunning) { 
+    //         fmt.Printf("Already Running Maple-Juice\n")
+    //         break
+    //     }
+
+    //     juiceInitTime = time.Now()
+
+    //     juiceRunning = true
+
+    //     juiceExeFile := split_command[1]
+    //     numJuices, err := strconv.Atoi(split_command[2])
+    //     if err != nil {
+    //         fmt.Printf("Could not convert numJuices %s to int\n", split_command[2])
+    //     }
+
+    //     aliveNodeCount := getAliveNodeCount()
+    //     numMaples = min(numJuices, aliveNodeCount-1)
+    //     fmt.Printf("num of juices %d\n", numJuices)
+
+    //     sdfsJuiceInterPrefix = split_command[3]
+    //     sdfsDestName = split_command[4]
+
+    //     var deleteInput bool 
+    //     if split_command[5] == "1" {
+    //         deleteInput = true
+    //     } else {
+    //         deleteInput = false
+    //     }
+
+    //     sdfsMapleExe = mapleExeFile
+    //     PutFileWrapper(mapleExeFile, sdfsMapleExe, conn)
+    //     fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
+
+
+
+
+
     case "maple":
         /*
         maple maple_exe num_maples sdfs_intermediate sdfs_input
@@ -2191,8 +2350,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
             break
         }
         // clear all the maple related maps
-        if mapleRunning{
-            fmt.Printf("Already Running Maple\n")
+        if (mapleRunning || juiceRunning) {
+            fmt.Printf("Already Running Maple-Juice\n")
             break
         }
 

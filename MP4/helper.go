@@ -130,6 +130,92 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
 }
 
+func PutFileWrapper2(localFilename string, sdfsFilename string) (bool) {
+    fmt.Printf("Inside put file wrapper for file %s\n", localFilename)
+
+    _, err := os.Stat(local_dir + localFilename)
+    if os.IsNotExist(err) {
+        fmt.Printf("Got a put for %s, but the file does not exist\n", localFilename)
+        log.Printf("[ME %d] Got a put for %s, but the file does not exist\n", myVid, localFilename)
+        return false
+    }
+
+    timeout := 20 * time.Second
+    acquireConn()
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(putPort), timeout)
+    if err != nil {
+        log.Printf("[ME %d] Unable to connect with the master PUTPORT ip=%s port=%d", myVid, masterIP, putPort)
+        releaseConn()
+        return false
+    }
+
+    master_command := fmt.Sprintf("put %s %d\n", sdfsFilename, myVid)
+    fmt.Fprintf(conn, master_command)
+
+    fmt.Printf("Sent the put request to master\n")
+
+    reader := bufio.NewReader(conn) // Master response
+    reply, err := reader.ReadString('\n')
+    if err != nil{
+        log.Printf(" Can't move forward with put reqest")
+        conn.Close()
+        releaseConn()
+        return false // free up the user request
+    }
+    reply = reply[:len(reply)-1]
+    fmt.Printf("Master reply for put from PUTPORT: %s\n", reply)
+    split_reply := strings.Split(reply, " ")
+    
+    conn.Close()
+    releaseConn()
+
+    nodeIds_str := strings.Split(split_reply[2], ",")
+    nodeIds := []int{}
+    for _, node_str := range nodeIds_str {
+        node, err := strconv.Atoi(node_str)
+        if err != nil {
+            panic(err)
+            // break // Free up the user 
+        }
+        nodeIds = append(nodeIds, node)
+    }
+
+    var wg sync.WaitGroup
+    wg.Add(4)
+
+    LocdoneList:= []int{}
+    myChan := make(chan int , 4)
+
+    fmt.Printf("Sending file to %v\n", nodeIds)
+
+    for _, node := range nodeIds {
+        // connguard <- struct{}{}
+        go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds,myChan,2)
+    }
+
+    wg.Wait()
+    for i:= 0;i<4;i++{
+        newVal := <-myChan
+        if newVal < 0 {
+            continue
+        } else {
+            LocdoneList = append(LocdoneList,newVal)
+        }
+    }
+
+    doneList_str := list2String(LocdoneList)
+    if len(LocdoneList) > 0{
+        fmt.Printf("Send ack to master PutFileWrapper2\n")
+        sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+        return true
+    } else {
+        fmt.Printf("Can't Finish Put request for %d\n",sdfsFilename)
+        return false
+    }
+}
+
+
+
 func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     fmt.Printf("Inside put file wrapper for file %s\n", localFilename)
 
@@ -616,7 +702,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         keyStatus[key] = FAILED
         return
     }
-    
+
     for _, mapleId := range mapleIds {
         // each record is mapleId:nodeId
         line := fmt.Sprintf("%d:%d", mapleId, mapleId2Node[mapleId])
@@ -698,40 +784,49 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
 
 
-    timeout := 20 * time.Second
-    acquireConn()
-    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
-    if err != nil {
-        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+    // timeout := 20 * time.Second
+    // acquireConn()
+    // conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    // if err != nil {
+    //     log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+    //     releaseConn()
+    //     return
+    // }
+
+    // PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
+    // conn.Close()
+    // releaseConn()
+
+    if PutFileWrapper2(outFilename, sdfsInterPrefix + "_" + key) {
+        acquireConn()
+
+        timeout := 20 * time.Second
+
+
+        conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(mapleJuicePort), timeout)
+          if err != nil {
+            log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
+            fmt.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
+
+            // should not close the connection if err-ed; gives seg fault
+            // conn.Close()
+            releaseConn()
+            return
+        }
+        message := fmt.Sprintf("keyack %s %d\n", key,myVid)
+        fmt.Printf("Sending %s\n",message)
+        log.Printf("Sending %s\n",message)
+        fmt.Fprintf(conn, message)
+        conn.Close()
         releaseConn()
+
+        fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", key)
+        fmt.Printf("Appended the file for %s key\n", key)
         return
     }
 
-    PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
-    conn.Close()
-    releaseConn()
     // send an ack to the master
-    acquireConn()
-    conn, err = net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(mapleJuicePort), timeout)
-      if err != nil {
-        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
-        fmt.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
-
-        // should not close the connection if err-ed; gives seg fault
-        // conn.Close()
-        releaseConn()
-        return
-    }
-    message := fmt.Sprintf("keyack %s %d\n", key,myVid)
-    fmt.Printf("Sending %s\n",message)
-    log.Printf("Sending %s\n",message)
-    fmt.Fprintf(conn, message)
-    conn.Close()
-    releaseConn()
-
-    fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", key)
-    fmt.Printf("Appended the file for %s key\n", key)
-    return
+    
     // put the appended file into sdfs and notify master
 }
 
