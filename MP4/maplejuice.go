@@ -199,8 +199,8 @@ func listenMapleJuicePort() {
                 sender,_ := strconv.Atoi(split_message[2])
                 if juiceCompMap[juiceId] != DONE{
                     juiceCount = juiceCount -1
-                    log.Printf("JUICE RECVD %d from %d , remaining keys %d \n",juiceId,sender,keyCount)
-                    fmt.Printf("JUICE RECVD %d from %d, remaining keys %d \n",juiceId,sender,keyCount)
+                    log.Printf("JUICE RECVD %d from %d , remaining keys %d \n",juiceId,sender,juiceCount)
+                    fmt.Printf("JUICE RECVD %d from %d, remaining keys %d \n",juiceId,sender,juiceCount)
                 }
                 // juiceCompMap[juiceId] = DONE
                 
