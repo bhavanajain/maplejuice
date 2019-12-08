@@ -93,7 +93,7 @@ var sdfsInterPrefix string
 // var newguard = make(chan struct{}, maxGoroutines)
 // var connguard = make(chan struct{}, 256)
 // var testguard = make(chan struct{}, 64)
-var connTokensCount = 600
+var connTokensCount = 100
 
 var connTokens = make(chan bool, connTokensCount)
 
