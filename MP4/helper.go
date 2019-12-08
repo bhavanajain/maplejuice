@@ -659,8 +659,8 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
     dataFileList := []string{}
 
-    fmt.Printf("[conn explosion check] before *KEYAGGR* loop  %d\n", activeConnCount)
-    log.Printf("[conn explosion check] before *KEYAGGR* loop  %d\n", activeConnCount)
+    fmt.Printf("[conn explosion check] before *KEYAGGR* %s loop  %d\n", key, activeConnCount)
+    log.Printf("[conn explosion check] before *KEYAGGR* %s loop  %d\n", key, activeConnCount)
 
 
     for _, nodeInfo := range(nodeInfoList) {
@@ -683,8 +683,8 @@ func KeyAggregation(key string, nodeInfoList []string) {
         }
     }
 
-    fmt.Printf("[conn explosion check] after *KEYAGGR* loop  %d\n", activeConnCount)
-    log.Printf("[conn explosion check] before *KEYAGGR* loop  %d\n", activeConnCount)
+    fmt.Printf("[conn explosion check] after *KEYAGGR* %s loop  %d\n", key, activeConnCount)
+    log.Printf("[conn explosion check] after *KEYAGGR* %s loop  %d\n", key, activeConnCount)
 
     fmt.Printf("Got all files for key %s aggregation\n", key)
 
