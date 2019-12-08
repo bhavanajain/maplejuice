@@ -729,7 +729,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
         releaseFile()
-        keyStatus[key] = FAILED
+        // keyStatus[key] = FAILED
         return
     }
 
@@ -1190,6 +1190,7 @@ func JuiceProcess(){
     log.Printf("[ME %d] Started the Juice Process",myVid)
     fmt.Printf("[ME %d] Started the Juice Process",myVid)
     for{
+        <- juiceToken
         process := false
         mutex.Lock()
         log.Printf("[ME %d] Got the LOCK Juice Process",myVid)

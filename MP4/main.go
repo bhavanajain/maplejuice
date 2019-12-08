@@ -47,6 +47,7 @@ func distributedFileSystem() {
 
         go HandleFileReplication()
         go keyRerunHandler()
+        go JuiceRerunHandler()
     } else {
         // go listenFileTransferPort()
         // go scanCommands()
