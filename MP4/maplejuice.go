@@ -2702,11 +2702,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
                         node2juiceJob[currNode] = &jobnode
                     }
-                    acquireParallel()
-                    go func(nodeID int, juiceId int, exeFile string, juicefile string) {
-                        sendJuiceInfo(nodeID,juiceId,exeFile,juicefile)
-                        releaseParallel()
-                    }(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
+                    // // acquireParallel()
+                    // go func(nodeID int, juiceId int, exeFile string, juicefile string) {
+                    //     sendJuiceInfo(nodeID,juiceId,exeFile,juicefile)
+                    //     // releaseParallel()
+                    // }(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
+                    sendJuiceInfo(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
      
                     juiceIdx = juiceIdx + 1
                     if juiceIdx == len(juiceFiles) {
