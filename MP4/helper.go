@@ -131,7 +131,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 }
 
 func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
-    fmt.Printf("Inside put file wrapper\n")
+    fmt.Printf("Inside put file wrapper for file %s\n", localFilename)
 
     _, err := os.Stat(local_dir + localFilename)
     if os.IsNotExist(err) {
