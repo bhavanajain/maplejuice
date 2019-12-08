@@ -193,9 +193,9 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     wg.Wait()
     for i:= 0;i<4;i++{
         newVal := <-myChan
-        if newVal < 0{
+        if newVal < 0 {
             continue
-        }else{
+        } else {
             LocdoneList = append(LocdoneList,newVal)
         }
     }
@@ -204,7 +204,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     if len(LocdoneList) > 0{
         fmt.Printf("Send ack to master")
         sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
-    }else{
+    } else {
         fmt.Printf("Can't Finish Put request for %d\n",sdfsFilename)
     }
 
