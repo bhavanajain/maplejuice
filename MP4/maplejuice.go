@@ -1017,6 +1017,7 @@ func listenFileTransferPort() {
 
                 mutex.Lock()
                 JuiceQueue = append(JuiceQueue,juiceInp)
+                fmt.Printf("The Juice JuiceQueue is %v \n",JuiceQueue)
                 mutex.Unlock()
 
 
