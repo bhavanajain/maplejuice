@@ -17,6 +17,8 @@ import (
 )
 
 
+
+
 func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile string) {
 	timeout := 20 * time.Second
 
@@ -42,6 +44,33 @@ func sendMapleInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
     // releaseConn()
     return
 }
+
+func sendJuiceInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile string) {
+    timeout := 20 * time.Second
+
+    ip := memberMap[nodeId].ip
+    port := fileTransferPort
+
+    acquireConn()
+    conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
+    if err != nil {
+        log.Printf("[ME %d] Unable to dial a connection to %d (to send maple task for %s)\n", myVid, nodeId, sdfsMapleExe)
+        releaseConn()
+
+        return
+    }
+    defer releaseConn()
+    defer conn.Close()
+
+
+    message := fmt.Sprintf("runjuice %d %s %s", mapleId, sdfsMapleExe, inputFile)
+    // fmt.Printf("%s\n", message)
+    padded_message := fillString(message, messageLength)
+    conn.Write([]byte(padded_message))
+    // releaseConn()
+    return
+}
+
 
 func getFileWrapper(sdfsFilename string, localFilename string) bool {
     fmt.Printf("Inside get file wrapper\n")
