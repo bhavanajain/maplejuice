@@ -270,7 +270,11 @@ func listenMapleJuicePort() {
                 }
 
             case "keyack":
+
                 key := split_message[1]
+                if keyStatus[key] == DONE{
+                    break
+                }
                 sender,_ := strconv.Atoi(split_message[2])
                 if keyStatus[key] != DONE{
                     keyCount = keyCount -1
@@ -327,7 +331,7 @@ func listenMapleJuicePort() {
                     elapsed := time.Since(mapleInitTime)
                     fmt.Printf("Time taken for maple to finish %s\n", elapsed)
 
-                    os.Exit(1)
+                    // os.Exit(1)
                     
                 }
 
