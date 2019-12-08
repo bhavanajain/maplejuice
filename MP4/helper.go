@@ -658,6 +658,11 @@ func KeyAggregation(key string, nodeInfoList []string) {
     ch := make(chan bool, len(nodeInfoList))
 
     dataFileList := []string{}
+
+    fmt.Printf("[conn explosion check] before *KEYAGGR* loop  %d\n", activeConnCount)
+    log.Printf("[conn explosion check] before *KEYAGGR* loop  %d\n", activeConnCount)
+
+
     for _, nodeInfo := range(nodeInfoList) {
          
         splitNodeInfo:= strings.Split(nodeInfo, ":")
@@ -677,6 +682,9 @@ func KeyAggregation(key string, nodeInfoList []string) {
             return
         }
     }
+
+    fmt.Printf("[conn explosion check] after *KEYAGGR* loop  %d\n", activeConnCount)
+    log.Printf("[conn explosion check] before *KEYAGGR* loop  %d\n", activeConnCount)
 
     fmt.Printf("Got all files for key %s aggregation\n", key)
 
@@ -731,10 +739,11 @@ func KeyAggregation(key string, nodeInfoList []string) {
 func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch chan<- bool, count int) {
 
     // get file 
-    if count <= 0{
+    if count <= 0 {
         ch <- false
         return
     }
+
     if destNodeId == myVid {
         success := copyFile(destFilePath, localFilePath)
         ch <- success
@@ -746,17 +755,17 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 
         return
     }
-    if !memberMap[destNodeId].alive{
+
+    if !memberMap[destNodeId].alive {
         ch <- false
-        // releaseConn()
-
         return
-
     }
+
     timeout := time.Duration(20) * time.Second
 
     ip := memberMap[destNodeId].ip
     port := fileTransferPort
+
     acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
@@ -766,7 +775,9 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // conn.Close()
         releaseConn()
         // connguard <- struct{}{}
+
         time.Sleep(10 * time.Millisecond)
+
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -789,22 +800,23 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // releaseConn()
         // connguard <- struct{}{}
         time.Sleep(10 * time.Millisecond)
-        go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
+        go getDirFile(destNodeId, destFilePath, localFilePath, ch, count-1)
         return
     }
-    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
 
+    fileSize, _ := strconv.ParseInt(strings.Trim(string(bufferFileSize), filler), 10, 64)
     log.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
+
     // fmt.Printf("[ME %d] Incoming file size %d", myVid, fileSize)
     acquireFile()
-    activeFileNum = activeFileNum+1
-    fmt.Printf("The number of active Files %d \n",activeFileNum)
+    // activeFileNum = activeFileNum+1
+    // fmt.Printf("The number of active Files %d \n",activeFileNum)
     file, err := os.Create(localFilePath)
     if err != nil {
         log.Printf("[ME %d] Cannot create the local file %s", myVid, localFilePath) 
         // ch <- false
-        activeFileNum = activeFileNum-1
-        fmt.Printf("The number of active Files %d \n",activeFileNum)
+        // activeFileNum = activeFileNum-1
+        // fmt.Printf("The number of active Files %d \n",activeFileNum)
         // conn.Close()
         releaseFile()
         // releaseConn()
@@ -818,6 +830,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 
     var receivedBytes int64
     success := false
+
     for {
         if (fileSize - receivedBytes) < BUFFERSIZE {
             bytesW, err := io.CopyN(file, conn, (fileSize - receivedBytes))
@@ -840,11 +853,12 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
 
     if success {
         fmt.Printf("Received file %s\n", destFilePath)
-    }else{
+    } else {
         time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
+
     ch <- success
     // file.Close()
     // activeFileNum = activeFileNum-1
