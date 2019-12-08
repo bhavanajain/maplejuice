@@ -79,11 +79,15 @@ var keyTimeStamp = make(map[string]int64) // For rerun a key
 var workerNodes []int
 var mapleBarrier = false
 var mapleRunning = false
-// var juiceRunning = false
+var mapleInitTime time.Time
 var sdfsMapleExe string
 var mapleFiles []string
 var keyMapleIdMap = make(map[string][]int)
 // var failRerunMap = make(map[int]bool)
+
+// juice related
+var juiceRunning = false
+// var juiceInitTime
 
 
 var keyCount = 0
@@ -99,9 +103,8 @@ var connTokens = make(chan bool, connTokensCount)
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
 
-var parallelCount = 50
+var parallelCount = 100
 var parallelToken = make(chan bool, parallelCount)
-
 
 var activeFileNum = 0
 
@@ -117,7 +120,6 @@ var activeConnCount = 0
 var activeFileCount = 0
 var activeParallelCount = 0
 
-var mapleInitTime time.Time
 
 
 func listenMapleJuicePort() {
@@ -2181,6 +2183,50 @@ func executeCommand(command string, userReader *bufio.Reader) {
             fmt.Printf("%s",reply)
         }
 
+    // case "juice":
+
+    //     if myIP != masterIP {
+    //         fmt.Printf("Run Juice command from master\n")
+    //         break
+    //     }
+
+    //     if (mapleRunning || juiceRunning) { 
+    //         fmt.Printf("Already Running Maple-Juice\n")
+    //         break
+    //     }
+
+    //     juiceInitTime = time.Now()
+
+    //     juiceRunning = true
+
+    //     juiceExeFile := split_command[1]
+    //     numJuices, err := strconv.Atoi(split_command[2])
+    //     if err != nil {
+    //         fmt.Printf("Could not convert numJuices %s to int\n", split_command[2])
+    //     }
+
+    //     aliveNodeCount := getAliveNodeCount()
+    //     numMaples = min(numJuices, aliveNodeCount-1)
+    //     fmt.Printf("num of juices %d\n", numJuices)
+
+    //     sdfsJuiceInterPrefix = split_command[3]
+    //     sdfsDestName = split_command[4]
+
+    //     var deleteInput bool 
+    //     if split_command[5] == "1" {
+    //         deleteInput = true
+    //     } else {
+    //         deleteInput = false
+    //     }
+
+    //     sdfsMapleExe = mapleExeFile
+    //     PutFileWrapper(mapleExeFile, sdfsMapleExe, conn)
+    //     fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
+
+
+
+
+
     case "maple":
         /*
         maple maple_exe num_maples sdfs_intermediate sdfs_input
@@ -2191,8 +2237,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
             break
         }
         // clear all the maple related maps
-        if mapleRunning{
-            fmt.Printf("Already Running Maple\n")
+        if (mapleRunning || juiceRunning) {
+            fmt.Printf("Already Running Maple-Juice\n")
             break
         }
 
