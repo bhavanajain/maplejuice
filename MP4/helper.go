@@ -545,9 +545,7 @@ func AssembleKeyFiles() {
             keys = keys[:len(keys)-1]
 
             currNode := mapleId2Node[mapleId]
-            node2mapleJob[currNode].keysGenerate = append(node2mapleJob[currNode].keysGenerate,keys...)
-
-
+            node2mapleJob[currNode].keysGenerate = append(node2mapleJob[currNode].keysGenerate, keys...)
 
             for _, key := range keys {
                 _, ok := keyMapleIdMap[key]
@@ -557,7 +555,7 @@ func AssembleKeyFiles() {
                     keyMapleIdMap[key] = []int{mapleId}
                 }
             }
-            fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
+            // fmt.Printf("Keys for %d maple id: %v, len of keys = %d\n", mapleId, keys, len(keys))
             
         }
         // fmt.Printf("%v\n", keyMapleIdMap)
@@ -618,6 +616,7 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
         keyStatus[key] = FAILED
         return
     }
+    
     for _, mapleId := range mapleIds {
         // each record is mapleId:nodeId
         line := fmt.Sprintf("%d:%d", mapleId, mapleId2Node[mapleId])
