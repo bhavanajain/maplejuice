@@ -21,7 +21,8 @@ func distributedFileSystem() {
     os.MkdirAll(temp_dir, 0777)
     os.RemoveAll(maple_dir)
     os.MkdirAll(maple_dir, 0777)
-
+    os.RemoveAll(juice_dir)
+    os.MkdirAll(juice_dir, 0777)
 	for i:=0; i < connTokensCount; i++ {
 	    connTokens <- true
 	}
@@ -52,6 +53,7 @@ func distributedFileSystem() {
     }
     go listenFileTransferPort()
     go scanCommands()
+
 
 
     

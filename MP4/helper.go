@@ -1185,3 +1185,93 @@ func deleteMap(m map[interface{}]interface{}) {
 
 
 
+func JuiceProcess(){
+    for{
+        process := false
+        mutex.Lock()
+        var juiceKey string
+        if len(JuiceQueue) > 0{
+            juiceKey = JuiceQueue[0]
+            JuiceQueue = JuiceQueue[1:]
+            process = true
+        }
+        mutex.Unlock()
+        if process{
+            // Do the execute thing
+            acquireParallel()
+            go func (juiceKey string) {
+                juiceVal := strings.Split(juiceKey," ")
+                ExecuteJuice(juiceVal[0],juiceVal[1],juiceVal[2],juiceVal[3])
+                releaseParallel() 
+            }(juiceKey)
+        }
+
+    }
+}
+
+
+func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, juiceID string) {
+
+    err := os.Chmod(exeFile, 0777)
+    if err != nil {
+        fmt.Printf("%v\n", err)
+    }
+
+    if !getFileWrapper(inputFilePath, inputFilePath){
+        getFileWrapper(inputFilePath, inputFilePath)
+    }   
+
+
+    run_cmd := fmt.Sprintf("./%s -inputfile %s%s", exeFile, local_dir,inputFilePath)
+    fmt.Printf("Trying to run %s\n", run_cmd)
+    // acquireFile()
+    // activeFileNum = activeFileNum+1
+    // fmt.Printf("The number of active Files %d \n",activeFileNum)
+    // outfile, err := os.Create(outputFilePath)
+    out_cmd,err := exec.Command("sh","-c", run_cmd).Output()
+    // outfile, err := os.Create(outputFilePath)
+    if err != nil {
+        fmt.Printf("%v\n", err)
+        log.Printf("[Me %d]  Can't run juice\n",myVid)
+        // panic(err)
+    }
+
+    out_cmdStr := string(out_cmd)
+    fmt.Printf(" Output of Juice is %s \n",out_cmdStr)
+
+
+    fmt.Printf("[ME %d] Juice execution done for %s and file %s \n",myVid,juiceID,out_cmdStr)
+
+    // Send Key ack
+
+    acquireConn()
+
+    timeout := 20 * time.Second
+
+
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(mapleJuicePort), timeout)
+      if err != nil {
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
+        fmt.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, mapleJuicePort)
+
+        // should not close the connection if err-ed; gives seg fault
+        // conn.Close()
+        releaseConn()
+        return
+    }
+    message := fmt.Sprintf("keyJuice %s %d %s\n", juiceID , myVid, out_cmd)
+    fmt.Printf("Sending %s\n",message)
+    log.Printf("Sending %s\n",message)
+    fmt.Fprintf(conn, message)
+    conn.Close()
+    releaseConn()
+
+    fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", juiceID)
+    fmt.Printf("Appended the file for %s key\n", out_cmd)
+
+    // separate output into key specific files
+    // todo: extend to more than 1024 keys!!
+    
+}
+
+

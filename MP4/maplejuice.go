@@ -56,6 +56,8 @@ var local_dir = "local/"
 var shared_dir = "shared/"
 var temp_dir = "temp/"
 var maple_dir = "maple/"
+var juice_dir = "juice/"
+
 
 var replicatePeriod = 30
 
@@ -82,7 +84,7 @@ var mapleId2Node = make(map[int]int)
 var juiceId2Node = make(map[int]int)
 
 var mapleCompMap = make(map[int]bool)
-var juiceCompMap = make(map[int]bool)
+var juiceCompMap = make(map[int]int)
 
 var node2mapleJob = make(map[int]*mapleJob)
 var node2juiceJob = make(map[int]*juiceJob)
@@ -111,14 +113,17 @@ var keyJuiceIdMap = make(map[string][]int)
 
 var JuiceQueue []string
 var mutex = &sync.Mutex{}
+var fileMutex = &sync.Mutex{}
 // juice related
 
 // var juiceInitTime
 
+var sdfsDestJuiceName string
 
 var keyCount = 0
 // master + others
 var sdfsInterPrefix string
+var sdfsJuiceInterPrefix string
 
 // var newguard = make(chan struct{}, maxGoroutines)
 // var connguard = make(chan struct{}, 256)
@@ -177,6 +182,93 @@ func listenMapleJuicePort() {
             message_type := split_message[0]
 
             switch message_type {
+            case "keyJuice":
+                if !juiceRunning{
+                    break
+                }
+                juiceId,_ := strconv.Atoi(split_message[1])
+                if juiceCompMap[juiceId] == DONE{
+                    break
+                }
+
+                sender,_ := strconv.Atoi(split_message[2])
+                if juiceCompMap[juiceId] != DONE{
+                    keyCount = keyCount -1
+                    log.Printf("keyack RECVD %d from %d , remaining keys %d \n",juiceId,sender,keyCount)
+                    fmt.Printf("keyack RECVD %d from %d, remaining keys %d \n",juiceId,sender,keyCount)
+                }
+                // juiceCompMap[juiceId] = DONE
+                
+                juiceOutPut := split_message[3]
+
+                // Append in the file 
+                jFileName := fmt.Sprintf("%s%s.juice",juice_dir,sdfsDestJuiceName)
+                acquireFile()
+                tempFile, err := os.OpenFile(jFileName, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+                if err!= nil{
+                    fmt.Printf("Unable to open file for Writing %s \n",juiceOutPut)
+                    releaseFile()
+                    break
+                }
+                outline := fmt.Sprintf("%s\n",juiceOutPut)
+                tempFile.WriteString(outline)
+                tempFile.Close()
+                releaseFile()
+                juiceCompMap[juiceId] = DONE
+
+
+
+                fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", juiceId)
+
+                success := true
+                for tempKey := range juiceCompMap {
+                    if juiceCompMap[tempKey] != DONE {
+                        // fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
+                        success = false
+                        break
+                    }
+                }
+
+                if success {
+                    fmt.Printf("Juice task completed successfully\n")
+                    juiceRunning = false
+                    // clear all the data structures, maple, delete misc temp files
+                    // for tempKey := range(keyStatus) {
+                    //     fmt.Printf("%s ", tempKey)
+                    // }
+                    // fmt.Printf("\n")
+                    //Clean the data structure
+
+                    for k := range juiceId2Node {
+                        delete(juiceId2Node, k)
+                    }
+                    for k := range juiceCompMap{
+                        delete(juiceCompMap, k)
+                    }
+                    for k := range node2juiceJob {
+                        delete(node2juiceJob, k)
+                    }
+
+                    workerNodes = nil
+
+                    // mapleBarrier = false
+
+                    // for k := range(keyJuiceIdMap){
+                    //     delete(keyJuiceIdMap, k)
+                    // }
+
+                    // for k := range(keyStatus){
+                    //     delete(keyStatus, k)
+                    // }
+
+
+                    elapsed := time.Since(juiceInitTime)
+                    fmt.Printf("Time taken for maple to finish %s\n", elapsed)
+
+                    os.Exit(1)
+                    
+                }
+
             case "keyack":
                 key := split_message[1]
                 sender,_ := strconv.Atoi(split_message[2])
@@ -879,28 +971,45 @@ func listenFileTransferPort() {
 
                 sdfsJuiceExe := split_message[2]
                 localJuiceExe := sdfsJuiceExe
+                outputFilePath := fmt.Sprintf("%sJuice_%d.out", juice_dir, myVid)
                 // check 
                 if juiceRunning == false{
+                    juiceRunning = true
+                    acquireFile()
+                    outfile, err := os.Create(outputFilePath)
+                    if err != nil{
+                        fmt.Printf("Unable to create %s\n",outputFilePath)
+                        log.Printf("Unable to create %s\n",outputFilePath)
+                        releaseFile()
+                        break
+                    }
+                    outfile.Close()
+                    releaseFile()
+
                     if !getFileWrapper(sdfsJuiceExe, localJuiceExe){
                         getFileWrapper(sdfsJuiceExe, localJuiceExe)
-                    }     
+                    }
+
+                    go JuiceProcess()
+
                 }
+
 
                 fmt.Printf("Got the Juice exe, check my local folder\n");
 
-                // inputFile := split_message[3]
-                // localInputFile := inputFile
+                inputFile := split_message[3]
+                sdfsInputFile := inputFile
                 // if !getFileWrapper(inputFile, localInputFile){
                 //     getFileWrapper(inputFile, localInputFile)
                 // }
                 // fmt.Printf("I got the file %s %s\n", inputFile, localInputFile)
 
-                exeFile := fmt.Sprintf("local/%s", localMapleExe)
-                inputFilePath := fmt.Sprintf("local/%s", localInputFile)
+                exeFile := fmt.Sprintf("local/%s", localJuiceExe)
+                // inputFilePath := fmt.Sprintf("local/%s", localInputFile)
 
-                outputFilePath := fmt.Sprintf("%soutput_%d.tempout", maple_dir, mapleId)
+                // outputFilePath := fmt.Sprintf("%soutput_%d.tempout", juice_dir, juiceId)
 
-                juiceInp := fmt.Sprintf("%s %s %s %d",exeFile,inputFile,outputFilePath,juiceId)
+                juiceInp := fmt.Sprintf("%s %s %s %d",exeFile,sdfsInputFile,outputFilePath,juiceId)
 
                 mutex.Lock()
                 JuiceQueue = append(JuiceQueue,juiceInp)
@@ -2508,6 +2617,20 @@ func executeCommand(command string, userReader *bufio.Reader) {
             break
         }
 
+
+        sdfsDestJuiceName = split_command[4]
+        jFileName := fmt.Sprintf("%s%s.juice",juice_dir,sdfsDestJuiceName)
+        acquireFile()
+
+        juicefileO, err:= os.Create(jFileName)
+        if err != nil{
+            fmt.Printf("Unable to create Juice File %s\n",jFileName)
+            log.Printf("Unable to create Juice File %s\n",jFileName)
+            break
+        }
+        juicefileO.Close()
+        releaseFile()
+
         juiceInitTime = time.Now()
 
         juiceRunning = true
@@ -2518,11 +2641,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
             fmt.Printf("Could not convert numMaples %s to int\n", split_command[2])
         }
         aliveNodeCount := getAliveNodeCount()
-        numJuices = min(numMaples, aliveNodeCount - 1)
+        numJuices = min(numJuices, aliveNodeCount - 1)
         fmt.Printf("num of maples %d\n", numJuices)
 
         sdfsJuiceInterPrefix = split_command[3]
-        sdfsDestName := split_command[4]
+
+
 
         /*  ********** Will implement when required */
         // var deleteInput bool 
@@ -2532,9 +2656,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
         //     deleteInput = false
         // }
 
-        sdfsMapleExe = mapleExeFile
-        PutFileWrapper(mapleExeFile, sdfsMapleExe, conn)
-        fmt.Printf("Ran put file wrapper for %s %s\n", mapleExeFile, sdfsMapleExe)
+        sdfsMapleExe = juiceExeFile
+        PutFileWrapper(juiceExeFile, juiceExeFile, conn)
+        fmt.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, juiceExeFile)
 
         juiceFiles = []string{}
         for file := range fileMap {
@@ -2564,7 +2688,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
                 currNode := workerNodes[nodeIdx]
                 if currNode != 0 {
                     juiceId2Node[juiceIdx] = currNode
-                    juiceCompMap[juiceIdx] = false
+                    juiceCompMap[juiceIdx] = ONGOING
 
                     _, ok := node2juiceJob[currNode]
                     if ok {
@@ -2584,7 +2708,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
                     }(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
      
                     juiceIdx = juiceIdx + 1
-                    if juiceIdx == len(juiceIdx) {
+                    if juiceIdx == len(juiceFiles) {
                         break
                     }
                 }
@@ -3101,28 +3225,6 @@ func LeaderHandler( subject int, newPort int) {
 }
 
 
-func JuiceProcess(){
-    for{
-        process := false
-        mutex.Lock()
-        if len(JuiceQueue) > 0{
-            juiceKey := JuiceQueue[0]
-            JuiceQueue = JuiceQueue[1:]
-            process = true
-        }
-        mutex.Unlock()
-        if process{
-            // Do the execute thing
-            acquireParallel()
-            go func () {
-
-                ExecuteCommand()
-                releaseParallel() 
-            }()
-        }
-
-    }
-}
 
 
 func keyRerunHandler(){
