@@ -1187,6 +1187,8 @@ func deleteMap(m map[interface{}]interface{}) {
 
 
 func JuiceProcess(){
+    log.Printf("[ME %d] Started the Juice Process",myVid)
+    fmt.Printf("[ME %d] Started the Juice Process",myVid)
     for{
         process := false
         mutex.Lock()
