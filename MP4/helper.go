@@ -1213,7 +1213,7 @@ func JuiceProcess(){
 
 func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, juiceID string) {
 
-    fmt.Printf("Inside the execute Juice for %s\n",inputFilePath)
+    fmt.Printf("Inside the execute Juice for %s %s %s %s\n",exeFile,inputFilePath,outputFilePath,juiceID)
     err := os.Chmod(exeFile, 0777)
     if err != nil {
         fmt.Printf("%v\n", err)
