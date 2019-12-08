@@ -51,9 +51,9 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     // Create a connection to main to ask for the file
 	timeout := 20 * time.Second
     acquireConn()
-    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(masterPort), timeout)
+    conn, err := net.DialTimeout("tcp", masterIP + ":" + strconv.Itoa(getPort), timeout)
     if err != nil {
-        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, masterPort)
+        log.Printf("[ME %d] Unable to connect with the master ip=%s port=%d", myVid, masterIP, getPort)
         // conn.Close()
         releaseConn()
         return false
@@ -68,8 +68,10 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     reader := bufio.NewReader(conn)
     reply, err := reader.ReadString('\n')
-    if err != nil || len(reply) == 0 {
+    if err != nil{
         log.Printf("[ME %d] Could not read reply from master (for get %s)\n", myVid, sdfsFilename)
+        fmt.Printf("[ME %d] Could not read reply from master (for get %s) Reply : %s\n", myVid, sdfsFilename,reply)
+
         conn.Close()
         releaseConn()
         return false
@@ -77,8 +79,9 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     conn.Close()    // [NEW]
     releaseConn()
+    fmt.Printf("get Request Reply from master : %s \n",reply)
     if len(reply) == 0{
-        fmt.Printf("Empty reply received fot file %s\n",sdfsFilename)
+        fmt.Printf("Empty reply received for file %s\n",sdfsFilename)
         return false
     }
     reply = reply[:len(reply)-1]
@@ -93,7 +96,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     nodeIds_str := strings.Split(split_reply[2], ",")
 
-    // fmt.Printf("nodestr: %v %d\n", nodeIds_str, len(nodeIds_str))
+    fmt.Printf("[Get File] nodestr: %v %d\n", nodeIds_str, len(nodeIds_str))
 
     nodeIds := []int{}
     for _, node_str := range nodeIds_str {
@@ -106,7 +109,9 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
 
     success := false
     for _, node := range(nodeIds) {
-        success = getFile(node, sdfsFilename, localFilename)
+        fmt.Printf("[ME %d] Trying to read file %s from %d \n",myVid,sdfsFilename,node)
+        log.Printf("[ME %d] Trying to read file %s from %d \n",myVid,sdfsFilename,node)
+        success = getFile(node, sdfsFilename, localFilename) // Modify here
         if success {
             fmt.Printf("File received!!! %s %s\n",sdfsFilename,localFilename)
             break
@@ -175,20 +180,33 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     var wg sync.WaitGroup
     wg.Add(4)
 
-    doneList = make([]int, 0, 4)
+    LocdoneList:= []int{}
+    myChan := make(chan int , 4)
 
     fmt.Printf("Sending file to %v\n", nodeIds)
 
     for _, node := range nodeIds {
         // connguard <- struct{}{}
-        go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds)
+        go sendFile(node, localFilename, sdfsFilename, &wg, nodeIds,myChan,2)
     }
 
     wg.Wait()
+    for i:= 0;i<4;i++{
+        newVal := <-myChan
+        if newVal < 0{
+            continue
+        }else{
+            LocdoneList = append(LocdoneList,newVal)
+        }
+    }
 
-    doneList_str := list2String(doneList)
-    fmt.Printf("Send ack to master")
-    sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+    doneList_str := list2String(LocdoneList)
+    if len(LocdoneList) > 0{
+        fmt.Printf("Send ack to master")
+        sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
+    }else{
+        fmt.Printf("Can't Finish Put request for %d\n",sdfsFilename)
+    }
 
     // elapsed := time.Since(initTime)
 
@@ -543,6 +561,7 @@ func AssembleKeyFiles() {
             
         }
         // fmt.Printf("%v\n", keyMapleIdMap)
+        keyCount = len(keyMapleIdMap)
     }
     
     // assign key processing to worker nodes
@@ -550,7 +569,7 @@ func AssembleKeyFiles() {
     nodeIdx := 0
     
     // testguard = make(chan struct{}, 64) // limitng the number
-    keyCount = len(keyMapleIdMap)
+    
     for key := range keyMapleIdMap {
         _, ok := keyStatus[key]
         if ok && (keyStatus[key] == DONE || keyStatus[key] == ONGOING) {
@@ -566,7 +585,12 @@ func AssembleKeyFiles() {
 
         node2mapleJob[currNode].keysAggregate = append(node2mapleJob[currNode].keysAggregate, key)
 
-        go ProcessKey(key, currNode, keyMapleIdMap[key])
+        // go ProcessKey(key, currNode, keyMapleIdMap[key])
+        acquireParallel() // would block if guard channel is already filled
+        go func(key string, respNode int, mapleIds []int) {
+            ProcessKey(key, respNode, mapleIds)
+            releaseParallel()
+        }(key, currNode, keyMapleIdMap[key])
     
         nodeIdx = (nodeIdx + 1) % len(workerNodes)
     }
@@ -576,6 +600,9 @@ func AssembleKeyFiles() {
 
 func ProcessKey(key string, respNode int, mapleIds []int) {
     keyStatus[key] = ONGOING
+
+    // Ensure only some work is given per node
+
     // newguard <- struct{}{}
     fmt.Printf("Inside process key: key %s, respNode %d, maple ids that have this key: %v\n", key, respNode, mapleIds)
 
@@ -588,7 +615,8 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
     if err != nil {
         fmt.Printf("Could not create %s file\n", keysFilename)
         releaseFile()
-        panic(err)
+        keyStatus[key] = FAILED
+        return
     }
     for _, mapleId := range mapleIds {
         // each record is mapleId:nodeId
@@ -625,6 +653,8 @@ func ProcessKey(key string, respNode int, mapleIds []int) {
 func KeyAggregation(key string, nodeInfoList []string) {
     // var wg sync.WaitGroup
     // wg.Add(len(nodeInfoList))
+    // acquireParallel()
+    // defer releaseParallel()
     ch := make(chan bool, len(nodeInfoList))
 
     dataFileList := []string{}
@@ -637,7 +667,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         dataFilePath := fmt.Sprintf("%soutput_%s_%s.out", maple_dir, mapleId_str, key)
         dataFileList = append(dataFileList, dataFilePath)
         // connguard <- struct{}{}
-        go getDirFile(nodeId, dataFilePath, dataFilePath, ch, 2)
+        go getDirFile(nodeId, dataFilePath, dataFilePath, ch, 3)
     }
     
     for i := 0; i < len(nodeInfoList); i++ {
@@ -653,7 +683,11 @@ func KeyAggregation(key string, nodeInfoList []string) {
     outFilename := fmt.Sprintf("%s_inter.info", key)
     outFilePath := fmt.Sprintf("%s%s", local_dir, outFilename)
     
-    AppendFiles(dataFileList, outFilePath)
+    statusUpdate:=AppendFiles(dataFileList, outFilePath,2)
+    if !statusUpdate{
+        fmt.Printf("Unable to append file for key %s \n",key)
+        return
+    }
 
 
 
@@ -681,7 +715,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         releaseConn()
         return
     }
-    message := fmt.Sprintf("keyack %s\n", key)
+    message := fmt.Sprintf("keyack %s %d\n", key,myVid)
     fmt.Printf("Sending %s\n",message)
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
@@ -690,7 +724,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
 
     fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", key)
     fmt.Printf("Appended the file for %s key\n", key)
-    
+    return
     // put the appended file into sdfs and notify master
 }
 
@@ -732,6 +766,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // conn.Close()
         releaseConn()
         // connguard <- struct{}{}
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -753,6 +788,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         // conn.Close()
         // releaseConn()
         // connguard <- struct{}{}
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -773,6 +809,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
         releaseFile()
         // releaseConn()
         // connguard <- struct{}{}
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -804,6 +841,7 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     if success {
         fmt.Printf("Received file %s\n", destFilePath)
     }else{
+        time.Sleep(10 * time.Millisecond)
         go getDirFile(destNodeId,destFilePath,localFilePath,ch,count-1)
         return
     }
@@ -817,7 +855,11 @@ func getDirFile(destNodeId int, destFilePath string, localFilePath string, ch ch
     return    
 }
 
-func AppendFiles(inputFilePaths []string, outFilePath string) {
+func AppendFiles(inputFilePaths []string, outFilePath string, tryCount int)(bool) {
+
+    if tryCount<=0{
+        return false
+    }
     acquireFile()
     // activeFileNum = activeFileNum+1
     // fmt.Printf("The number of active Files %d \n",activeFileNum)
@@ -825,7 +867,8 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
     if err != nil {
         fmt.Printf("Could not open %s file for appending\n", outFilePath)
         releaseFile()
-        panic(err)
+        return AppendFiles(inputFilePaths,outFilePath,tryCount-1)
+        // panic(err)
     }
 
     for _, inputfile := range inputFilePaths {
@@ -836,12 +879,17 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
         if err != nil {
             fmt.Printf("Could not open %s file for appending\n", inputfile)
             releaseFile()
-            panic(err)
+            releaseFile()// two files
+            return AppendFiles(inputFilePaths,outFilePath,tryCount-1)
+            // panic(err)
         } 
 
         _, err = io.Copy(outfile, fIn)
         if err != nil {
             fmt.Printf("Could not copy the file from %s to %s\n", inputfile, outFilePath)
+            releaseFile()
+            releaseFile()// two files
+            return AppendFiles(inputFilePaths,outFilePath,tryCount-1)
         }
         fIn.Close()
         // activeFileNum = activeFileNum-1
@@ -855,6 +903,8 @@ func AppendFiles(inputFilePaths []string, outFilePath string) {
     
     releaseFile()
     fmt.Printf("Merged all files %v\n", inputFilePaths)
+    return true
+
 
 }
 
@@ -877,7 +927,7 @@ func min(a int, b int) int {
     }
 }
 
-func removeFromList(l []int, target int) {
+func removeFromList(l []int, target int)([]int) {
     targetidx := -1
     for idx, elem := range l {
         if elem == target {
@@ -889,19 +939,24 @@ func removeFromList(l []int, target int) {
         l[targetidx] = l[len(l)-1]
         l = l[:len(l)-1]
     }
+    return l
     
 }
 
 func handleMapleFailure(subject int) {
 
+    log.Printf("handling MAPLE FALIURE for %d mapleRunning: %v\n", subject, mapleRunning)
 
     if mapleRunning {
         _, isNodeMaple := node2mapleJob[subject]
         if isNodeMaple {
             fmt.Printf("Rerunning the maple task for failed nodes %d \n",subject)
+            log.Printf("Rerunning the maple task for failed nodes %d \n",subject)
+
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that
+            workerNodes = removeFromList(workerNodes, subject)
             replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
             var jobnode mapleJob
             jobnode.assignedMapleIds = node2mapleJob[subject].assignedMapleIds
@@ -909,18 +964,26 @@ func handleMapleFailure(subject int) {
             jobnode.keysGenerate = node2mapleJob[subject].keysGenerate
             node2mapleJob[replacement] = &jobnode
 
-            removeFromList(workerNodes, subject)
+            
             workerNodes = append(workerNodes, replacement)
+            fmt.Printf("[ME %d] Worker node %v \n",myVid,workerNodes)
+            log.Printf("[ME %d] Worker node %v \n",myVid,workerNodes)
 
             if !mapleBarrier {
                 // re-run all the maple ids assigned to this node
-                assignedMapleIds := node2mapleJob[subject].assignedMapleIds
+                assignedMapleIds := node2mapleJob[replacement].assignedMapleIds
                 for _, mapleid := range(assignedMapleIds) {
                     mapleId2Node[mapleid] = replacement
                     mapleCompMap[mapleid] = false
-                    // connguard <- struct{}{}
-                    go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                    // connguard <- struct{}{}   
+                    acquireParallel() // would block if guard channel is already filled
+                    go func(node int, mapleID int, fname string, inpFile string) {
+                        sendMapleInfo(node, mapleID, fname,inpFile)
+                        releaseParallel()
+                    }(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])          
+                    // go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                 }
+                return
             } else {
                 mapleAgain := false
                 for _, keyGen := range node2mapleJob[subject].keysGenerate {
@@ -932,32 +995,47 @@ func handleMapleFailure(subject int) {
 
                 if mapleAgain {
                     for _, keyGen := range node2mapleJob[subject].keysGenerate {
-                        keyStatus[keyGen] = FAILED
+                        if keyStatus[keyGen] != DONE{
+                            keyStatus[keyGen] = FAILED
+                        }
+                        
                     }
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
-                        keyStatus[keyAggr] = FAILED
+                        if keyStatus[keyAggr] != DONE{
+                            keyStatus[keyAggr] = FAILED
+                        }
+                        
                     }
                     mapleBarrier = false
-                    assignedMapleIds := node2mapleJob[subject].assignedMapleIds
+                    assignedMapleIds := node2mapleJob[replacement].assignedMapleIds
                     for _, mapleid := range(assignedMapleIds) {
+                        mapleId2Node[mapleid] = replacement
+                        mapleCompMap[mapleid] = false
+
                         // connguard <- struct{}{}
-                        go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                        acquireParallel() // would block if guard channel is already filled
+                        go func(node int, mapleID int, fname string, inpFile string) {
+                            sendMapleInfo(node, mapleID, fname,inpFile)
+                            releaseParallel()
+                        }(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
+                        // go sendMapleInfo(replacement, mapleid, sdfsMapleExe, mapleFiles[mapleid])
                     }
                 } else{
                     // testguard := make(chan struct{}, 50)
                     for _, keyAggr := range node2mapleJob[subject].keysAggregate {
                         if keyStatus[keyAggr] != DONE {
                             keyStatus[keyAggr] = FAILED
-                            // testguard <- struct{}{} // would block if guard channel is already filled
-                            // go func(key string, respNode int, mapleIds []int) {
-                            //      ProcessKey(key, respNode, mapleIds)
-                            //     <-testguard
-                            // }(keyAggr, replacement, keyMapleIdMap[keyAggr])
-                            go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            acquireParallel() // would block if guard channel is already filled
+                            go func(key string, respNode int, mapleIds []int) {
+                                ProcessKey(key, respNode, mapleIds)
+                                releaseParallel()
+                            }(keyAggr, replacement, keyMapleIdMap[keyAggr])
+                            // go ProcessKey(keyAggr, replacement, keyMapleIdMap[keyAggr])
                         }  
                     } 
                 }
             }
+            return
         }
     }
 }

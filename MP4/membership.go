@@ -151,13 +151,31 @@ func checkChildren() {
 		for child_vid, cnode := range children {
 			if currTime - cnode.timestamp > 2 * heartbeatPeriod {
 				log.Printf("[ME %d] No heartbeat from %d since two heartbeat periods", myVid, child_vid)
-				suspects = append(suspects, child_vid)
+				if !elemExist(suspects,child_vid){
+					suspects = append(suspects, child_vid)
+				}
 				go checkSuspicion(child_vid)
 			}
 		}
 		time.Sleep(time.Duration(heartbeatPeriod) * time.Second)
 	}
 	return
+}
+
+func elemExist(l []int, e int)(bool){
+	idx := -1
+	for i,elem := range l{
+		if elem == e{
+			idx = i
+			break
+		}
+	}
+	if idx == -1{
+		return false
+	}else{
+		return true
+	}
+
 }
 
 func checkSuspicion(vid int) {
@@ -189,6 +207,9 @@ func checkSuspicion(vid int) {
 	for i, suspect := range(suspects) {
 		if suspect == vid {
 			suspect_idx = i
+			if !memberMap[suspect].alive{
+				break
+			}
 			memberMap[suspect].alive = false
 			_, ok := children[vid]
 			if ok {
@@ -202,6 +223,7 @@ func checkSuspicion(vid int) {
 			updateMonitors()
 			if myIP == masterIP {
 				go replicateFiles(suspect) // Redistribute it's file
+				go handleMapleFailure(suspect)
 			}
 			if memberMap[vid].ip == masterIP{
 				go LeaderElection()
@@ -820,13 +842,23 @@ func listenOtherPort() (err error) {
 		case "LEAVE", "CRASH":
 			origin_time, _ := strconv.ParseInt(string(split_message[2]), 10, 64)
 
+			log.Printf("Inside switch-case, CRASH message origin time: %d eventTimeMap[subject]: %d\n", origin_time, eventTimeMap[subject])
+
+			// handlingErr := true 
+			// _,chk := memberMap[subject]
+			// if !chk{
+			// 	handlingErr = false
+			// }else if !memberMap[subject].alive{
+			// 	handlingErr = false
+			// }
+
 			_, ok := eventTimeMap[subject]
 
 			if (!ok || eventTimeMap[subject] < origin_time) {
-
-				fmt.Printf("Processing CRASH for %d\n", subject)
-
 				eventTimeMap[subject] = origin_time
+				fmt.Printf("Processing CRASH for %d\n", subject)
+				log.Printf("Processing CRASH for %d\n", subject)
+
 				disseminate(message)
 
 				_, ok := memberMap[subject]
@@ -853,13 +885,16 @@ func listenOtherPort() (err error) {
 					log.Printf("[ME %d] Processed %s for %d, maxID = %d", myVid, message_type, subject, maxID)
 
 					// Check the files belonging to the dead node and redistribute the files
+
+					// log.Printf("Handling error for %d, HANDLE ERR %v\n", subject, handlingErr)
+
 					if myIP == masterIP {
 						go replicateFiles(subject)
 						// if map task is ongoing, rerun stuff
 						go handleMapleFailure(subject)
 					}
 
-					if memberMap[subject].ip == masterIP {
+					if memberMap[subject].ip == masterIP  {
 						go LeaderElection()
 					}
 					// This is for MP4

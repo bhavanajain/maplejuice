@@ -30,11 +30,18 @@ func distributedFileSystem() {
 	    fileTokens <- true
 	}
 
+	for i:=0; i < parallelCount; i++ {
+	    parallelToken <- true
+	}
 
     myIP := getmyIP()
     if myIP == masterIP {
         go listenMasterRequests()
         go listenMapleJuicePort()
+        
+        go listenAckPort()
+        go listenGetPort()
+
         go HandleFileReplication()
         go keyRerunHandler()
     } else {

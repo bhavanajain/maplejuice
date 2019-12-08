@@ -7,17 +7,21 @@ import (
 	"os"
 	"flag"
 	"io"
+	"regexp"
 )
 
-const alpha = "abcdefghijklmnopqrstuvwxyz"
-func alphaOnly(s string) bool {
-   for _, char := range s {  
-      if !strings.Contains(alpha, strings.ToLower(string(char))) {
-         return false
-      }
-   }
-   return true
-}
+// const alpha = "abcdefghijklmnopqrstuvwxyz"
+// func alphaOnly(s string) bool {
+//    for _, char := range s {  
+//       if !strings.Contains(alpha, strings.ToLower(string(char))) {
+//          return false
+//       }
+//    }
+//    return true
+// }
+
+var IsAlpha = regexp.MustCompile(`^[a-zA-Z]+$`).MatchString
+
 func main() {
 	inputFile := flag.String("inputfile", "", "path to the input file")
 	flag.Parse()
@@ -49,16 +53,20 @@ func main() {
 				if len(word) == 0 {
 					continue
 				}
-				if !alphaOnly(word){
+				resWord := strings.ToLower(word)
+				// if !alphaOnly(word){
+				// 	continue
+				// }
+				if !IsAlpha(resWord) {
 					continue
 				}
-				_, ok := wordCount[word]
+				_, ok := wordCount[resWord]
 				if ok {
-					wordCount[word] += 1
+					wordCount[resWord] += 1
 				} else {
-					if len(wordCount) < 1000 {
-						wordCount[word] = 1
-					}
+					// if len(wordCount) < 1000 {
+					wordCount[resWord] = 1
+					// }
 				}
 			}
 		}
