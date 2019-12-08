@@ -93,7 +93,7 @@ var sdfsInterPrefix string
 // var newguard = make(chan struct{}, maxGoroutines)
 // var connguard = make(chan struct{}, 256)
 // var testguard = make(chan struct{}, 64)
-var connTokensCount = 600
+var connTokensCount = 200
 var connTokens = make(chan bool, connTokensCount)
 
 var fileTokensCount = 3000
@@ -2809,7 +2809,7 @@ func keyRerunHandler(){
         if myIP == masterIP {
             for tempKey := range keyStatus {
                 if keyStatus[tempKey] != DONE {
-                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 60 {
+                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120 {
                         // rerun the key
                         fmt.Printf("Key Rerun : %s \n",tempKey)
                         log.Printf("Key Rerun : %s \n",tempKey)
