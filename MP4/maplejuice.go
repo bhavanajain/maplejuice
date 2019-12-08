@@ -973,11 +973,11 @@ func listenFileTransferPort() {
                         
                 juiceId, _ := strconv.Atoi(split_message[1])
 
-                sdfsJuiceExe := split_message[2]
+                sdfsJuiceExe = split_message[2]
                 localJuiceExe := sdfsJuiceExe
                 outputFilePath := fmt.Sprintf("%sJuice_%d.out", juice_dir, myVid)
                 // check 
-                if juiceRunning == false{
+                if !juiceRunning {
                     juiceRunning = true
                     acquireFile()
                     outfile, err := os.Create(outputFilePath)
@@ -2621,13 +2621,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
             break
         }
 
-
         sdfsDestJuiceName = split_command[4]
         jFileName := fmt.Sprintf("%s%s.juice",juice_dir,sdfsDestJuiceName)
-        acquireFile()
 
+        acquireFile()
         juicefileO, err:= os.Create(jFileName)
-        if err != nil{
+        if err != nil {
             fmt.Printf("Unable to create Juice File %s\n",jFileName)
             log.Printf("Unable to create Juice File %s\n",jFileName)
             break
@@ -2640,13 +2639,19 @@ func executeCommand(command string, userReader *bufio.Reader) {
         juiceRunning = true
 
         juiceExeFile := split_command[1]    // mapleExe should be in local
+        sdfsJuiceExe = juiceExeFile
+        PutFileWrapper(juiceExeFile, sdfsJuiceExe, conn)
+        fmt.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, sdfsJuiceExe)
+        log.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, sdfsJuiceExe)
+
+
         numJuices, err := strconv.Atoi(split_command[2])
         if err != nil {
-            fmt.Printf("Could not convert numMaples %s to int\n", split_command[2])
+            fmt.Printf("Could not convert numJucies %s to int\n", split_command[2])
         }
         aliveNodeCount := getAliveNodeCount()
         numJuices = min(numJuices, aliveNodeCount - 1)
-        fmt.Printf("num of maples %d\n", numJuices)
+        fmt.Printf("num of juices %d\n", numJuices)
 
         sdfsJuiceInterPrefix = split_command[3]
 
@@ -2660,28 +2665,20 @@ func executeCommand(command string, userReader *bufio.Reader) {
         //     deleteInput = false
         // }
 
-        sdfsMapleExe = juiceExeFile
-        PutFileWrapper(juiceExeFile, juiceExeFile, conn)
-        fmt.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, juiceExeFile)
-
+        
         juiceFiles = []string{}
         for file := range fileMap {
             if strings.Contains(file, sdfsJuiceInterPrefix) {
                 juiceFiles = append(juiceFiles, file)
             }
         }
-        fmt.Printf("Maple files %v\n", juiceFiles)
+        fmt.Printf("Juice files %v\n", juiceFiles)
         numJuices = min(numJuices, len(juiceFiles))
 
         workerNodes = getRandomNodes([]int{0}, numJuices)
+
         fmt.Printf("Juice Worker Nodes : %v \n",workerNodes)
         log.Printf("Juice Worker Nodes : %v \n",workerNodes)
-
-        // time.Sleep(2 * time.Second)
-
-        // fmt.Printf("Worker Nodes : %v \n",workerNodes)
-
-        /**/
 
         // This shoould be in go routine so that we can send requests peacefully
         go func () {
