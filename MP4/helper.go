@@ -1303,7 +1303,11 @@ func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, j
         releaseConn()
         return
     }
-    message := fmt.Sprintf("keyJuice %s %d %s\n", juiceID , myVid, out_cmd)
+
+    out_cmdStr = strings.Replace(out_cmdStr, " ", ",", -1)
+
+    message := fmt.Sprintf("keyJuice %s %d %s\n", juiceID , myVid, out_cmdStr)
+
     fmt.Printf("Sending %s\n",message)
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
