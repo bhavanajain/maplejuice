@@ -1199,11 +1199,11 @@ func JuiceProcess(){
         mutex.Unlock()
         if process{
             // Do the execute thing
-            acquireParallel()
+            // acquireParallel()
             go func (juiceKey string) {
                 juiceVal := strings.Split(juiceKey," ")
                 ExecuteJuice(juiceVal[0],juiceVal[1],juiceVal[2],juiceVal[3])
-                releaseParallel() 
+                // releaseParallel() 
             }(juiceKey)
         }
 
@@ -1213,6 +1213,7 @@ func JuiceProcess(){
 
 func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, juiceID string) {
 
+    fmt.Printf("Inside the execute Juice for %s\n",inputFilePath)
     err := os.Chmod(exeFile, 0777)
     if err != nil {
         fmt.Printf("%v\n", err)
@@ -1267,8 +1268,8 @@ func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, j
     conn.Close()
     releaseConn()
 
-    fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", juiceID)
-    fmt.Printf("Appended the file for %s key\n", out_cmd)
+    fmt.Printf("DAMN ========************======== JUICE KEYACK for %s\n", juiceID)
+    // fmt.Printf("Appended the file for %s key\n", out_cmd)
 
     // separate output into key specific files
     // todo: extend to more than 1024 keys!!
