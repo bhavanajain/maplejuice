@@ -1828,6 +1828,14 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 
     // connguard <- struct{}{}
     // fmt.Printf("[ME %d] Dialing ")
+
+    if nodeId == myVid{
+        // Get file from self
+        success := copyFile(shared_dir + sdfsFilename, local_dir + localFilename)
+        return success
+
+    }
+
     acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
@@ -2083,7 +2091,7 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
     return
 }
 
-var doneList = make([]int, 0, 4)
+// var doneList = make([]int, 0, 4)
 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int,ch chan<- int,tryCount int) {
 
@@ -2105,7 +2113,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename + "." + strconv.Itoa(nodeId))
 
         if success {
-            doneList = append(doneList, nodeId)
+            // doneList = append(doneList, nodeId)
             fmt.Printf("sent the file to %d\n", nodeId)
             ch <- nodeId
             wg.Done()
