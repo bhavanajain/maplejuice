@@ -205,10 +205,12 @@ func listenMapleJuicePort() {
                         delete(keyStatus, k)
                     }
 
-                    // os.Exit(1)
 
                     elapsed := time.Since(mapleInitTime)
                     fmt.Printf("Time taken for maple to finish %s\n", elapsed)
+
+                    os.Exit(1)
+                    
                 }
 
             }
