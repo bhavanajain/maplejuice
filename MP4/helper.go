@@ -1192,6 +1192,8 @@ func JuiceProcess(){
     for{
         process := false
         mutex.Lock()
+        log.Printf("[ME %d] Got the LOCK Juice Process",myVid)
+        fmt.Printf("[ME %d] Got the LOCK Juice Process",myVid)
         var juiceKey string
         if len(JuiceQueue) > 0{
             juiceKey = JuiceQueue[0]
