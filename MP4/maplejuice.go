@@ -94,7 +94,6 @@ var sdfsInterPrefix string
 // var connguard = make(chan struct{}, 256)
 // var testguard = make(chan struct{}, 64)
 var connTokensCount = 600
-
 var connTokens = make(chan bool, connTokensCount)
 
 var fileTokensCount = 3000
@@ -116,6 +115,8 @@ var getPort = 8077
 
 var activeConnCount = 0
 var activeFileCount = 0
+
+var mapleInitTime time.Time
 
 
 func listenMapleJuicePort() {
@@ -199,7 +200,10 @@ func listenMapleJuicePort() {
                         delete(keyStatus, k)
                     }
 
-                    os.Exit(1)
+                    // os.Exit(1)
+
+                    elapsed := time.Since(mapleInitTime)
+                    fmt.Printf("Time taken for maple to finish %s\n", elapsed)
                 }
 
             }
@@ -2187,6 +2191,9 @@ func executeCommand(command string, userReader *bufio.Reader) {
             fmt.Printf("Already Running Maple\n")
             break
         }
+
+        mapleInitTime = time.Now()
+
         mapleRunning = true
 
         mapleExeFile := split_command[1]    // mapleExe should be in local
