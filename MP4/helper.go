@@ -73,7 +73,7 @@ func sendJuiceInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
 
 
 func getFileWrapper(sdfsFilename string, localFilename string) bool {
-    fmt.Printf("Inside get file wrapper\n")
+    fmt.Printf("Inside get file wrapper: asking for sdfs: %s local: %s \n", sdfsFilename, localFilename)
     initTime := time.Now()
     // sdfsFilename := split_command[1]
     // localFilename := split_command[2]
@@ -317,6 +317,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
 
     doneList_str := list2String(LocdoneList)
     if len(LocdoneList) > 0{
+        log.Printf("[INSIDE PUTFILEWRAPPER] success putting %s %s\n", localFilename, sdfsFilename)
         fmt.Printf("Send ack to master")
         sendAcktoMaster("put", myVid, doneList_str, sdfsFilename)
     } else {
