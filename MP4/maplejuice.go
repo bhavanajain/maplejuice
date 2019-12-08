@@ -100,7 +100,7 @@ var connTokens = make(chan bool, connTokensCount)
 var fileTokensCount = 3000
 var fileTokens = make(chan bool, fileTokensCount)
 
-var parallelCount = 30
+var parallelCount = 50
 var parallelToken = make(chan bool, parallelCount)
 
 
