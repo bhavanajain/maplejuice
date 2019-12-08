@@ -1304,7 +1304,7 @@ func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, j
         return
     }
 
-    out_cmdStr = strings.Replace(out_cmdStr, " ", ",", -1)
+    out_cmdStr = strings.Replace(out_cmdStr," ", "-", -1)
 
     message := fmt.Sprintf("keyJuice %s %d %s\n", juiceID , myVid, out_cmdStr)
 
