@@ -7,20 +7,20 @@ import (
 	"os"
 	"flag"
 	"io"
-	"regexp"
+	// "regexp"
 )
 
-// const alpha = "abcdefghijklmnopqrstuvwxyz"
-// func alphaOnly(s string) bool {
-//    for _, char := range s {  
-//       if !strings.Contains(alpha, strings.ToLower(string(char))) {
-//          return false
-//       }
-//    }
-//    return true
-// }
+const alpha = "abcdefghijklmnopqrstuvwxyz"
+func alphaOnly(s string) bool {
+   for _, char := range s {  
+      if !strings.Contains(alpha, string(char)) {
+         return false
+      }
+   }
+   return true
+}
 
-var IsAlpha = regexp.MustCompile(`^[a-zA-Z]+$`).MatchString
+// var IsAlpha = regexp.MustCompile(`^[a-zA-Z]+$`).MatchString
 
 func main() {
 	inputFile := flag.String("inputfile", "", "path to the input file")
@@ -57,7 +57,7 @@ func main() {
 				// if !alphaOnly(word){
 				// 	continue
 				// }
-				if !IsAlpha(resWord) {
+				if !alphaOnly(resWord) {
 					continue
 				}
 				_, ok := wordCount[resWord]
