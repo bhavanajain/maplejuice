@@ -57,10 +57,8 @@ func main() {
 		}
 	}
 
-	// for word, count := range(wordCount) {
-	// 	fmt.Printf("%s %d\n", word, count)
-	// }
-
-	fmt.Printf("%+v\n", result)
+	for key, value := range (result) {
+		fmt.Printf("%s %d\n", word, count)
+	}
 
 }

@@ -85,6 +85,7 @@ var juiceId2Node = make(map[int]int)
 
 var mapleCompMap = make(map[int]bool)
 var juiceCompMap = make(map[int]int)
+var juiceTimeStamp = make(map[int]int64) 
 
 var node2mapleJob = make(map[int]*mapleJob)
 var node2juiceJob = make(map[int]*juiceJob)
@@ -121,6 +122,7 @@ var fileMutex = &sync.Mutex{}
 var sdfsDestJuiceName string
 
 var keyCount = 0
+var juiceCount = 0
 // master + others
 var sdfsInterPrefix string
 var sdfsJuiceInterPrefix string
@@ -136,6 +138,9 @@ var fileTokens = make(chan bool, fileTokensCount)
 
 var parallelCount = 100
 var parallelToken = make(chan bool, parallelCount)
+
+var juiceTokenCount = 20
+var juiceToken = make(chan bool,juiceTokenCount)
 
 var activeFileNum = 0
 
@@ -193,7 +198,7 @@ func listenMapleJuicePort() {
 
                 sender,_ := strconv.Atoi(split_message[2])
                 if juiceCompMap[juiceId] != DONE{
-                    keyCount = keyCount -1
+                    juiceCount = juiceCount -1
                     log.Printf("JUICE RECVD %d from %d , remaining keys %d \n",juiceId,sender,keyCount)
                     fmt.Printf("JUICE RECVD %d from %d, remaining keys %d \n",juiceId,sender,keyCount)
                 }
@@ -263,7 +268,7 @@ func listenMapleJuicePort() {
 
 
                     elapsed := time.Since(juiceInitTime)
-                    fmt.Printf("Time taken for maple to finish %s\n", elapsed)
+                    fmt.Printf("Time taken for Juice to finish %s\n", elapsed)
 
                     os.Exit(1)
                     
@@ -1019,6 +1024,9 @@ func listenFileTransferPort() {
                 JuiceQueue = append(JuiceQueue,juiceInp)
                 fmt.Printf("The Juice JuiceQueue is %v \n",JuiceQueue)
                 mutex.Unlock()
+                go func() {
+                    juiceToken <- true
+                }()
 
 
             case "movefile":
@@ -2676,6 +2684,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
         fmt.Printf("Juice files %v\n", juiceFiles)
         numJuices = min(numJuices, len(juiceFiles))
 
+        juiceCount = len(juiceFiles)
+
         workerNodes = getRandomNodes([]int{0}, numJuices)
 
         fmt.Printf("Juice Worker Nodes : %v \n",workerNodes)
@@ -2691,6 +2701,8 @@ func executeCommand(command string, userReader *bufio.Reader) {
                 if currNode != 0 {
                     juiceId2Node[juiceIdx] = currNode
                     juiceCompMap[juiceIdx] = ONGOING
+                    juiceTimeStamp[juiceIdx] = time.Now().Unix()
+
 
                     _, ok := node2juiceJob[currNode]
                     if ok {
@@ -3228,6 +3240,30 @@ func LeaderHandler( subject int, newPort int) {
 }
 
 
+func JuiceRerunHandler(){
+    for {
+        time.Sleep(time.Duration(replicatePeriod) * time.Second)
+
+        if myIP == masterIP {
+            for tempKey := range juiceCompMap {
+                if juiceCompMap[tempKey] == ONGOING {
+                    if  (time.Now().Unix() -  juiceTimeStamp[tempKey]) > 120 {
+                        // rerun the key
+                        fmt.Printf("Key Rerun : %s \n",tempKey)
+                        log.Printf("Key Rerun : %s \n",tempKey)
+
+                        // go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
+                        // acquireParallel() // would block if guard channel is already filled
+                        go func(nodeID int, juiceId int, JuiceExe string , inpFile string) {
+                            sendJuiceInfo(nodeID, juiceId, JuiceExe,inpFile)
+                            // releaseParallel()
+                        }(workerNodes[rand.Intn(len(workerNodes))], tempKey, sdfsJuiceExe,juiceFiles[tempKey])
+                    }
+                }
+            }
+        }
+    }
+} 
 
 
 func keyRerunHandler(){
@@ -3236,7 +3272,7 @@ func keyRerunHandler(){
 
         if myIP == masterIP {
             for tempKey := range keyStatus {
-                if keyStatus[tempKey] != DONE {
+                if keyStatus[tempKey] == ONGOING {
                     if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120 {
                         // rerun the key
                         fmt.Printf("Key Rerun : %s \n",tempKey)
