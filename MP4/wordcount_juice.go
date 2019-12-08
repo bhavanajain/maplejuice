@@ -58,7 +58,7 @@ func main() {
 	}
 
 	for key, value := range (result) {
-		fmt.Printf("%s %d\n", word, count)
+		fmt.Printf("%s %d\n", key, value)
 	}
 
 }
