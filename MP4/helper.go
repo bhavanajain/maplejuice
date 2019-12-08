@@ -1081,6 +1081,43 @@ func removeFromList(l []int, target int)([]int) {
     
 }
 
+
+
+func handleJuiceFaiure(subject int){
+    log.Printf("handling JUICE FALIURE for %d mapleRunning: %v\n", subject, juiceRunning)
+    fmt.Printf("handling JUICE FALIURE for %d mapleRunning: %v\n", subject, juiceRunning)
+    if juiceRunning{
+        _, isNodeJuice := node2juiceJob[subject]
+        if isNodeJuice{
+            workerNodes = removeFromList(workerNodes, subject)
+            replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            var jobnode juiceJob
+            jobnode.assignedJuiceIds = node2juiceJob[subject].assignedJuiceIds
+            jobnode.keysAggregate = node2mapleJob[subject].keysAggregate
+            node2juiceJob[replacement] = &jobnode
+            workerNodes = append(workerNodes, replacement)
+            fmt.Printf("[ME %d] Juice Worker node %v \n",myVid,workerNodes)
+            log.Printf("[ME %d] Juice Worker node %v \n",myVid,workerNodes)
+
+            asignedIds := node2juiceJob[replacement].assignedJuiceIds
+            for _, juiceid := range(asignedIds){
+                if juiceCompMap[juiceid] == DONE{
+                    continue
+                }
+                juiceId2Node[juiceid] = replacement
+                juiceCompMap[juiceid] = ONGOING
+                juiceTimeStamp[juiceid] = time.Now().Unix()
+                sendJuiceInfo(replacement,juiceid,sdfsJuiceExe,juiceFiles[juiceid])
+
+            }
+
+        }
+    }
+
+    return
+}
+
+
 func handleMapleFailure(subject int) {
 
     log.Printf("handling MAPLE FALIURE for %d mapleRunning: %v\n", subject, mapleRunning)
