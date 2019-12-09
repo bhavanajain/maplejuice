@@ -74,6 +74,7 @@ func sendJuiceInfo(nodeId int, mapleId int, sdfsMapleExe string, inputFile strin
 
 func getFileWrapper(sdfsFilename string, localFilename string) bool {
     fmt.Printf("Inside get file wrapper: asking for sdfs: %s local: %s \n", sdfsFilename, localFilename)
+    log.Printf("Inside get file wrapper: asking for sdfs: %s local: %s \n", sdfsFilename, localFilename)
     initTime := time.Now()
     // sdfsFilename := split_command[1]
     // localFilename := split_command[2]
@@ -93,6 +94,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     fmt.Fprintf(conn, master_command) // get the running 
 
     fmt.Printf("sent a get request %s to the master\n", master_command) 
+    log.Printf("sent a get request %s to the master\n", master_command) 
 
 
     reader := bufio.NewReader(conn)
@@ -109,6 +111,7 @@ func getFileWrapper(sdfsFilename string, localFilename string) bool {
     conn.Close()    // [NEW]
     releaseConn()
     fmt.Printf("get Request Reply from master : %s \n",reply)
+    log.Printf("get Request Reply from master : %s \n",reply)
     if len(reply) == 0{
         fmt.Printf("Empty reply received for file %s\n",sdfsFilename)
         return false
@@ -1291,6 +1294,7 @@ func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, j
 
 
     fmt.Printf("[ME %d] Juice execution done for %s and file %s \n",myVid,juiceID,out_cmdStr)
+    log.Printf("[ME %d] Juice execution done for %s and file %s \n",myVid,juiceID,out_cmdStr)
 
     // Send Key ack
 
