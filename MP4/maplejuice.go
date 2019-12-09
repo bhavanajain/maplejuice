@@ -91,6 +91,7 @@ var node2mapleJob = make(map[int]*mapleJob)
 var node2juiceJob = make(map[int]*juiceJob)
 
 var keyStatus = make(map[string]int)
+var keyDone = make(map[string]bool)
 var keyTimeStamp = make(map[string]int64) // For rerun a key
 var workerNodes []int
 
@@ -277,23 +278,24 @@ func listenMapleJuicePort() {
             case "keyack":
 
                 key := split_message[1]
-                if keyStatus[key] == DONE{
+                if keyDone[key]{
                     break
                 }
                 sender,_ := strconv.Atoi(split_message[2])
-                if keyStatus[key] != DONE{
+                if !keyDone[key]{
                     keyCount = keyCount -1
                     log.Printf("keyack RECVD %s from %d , remaining keys %d \n",key,sender,keyCount)
                     fmt.Printf("keyack RECVD %s from %d, remaining keys %d \n",key,sender,keyCount)
                 }
                 keyStatus[key] = DONE
+                keyDone[key] = true
                 
 
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
                 success := true
-                for tempKey := range keyStatus {
-                    if keyStatus[tempKey] != DONE {
+                for tempKey := range keyDone {
+                    if !keyDone[tempKey] {
                         // fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
                         success = false
                         break

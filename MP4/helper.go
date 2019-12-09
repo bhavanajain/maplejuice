@@ -667,6 +667,7 @@ func AssembleKeyFiles() {
             node2mapleJob[currNode].keysGenerate = append(node2mapleJob[currNode].keysGenerate, keys...)
 
             for _, key := range keys {
+                keyDone[key] = false
                 _, ok := keyMapleIdMap[key]
                 if ok {
                     keyMapleIdMap[key] = append(keyMapleIdMap[key], mapleId)
