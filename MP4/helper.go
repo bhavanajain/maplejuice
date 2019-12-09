@@ -386,7 +386,7 @@ func simpleSendFile(conn net.Conn, filename string) {
 
     fileSize := fillString(strconv.FormatInt(fileInfo.Size(), 10), 10)
     if fileInfo.Size() == 0 {
-        fmt.Printf("=======********** DAMN, filesize = 0, %s\n", filename)
+        fmt.Printf("=======********** , filesize = 0, %s\n", filename)
     }
     
     fileName := fillString(fileInfo.Name(), 64)
@@ -858,7 +858,7 @@ func KeyAggregation(key string, nodeInfoList []string) {
         conn.Close()
         releaseConn()
 
-        fmt.Printf("DAMN ========************======== sENT KEYACK for %s\n", key)
+        fmt.Printf(" ========************======== sENT KEYACK for %s\n", key)
         fmt.Printf("Appended the file for %s key\n", key)
         return
     }
@@ -1324,7 +1324,7 @@ func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, j
     conn.Close()
     releaseConn()
 
-    fmt.Printf("DAMN ========************======== JUICE KEYACK for %s\n", juiceID)
+    fmt.Printf(" ========************======== JUICE KEYACK for %s\n", juiceID)
     // fmt.Printf("Appended the file for %s key\n", out_cmd)
 
     // separate output into key specific files
