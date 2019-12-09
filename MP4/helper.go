@@ -1096,14 +1096,21 @@ func handleJuiceFaiure(subject int){
     fmt.Printf("handling JUICE FALIURE for %d juiceRunning: %v\n", subject, juiceRunning)
     if juiceRunning{
         _, isNodeJuice := node2juiceJob[subject]
+            // replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+
         if isNodeJuice{
             // workerNodes = removeFromList(workerNodes, subject)
-            // replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
-            for{
-                replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            for i:=0;i<4;i++{
                 if replacement!=0{
                     break
                 }
+                replacement = getRandomNodes(append(workerNodes, 0), 1)[0]
+                
+            }
+
+            if replacement == 0{
+                return
             }
 
             workerNodes = removeFromList(workerNodes, subject)
@@ -1148,11 +1155,23 @@ func handleMapleFailure(subject int) {
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that
-            for{
-                replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            for i:=0; i<4;i++{
+                
                 if replacement!=0{
                     break
                 }
+                replacement = getRandomNodes(append(workerNodes, 0), 1)[0]
+
+            }
+            if replacement == 0{
+                fmt.Printf("****************************************************")
+                fmt.Printf("********* CANT HANDLE MAPLE FAIL *******************")
+                fmt.Printf("****************************************************")
+                log.Printf("****************************************************")
+                log.Printf("********* CANT HANDLE MAPLE FAIL *******************")
+                log.Printf("****************************************************")
+                return
             }
             workerNodes = removeFromList(workerNodes, subject)
 
