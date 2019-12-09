@@ -202,6 +202,12 @@ func listenMapleJuicePort() {
 
                 sender,_ := strconv.Atoi(split_message[2])
                 juiceOutPut := split_message[3]
+                checkOut:= strings.Trim(juiceOutPut," ")
+                if len(checkOut)<2{
+                    fmt.Printf("WRONGJUICE Output : %s , juiceID : %d\n",juiceOutPut,juiceId)
+                    log.Printf("WRONGJUICE Output : %s , juiceID : %d\n",juiceOutPut,juiceId)
+                    break
+                }
 
                 if juiceCompMap[juiceId] != DONE{
                     juiceCount = juiceCount -1
@@ -228,7 +234,7 @@ func listenMapleJuicePort() {
 
 
 
-                fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", juiceId)
+                fmt.Printf("%d key has been processed and the corresponding sdfs is added\n", juiceId)
 
                 success := true
                 for tempKey := range juiceCompMap {
@@ -2791,6 +2797,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
                     }
                     acquireJuice()
                     go func(nodeID int, juiceId int, exeFile string, juicefile string) {
+                        log.Printf("Sent SENTJUICE keyFile : %s to nodeID : %d with juiceID : %d\n",juicefile,nodeID,juiceId)
                         sendJuiceInfo(nodeID,juiceId,exeFile,juicefile)
                         releaseJuice()
                     }(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
@@ -3329,6 +3336,8 @@ func JuiceRerunHandler(){
                         // go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
                         acquireJuice() // would block if guard channel is already filled
                         go func(nodeID int, juiceId int, JuiceExe string , inpFile string) {
+                            log.Printf("Sent SENTJUICE keyFile : %s to nodeID : %d with juiceID : %d\n",inpFile,nodeID,juiceId)
+
                             sendJuiceInfo(nodeID, juiceId, JuiceExe,inpFile)
                             releaseJuice()
                         }(workerNodes[rand.Intn(len(workerNodes))], tempKey, sdfsJuiceExe,juiceFiles[tempKey])
