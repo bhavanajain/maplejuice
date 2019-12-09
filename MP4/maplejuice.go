@@ -198,14 +198,15 @@ func listenMapleJuicePort() {
                 }
 
                 sender,_ := strconv.Atoi(split_message[2])
+                juiceOutPut := split_message[3]
+
                 if juiceCompMap[juiceId] != DONE{
                     juiceCount = juiceCount -1
-                    log.Printf("JUICE RECVD %d from %d , remaining keys %d \n",juiceId,sender,juiceCount)
-                    fmt.Printf("JUICE RECVD %d from %d, remaining keys %d \n",juiceId,sender,juiceCount)
+                    log.Printf("JUICE RECVD %d from %d OutPut : %s, remaining keys %d \n",juiceId,sender,juiceOutPut,juiceCount)
+                    fmt.Printf("JUICE RECVD %d from %d OutPut : %s, remaining keys %d \n",juiceId,sender,juiceOutPut,juiceCount)
                 }
                 // juiceCompMap[juiceId] = DONE
                 
-                juiceOutPut := split_message[3]
 
                 // Append in the file 
                 jFileName := fmt.Sprintf("%s%s.juice",juice_dir,sdfsDestJuiceName)
@@ -3297,7 +3298,7 @@ func JuiceRerunHandler(){
         if myIP == masterIP {
             for tempKey := range juiceCompMap {
                 if juiceCompMap[tempKey] == ONGOING {
-                    if  (time.Now().Unix() -  juiceTimeStamp[tempKey]) > 120 {
+                    if  (time.Now().Unix() -  juiceTimeStamp[tempKey]) > 30 {
                         // rerun the key
                         fmt.Printf("Key Rerun : %s \n",tempKey)
                         log.Printf("Key Rerun : %s \n",tempKey)
@@ -3323,7 +3324,7 @@ func keyRerunHandler(){
         if myIP == masterIP {
             for tempKey := range keyStatus {
                 if keyStatus[tempKey] == ONGOING {
-                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 120 {
+                    if  (time.Now().Unix() -  keyTimeStamp[tempKey]) > 30 {
                         // rerun the key
                         fmt.Printf("Key Rerun : %s \n",tempKey)
                         log.Printf("Key Rerun : %s \n",tempKey)
