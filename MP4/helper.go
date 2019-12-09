@@ -1135,6 +1135,8 @@ func handleJuiceFaiure(subject int){
                 juiceId2Node[juiceid] = replacement
                 juiceCompMap[juiceid] = ONGOING
                 juiceTimeStamp[juiceid] = time.Now().Unix()
+                log.Printf("Sent SENTJUICE keyFile : %s to nodeID : %d with juiceID : %d\n",juiceFiles[juiceid],replacement,juiceid)
+
                 sendJuiceInfo(replacement,juiceid,sdfsJuiceExe,juiceFiles[juiceid])
 
             }
