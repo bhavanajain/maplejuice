@@ -2684,6 +2684,21 @@ func executeCommand(command string, userReader *bufio.Reader) {
         juiceExeFile := split_command[1]    // mapleExe should be in local
         sdfsJuiceExe = juiceExeFile
         PutFileWrapper(juiceExeFile, sdfsJuiceExe, conn)
+        LocjuicePath := fmt.Sprintf("%s%s",shared_dir,sdfsJuiceExe)
+        _,err = os.Stat(LocjuicePath)
+        if os.IsNotExist(err){
+            log.Printf("Could not put JuiceExe : %s\n",juiceExeFile)
+            fmt.Printf("Could not put JuiceExe : %s\n",juiceExeFile)
+            PutFileWrapper(juiceExeFile, sdfsJuiceExe, conn)
+            // break
+
+        }
+        _,err = os.Stat(LocjuicePath)
+        if os.IsNotExist(err){
+            log.Printf("Could not put Twice JuiceExe : %s\n",juiceExeFile)
+            fmt.Printf("Could not put Twice JuiceExe : %s\n",juiceExeFile)
+            break
+        }
         fmt.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, sdfsJuiceExe)
         log.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, sdfsJuiceExe)
 
