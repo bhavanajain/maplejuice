@@ -1088,8 +1088,8 @@ func removeFromList(l []int, target int)([]int) {
 
 
 func handleJuiceFaiure(subject int){
-    log.Printf("handling JUICE FALIURE for %d mapleRunning: %v\n", subject, juiceRunning)
-    fmt.Printf("handling JUICE FALIURE for %d mapleRunning: %v\n", subject, juiceRunning)
+    log.Printf("handling JUICE FALIURE for %d juiceRunning: %v\n", subject, juiceRunning)
+    fmt.Printf("handling JUICE FALIURE for %d juiceRunning: %v\n", subject, juiceRunning)
     if juiceRunning{
         _, isNodeJuice := node2juiceJob[subject]
         if isNodeJuice{
