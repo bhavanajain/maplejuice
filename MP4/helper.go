@@ -1097,7 +1097,7 @@ func handleJuiceFaiure(subject int){
             replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
             var jobnode juiceJob
             jobnode.assignedJuiceIds = node2juiceJob[subject].assignedJuiceIds
-            jobnode.keysAggregate = node2mapleJob[subject].keysAggregate
+            // jobnode.keysAggregate = node2juiceJob[subject].keysAggregate
             node2juiceJob[replacement] = &jobnode
             workerNodes = append(workerNodes, replacement)
             fmt.Printf("[ME %d] Juice Worker node %v \n",myVid,workerNodes)
