@@ -35,6 +35,10 @@ func distributedFileSystem() {
 	    parallelToken <- true
 	}
 
+	for i:=0; i < juicePCount; i++ {
+	    juicePToken <- true
+	}
+
     myIP := getmyIP()
     if myIP == masterIP {
         go listenMasterRequests()
