@@ -714,16 +714,16 @@ func fillString(givenString string, toLength int) string {
 // }
 
 func acquireConn() {
-    fmt.Printf("Acquiring conn token, curr count: %d\n", activeConnCount)
+    // fmt.Printf("Acquiring conn token, curr count: %d\n", activeConnCount)
     <- connTokens
     activeConnCount = activeConnCount + 1
-    fmt.Printf("Acquired conn token, curr count %d \n", activeConnCount)
+    // fmt.Printf("Acquired conn token, curr count %d \n", activeConnCount)
 }
 
 func releaseConn() {
     connTokens <- true
     activeConnCount = activeConnCount - 1
-    fmt.Printf("Released conn token, curr count %d \n", activeConnCount)
+    // fmt.Printf("Released conn token, curr count %d \n", activeConnCount)
 
     // select {
     //     case msg := <-connTokens:
@@ -734,10 +734,10 @@ func releaseConn() {
 }
 
 func acquireFile() {
-    fmt.Printf("Acquiring file token, curr count: %d\n", activeFileCount)
+    // fmt.Printf("Acquiring file token, curr count: %d\n", activeFileCount)
     <- fileTokens
     activeFileCount = activeFileCount + 1
-    fmt.Printf("Acquired file token, curr count %d \n", activeFileCount)
+    // fmt.Printf("Acquired file token, curr count %d \n", activeFileCount)
 
     // fileTokens <- true
 }
@@ -745,7 +745,7 @@ func acquireFile() {
 func releaseFile() {
     fileTokens <- true
     activeFileCount = activeFileCount - 1
-    fmt.Printf("Released file token, curr count %d \n", activeFileCount)
+    // fmt.Printf("Released file token, curr count %d \n", activeFileCount)
 
     // select {
     //     case msg := <-fileTokens:
@@ -756,10 +756,10 @@ func releaseFile() {
 }
 
 func acquireParallel() {
-    fmt.Printf("Acquiring parallel token, curr count: %d\n", activeParallelCount)
+    // fmt.Printf("Acquiring parallel token, curr count: %d\n", activeParallelCount)
     <- parallelToken
     activeParallelCount = activeParallelCount + 1
-    fmt.Printf("Acquired parallel token, curr count %d \n", activeParallelCount)
+    // fmt.Printf("Acquired parallel token, curr count %d \n", activeParallelCount)
 
     // activeFileCount = activeFileCount+1
     // fmt.Printf("Active File Count %d \n",activeFileCount)
@@ -770,7 +770,7 @@ func acquireParallel() {
 func releaseParallel() {
     parallelToken <- true
     activeParallelCount = activeParallelCount - 1
-    fmt.Printf("Released parallel token, curr count %d \n", activeParallelCount)
+    // fmt.Printf("Released parallel token, curr count %d \n", activeParallelCount)
 
     // activeFileCount = activeFileCount-1
     // fmt.Printf("Active File Count %d \n",activeFileCount)

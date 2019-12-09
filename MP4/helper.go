@@ -1270,7 +1270,8 @@ func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, j
     }   
 
 
-    run_cmd := fmt.Sprintf("./%s -inputfile %s%s", exeFile, local_dir,inputFilePath)
+    // run_cmd := fmt.Sprintf("./%s -inputfile %s%s", exeFile, local_dir,inputFilePath)
+    run_cmd := fmt.Sprintf("cat %s%s | python %s",local_dir,inputFilePath,exeFile)
     fmt.Printf("Trying to run %s\n", run_cmd)
     // acquireFile()
     // activeFileNum = activeFileNum+1
