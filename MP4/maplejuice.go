@@ -270,6 +270,7 @@ func listenMapleJuicePort() {
 
                     elapsed := time.Since(juiceInitTime)
                     fmt.Printf("Time taken for Juice to finish %s\n", elapsed)
+                    log.Printf("Time taken for Juice to finish %s\n", elapsed)
 
                     log.Printf("*********************************************\n")
                     log.Printf("***********   JUICE DONE ********************\n")
