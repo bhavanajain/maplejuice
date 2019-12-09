@@ -271,7 +271,14 @@ func listenMapleJuicePort() {
                     elapsed := time.Since(juiceInitTime)
                     fmt.Printf("Time taken for Juice to finish %s\n", elapsed)
 
-                    os.Exit(1)
+                    log.Printf("*********************************************\n")
+                    log.Printf("***********   JUICE DONE ********************\n")
+                    log.Printf("*********************************************\n")
+
+                    fmt.Printf("*********************************************\n")
+                    fmt.Printf("***********   JUICE DONE ********************\n")
+                    fmt.Printf("*********************************************\n")
+                    // os.Exit(1)
                     
                 }
 
@@ -342,6 +349,17 @@ func listenMapleJuicePort() {
                     elapsed := time.Since(mapleInitTime)
                     fmt.Printf("Time taken for maple to finish %s\n", elapsed)
                     log.Printf("Time taken for maple to finish %s\n", elapsed)
+
+
+
+
+                    log.Printf("*********************************************\n")
+                    log.Printf("***********   MAPLE DONE ********************\n")
+                    log.Printf("*********************************************\n")
+                    
+                    fmt.Printf("*********************************************\n")
+                    fmt.Printf("***********   MAPLE DONE ********************\n")
+                    fmt.Printf("*********************************************\n")
 
                     // os.Exit(1)
                     
