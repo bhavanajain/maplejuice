@@ -2697,6 +2697,7 @@ func executeCommand(command string, userReader *bufio.Reader) {
         if os.IsNotExist(err){
             log.Printf("Could not put Twice JuiceExe : %s\n",juiceExeFile)
             fmt.Printf("Could not put Twice JuiceExe : %s\n",juiceExeFile)
+            juiceRunning = false
             break
         }
         fmt.Printf("Ran put file wrapper for %s %s\n", juiceExeFile, sdfsJuiceExe)
