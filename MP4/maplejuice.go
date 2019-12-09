@@ -140,6 +140,9 @@ var fileTokens = make(chan bool, fileTokensCount)
 var parallelCount = 100
 var parallelToken = make(chan bool, parallelCount)
 
+var juicePCount = 200
+var juicePToken = make(chan bool, juicePCount)
+
 var juiceTokenCount = 20
 var juiceToken = make(chan bool,juiceTokenCount)
 
@@ -735,6 +738,26 @@ func releaseConn() {
     // }
 }
 
+func acquireJuice() {
+    // fmt.Printf("Acquiring conn token, curr count: %d\n", activeConnCount)
+    <- juicePToken
+    // activeConnCount = activeConnCount + 1
+    // fmt.Printf("Acquired conn token, curr count %d \n", activeConnCount)
+}
+
+func releaseJuice() {
+    juicePToken <- true
+    // activeConnCount = activeConnCount - 1
+    // fmt.Printf("Released conn token, curr count %d \n", activeConnCount)
+
+    // select {
+    //     case msg := <-connTokens:
+    //         fmt.Printf("released conn %v\n", msg)
+    //     default:
+    //         fmt.Println("Why you be trying to pop empty connTokens?\n")
+    // }
+}
+
 func acquireFile() {
     // fmt.Printf("Acquiring file token, curr count: %d\n", activeFileCount)
     <- fileTokens
@@ -1049,7 +1072,7 @@ func listenFileTransferPort() {
 
                 mutex.Lock()
                 JuiceQueue = append(JuiceQueue,juiceInp)
-                fmt.Printf("The Juice JuiceQueue is %v \n",JuiceQueue)
+                // fmt.Printf("The Juice JuiceQueue is %v \n",JuiceQueue)
                 mutex.Unlock()
                 go func() {
                     juiceToken <- true
@@ -2766,12 +2789,12 @@ func executeCommand(command string, userReader *bufio.Reader) {
 
                         node2juiceJob[currNode] = &jobnode
                     }
-                    // // acquireParallel()
-                    // go func(nodeID int, juiceId int, exeFile string, juicefile string) {
-                    //     sendJuiceInfo(nodeID,juiceId,exeFile,juicefile)
-                    //     // releaseParallel()
-                    // }(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
-                    sendJuiceInfo(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
+                    acquireJuice()
+                    go func(nodeID int, juiceId int, exeFile string, juicefile string) {
+                        sendJuiceInfo(nodeID,juiceId,exeFile,juicefile)
+                        releaseJuice()
+                    }(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
+                    // sendJuiceInfo(currNode, juiceIdx, sdfsJuiceExe, juiceFiles[juiceIdx])
      
                     juiceIdx = juiceIdx + 1
                     if juiceIdx == len(juiceFiles) {
@@ -3304,10 +3327,10 @@ func JuiceRerunHandler(){
                         log.Printf("Key Rerun : %s \n",tempKey)
 
                         // go ProcessKey (tempKey, workerNodes[rand.Intn(len(workerNodes))], keyMapleIdMap[tempKey])
-                        // acquireParallel() // would block if guard channel is already filled
+                        acquireJuice() // would block if guard channel is already filled
                         go func(nodeID int, juiceId int, JuiceExe string , inpFile string) {
                             sendJuiceInfo(nodeID, juiceId, JuiceExe,inpFile)
-                            // releaseParallel()
+                            releaseJuice()
                         }(workerNodes[rand.Intn(len(workerNodes))], tempKey, sdfsJuiceExe,juiceFiles[tempKey])
                     }
                 }
