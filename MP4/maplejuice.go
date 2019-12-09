@@ -277,6 +277,10 @@ func listenMapleJuicePort() {
 
             case "keyack":
 
+                if !mapleRunning{
+                    break
+                }
+
                 key := split_message[1]
                 if keyDone[key]{
                     break
