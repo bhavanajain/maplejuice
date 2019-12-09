@@ -91,6 +91,7 @@ var node2mapleJob = make(map[int]*mapleJob)
 var node2juiceJob = make(map[int]*juiceJob)
 
 var keyStatus = make(map[string]int)
+var keyDone = make(map[string]bool)
 var keyTimeStamp = make(map[string]int64) // For rerun a key
 var workerNodes []int
 
@@ -199,8 +200,8 @@ func listenMapleJuicePort() {
                 sender,_ := strconv.Atoi(split_message[2])
                 if juiceCompMap[juiceId] != DONE{
                     juiceCount = juiceCount -1
-                    log.Printf("JUICE RECVD %d from %d , remaining keys %d \n",juiceId,sender,keyCount)
-                    fmt.Printf("JUICE RECVD %d from %d, remaining keys %d \n",juiceId,sender,keyCount)
+                    log.Printf("JUICE RECVD %d from %d , remaining keys %d \n",juiceId,sender,juiceCount)
+                    fmt.Printf("JUICE RECVD %d from %d, remaining keys %d \n",juiceId,sender,juiceCount)
                 }
                 // juiceCompMap[juiceId] = DONE
                 
@@ -270,30 +271,42 @@ func listenMapleJuicePort() {
                     elapsed := time.Since(juiceInitTime)
                     fmt.Printf("Time taken for Juice to finish %s\n", elapsed)
 
-                    os.Exit(1)
+                    log.Printf("*********************************************\n")
+                    log.Printf("***********   JUICE DONE ********************\n")
+                    log.Printf("*********************************************\n")
+
+                    fmt.Printf("*********************************************\n")
+                    fmt.Printf("***********   JUICE DONE ********************\n")
+                    fmt.Printf("*********************************************\n")
+                    // os.Exit(1)
                     
                 }
 
             case "keyack":
 
+                if !mapleRunning{
+                    break
+                }
+
                 key := split_message[1]
-                if keyStatus[key] == DONE{
+                if keyDone[key]{
                     break
                 }
                 sender,_ := strconv.Atoi(split_message[2])
-                if keyStatus[key] != DONE{
+                if !keyDone[key]{
                     keyCount = keyCount -1
                     log.Printf("keyack RECVD %s from %d , remaining keys %d \n",key,sender,keyCount)
                     fmt.Printf("keyack RECVD %s from %d, remaining keys %d \n",key,sender,keyCount)
                 }
                 keyStatus[key] = DONE
+                keyDone[key] = true
                 
 
                 fmt.Printf("%s key has been processed and the corresponding sdfs is added\n", key)
 
                 success := true
-                for tempKey := range keyStatus {
-                    if keyStatus[tempKey] != DONE {
+                for tempKey := range keyDone {
+                    if !keyDone[tempKey] {
                         // fmt.Printf("!!!!!!!!!!!!!!!!!!!!!!!!!!!!Key %s not done \n",tempKey)
                         success = false
                         break
@@ -335,6 +348,18 @@ func listenMapleJuicePort() {
 
                     elapsed := time.Since(mapleInitTime)
                     fmt.Printf("Time taken for maple to finish %s\n", elapsed)
+                    log.Printf("Time taken for maple to finish %s\n", elapsed)
+
+
+
+
+                    log.Printf("*********************************************\n")
+                    log.Printf("***********   MAPLE DONE ********************\n")
+                    log.Printf("*********************************************\n")
+                    
+                    fmt.Printf("*********************************************\n")
+                    fmt.Printf("***********   MAPLE DONE ********************\n")
+                    fmt.Printf("*********************************************\n")
 
                     // os.Exit(1)
                     
@@ -1828,6 +1853,14 @@ func getFile(nodeId int, sdfsFilename string, localFilename string) (bool) {
 
     // connguard <- struct{}{}
     // fmt.Printf("[ME %d] Dialing ")
+
+    if nodeId == myVid{
+        // Get file from self
+        success := copyFile(shared_dir + sdfsFilename, local_dir + localFilename)
+        return success
+
+    }
+
     acquireConn()
     conn, err := net.DialTimeout("tcp", ip + ":" + strconv.Itoa(port), timeout) 
     if err != nil {
@@ -2083,7 +2116,7 @@ func sendAcktoMaster(action string, srcNode int, destNodes string, fileName stri
     return
 }
 
-var doneList = make([]int, 0, 4)
+// var doneList = make([]int, 0, 4)
 
 func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.WaitGroup, allNodes []int,ch chan<- int,tryCount int) {
 
@@ -2105,7 +2138,7 @@ func sendFile(nodeId int, localFilename string, sdfsFilename string, wg *sync.Wa
         success := copyFile(local_dir + localFilename, temp_dir + sdfsFilename + "." + strconv.Itoa(nodeId))
 
         if success {
-            doneList = append(doneList, nodeId)
+            // doneList = append(doneList, nodeId)
             fmt.Printf("sent the file to %d\n", nodeId)
             ch <- nodeId
             wg.Done()
@@ -3290,3 +3323,6 @@ func keyRerunHandler(){
         }
     }
 } 
+
+
+

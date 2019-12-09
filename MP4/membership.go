@@ -224,6 +224,7 @@ func checkSuspicion(vid int) {
 			if myIP == masterIP {
 				go replicateFiles(suspect) // Redistribute it's file
 				go handleMapleFailure(suspect)
+				go handleJuiceFaiure(suspect)
 			}
 			if memberMap[vid].ip == masterIP{
 				go LeaderElection()
@@ -892,6 +893,7 @@ func listenOtherPort() (err error) {
 						go replicateFiles(subject)
 						// if map task is ongoing, rerun stuff
 						go handleMapleFailure(subject)
+						go handleJuiceFaiure(subject)
 					}
 
 					if memberMap[subject].ip == masterIP  {

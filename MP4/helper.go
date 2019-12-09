@@ -183,6 +183,8 @@ func PutFileWrapper2(localFilename string, sdfsFilename string) (bool) {
 
     fmt.Printf("Sent the put request to master\n")
 
+    // Add a time out for the connection else move ahead
+    conn.SetReadDeadline(time.Now().Add(10*time.Second))
     reader := bufio.NewReader(conn) // Master response
     reply, err := reader.ReadString('\n')
     if err != nil{
@@ -267,6 +269,7 @@ func PutFileWrapper(localFilename string, sdfsFilename string, conn net.Conn) {
     fmt.Printf("Sent the put request to master\n")
 
     reader := bufio.NewReader(conn) // Master response
+    conn.SetReadDeadline(time.Now().Add(10*time.Second))
     reply, err := reader.ReadString('\n')
     if err != nil{
         log.Printf(" Can't move forward with put reqest")
@@ -664,6 +667,7 @@ func AssembleKeyFiles() {
             node2mapleJob[currNode].keysGenerate = append(node2mapleJob[currNode].keysGenerate, keys...)
 
             for _, key := range keys {
+                keyDone[key] = false
                 _, ok := keyMapleIdMap[key]
                 if ok {
                     keyMapleIdMap[key] = append(keyMapleIdMap[key], mapleId)
@@ -1081,6 +1085,43 @@ func removeFromList(l []int, target int)([]int) {
     
 }
 
+
+
+func handleJuiceFaiure(subject int){
+    log.Printf("handling JUICE FALIURE for %d juiceRunning: %v\n", subject, juiceRunning)
+    fmt.Printf("handling JUICE FALIURE for %d juiceRunning: %v\n", subject, juiceRunning)
+    if juiceRunning{
+        _, isNodeJuice := node2juiceJob[subject]
+        if isNodeJuice{
+            workerNodes = removeFromList(workerNodes, subject)
+            replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            var jobnode juiceJob
+            jobnode.assignedJuiceIds = node2juiceJob[subject].assignedJuiceIds
+            // jobnode.keysAggregate = node2juiceJob[subject].keysAggregate
+            node2juiceJob[replacement] = &jobnode
+            workerNodes = append(workerNodes, replacement)
+            fmt.Printf("[ME %d] Juice Worker node %v \n",myVid,workerNodes)
+            log.Printf("[ME %d] Juice Worker node %v \n",myVid,workerNodes)
+
+            asignedIds := node2juiceJob[replacement].assignedJuiceIds
+            for _, juiceid := range(asignedIds){
+                if juiceCompMap[juiceid] == DONE{
+                    continue
+                }
+                juiceId2Node[juiceid] = replacement
+                juiceCompMap[juiceid] = ONGOING
+                juiceTimeStamp[juiceid] = time.Now().Unix()
+                sendJuiceInfo(replacement,juiceid,sdfsJuiceExe,juiceFiles[juiceid])
+
+            }
+
+        }
+    }
+
+    return
+}
+
+
 func handleMapleFailure(subject int) {
 
     log.Printf("handling MAPLE FALIURE for %d mapleRunning: %v\n", subject, mapleRunning)
@@ -1266,7 +1307,11 @@ func ExecuteJuice(exeFile string, inputFilePath string, outputFilePath string, j
         releaseConn()
         return
     }
-    message := fmt.Sprintf("keyJuice %s %d %s\n", juiceID , myVid, out_cmd)
+
+    out_cmdStr = strings.Replace(out_cmdStr," ", "-", -1)
+
+    message := fmt.Sprintf("keyJuice %s %d %s\n", juiceID , myVid, out_cmdStr)
+
     fmt.Printf("Sending %s\n",message)
     log.Printf("Sending %s\n",message)
     fmt.Fprintf(conn, message)
