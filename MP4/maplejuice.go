@@ -1051,9 +1051,15 @@ func listenFileTransferPort() {
                     outfile.Close()
                     releaseFile()
 
-                    if !getFileWrapper(sdfsJuiceExe, localJuiceExe){
-                        getFileWrapper(sdfsJuiceExe, localJuiceExe)
+                    for i=0 ; i<5; i++{
+                        if getFileWrapper(sdfsJuiceExe, localJuiceExe){
+                            break
+                        }
                     }
+
+                    // if !getFileWrapper(sdfsJuiceExe, localJuiceExe){
+                    //     getFileWrapper(sdfsJuiceExe, localJuiceExe)
+                    // }
 
                     go JuiceProcess()
 
