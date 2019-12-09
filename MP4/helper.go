@@ -1097,8 +1097,17 @@ func handleJuiceFaiure(subject int){
     if juiceRunning{
         _, isNodeJuice := node2juiceJob[subject]
         if isNodeJuice{
+            // workerNodes = removeFromList(workerNodes, subject)
+            // replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+            for{
+                replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+                if replacement!=0{
+                    break
+                }
+            }
+
             workerNodes = removeFromList(workerNodes, subject)
-            replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+
             var jobnode juiceJob
             jobnode.assignedJuiceIds = node2juiceJob[subject].assignedJuiceIds
             // jobnode.keysAggregate = node2juiceJob[subject].keysAggregate
@@ -1139,15 +1148,22 @@ func handleMapleFailure(subject int) {
             // this node is running maple
 
             // [TODO] what is the system does not have enough nodes to satisfy this req, handle that
+            for{
+                replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+                if replacement!=0{
+                    break
+                }
+            }
             workerNodes = removeFromList(workerNodes, subject)
-            replacement := getRandomNodes(append(workerNodes, 0), 1)[0]
+
+            // workerNodes = removeFromList(workerNodes, subject)
             var jobnode mapleJob
             jobnode.assignedMapleIds = node2mapleJob[subject].assignedMapleIds
             jobnode.keysAggregate = node2mapleJob[subject].keysAggregate
             jobnode.keysGenerate = node2mapleJob[subject].keysGenerate
             node2mapleJob[replacement] = &jobnode
 
-            
+            workerNodes = removeFromList(workerNodes, subject)
             workerNodes = append(workerNodes, replacement)
             fmt.Printf("[ME %d] Worker node %v \n",myVid,workerNodes)
             log.Printf("[ME %d] Worker node %v \n",myVid,workerNodes)
