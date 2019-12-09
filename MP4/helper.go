@@ -187,7 +187,7 @@ func PutFileWrapper2(localFilename string, sdfsFilename string) (bool) {
     fmt.Printf("Sent the put request to master\n")
 
     // Add a time out for the connection else move ahead
-    conn.SetReadDeadline(time.Now().Add(10*time.Second))
+    conn.SetReadDeadline(time.Now().Add(20*time.Second))
     reader := bufio.NewReader(conn) // Master response
     reply, err := reader.ReadString('\n')
     if err != nil{
