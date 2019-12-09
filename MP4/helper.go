@@ -834,8 +834,12 @@ func KeyAggregation(key string, nodeInfoList []string) {
     // PutFileWrapper(outFilename, sdfsInterPrefix + "_" + key, conn)
     // conn.Close()
     // releaseConn()
+    valSuc := PutFileWrapper2(outFilename, sdfsInterPrefix + "_" + key)
+    if !valSuc{
+        valSuc = PutFileWrapper2(outFilename, sdfsInterPrefix + "_" + key)
+    }
 
-    if PutFileWrapper2(outFilename, sdfsInterPrefix + "_" + key) {
+    if valSuc {
         acquireConn()
 
         timeout := 20 * time.Second
