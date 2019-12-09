@@ -335,6 +335,7 @@ func listenMapleJuicePort() {
 
                     elapsed := time.Since(mapleInitTime)
                     fmt.Printf("Time taken for maple to finish %s\n", elapsed)
+                    log.Printf("Time taken for maple to finish %s\n", elapsed)
 
                     // os.Exit(1)
                     
