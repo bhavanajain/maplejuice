@@ -484,7 +484,8 @@ func ExecuteCommand(exeFile string, inputFilePath string, outputFilePath string,
         fmt.Printf("%v\n", err)
     }
 
-    run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
+    // run_cmd := fmt.Sprintf("./%s -inputfile %s", exeFile, inputFilePath)
+    run_cmd := fmt.Sprintf("cat %s%s | python %s",local_dir,inputFilePath,exeFile)
     fmt.Printf("Trying to run %s\n", run_cmd)
     acquireFile()
     // activeFileNum = activeFileNum+1
