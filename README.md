@@ -58,8 +58,7 @@ When a maple task is started, the following steps are carried out:
 
 For large number of keys, we observe that the time taken by hadoop is lesser and it outperforms our system. Our system faces resource contention and needs to do batching of requests. 
 
-<img src="graphs/url-frequency.png" alt="MapleJuice vs Hadoop for URL frequency app" width="6
-00">
+<img src="graphs/url-frequency.png" alt="MapleJuice vs Hadoop for URL frequency app" width="600">
 
 For URL frequency count, we reduced the size of our dataset to see the affect keys size has on the system, hadoop takes similar time to perform as the previous one due to it’s initial setup, but our system performs much faster owing to its low initial overhead.
 
